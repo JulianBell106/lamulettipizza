@@ -1,174 +1,148 @@
 /**
- * La Muletti Pizza — App JavaScript
+ * La Muletti Pizza — App JS
  * ============================================================================
+ * All customer-specific data comes from CONFIG (js/config.js).
+ * This file should never need editing when onboarding a new customer.
+ *
  * Structure:
- *   1. Menu Data
- *   2. Shared State
- *   3. Utility Functions
- *   4. Desktop — Menu Rendering
- *   5. Desktop — Basket
- *   6. Desktop — Order Confirmation
- *   7. Desktop — Nav Scroll Effect
- *   8. Mobile — Page Navigation
- *   9. Mobile — Menu Rendering
- *  10. Mobile — Basket
- *  11. Mobile — Order Confirmation
- *  12. Scroll Reveal (IntersectionObserver)
- *  13. Init
+ *   1.  Theme injection
+ *   2.  Page bootstrap (title, meta, images)
+ *   3.  Shared state
+ *   4.  Utility functions
+ *   5.  Desktop — Nav + Hero
+ *   6.  Desktop — Strip bar
+ *   7.  Desktop — Menu
+ *   8.  Desktop — Story / About
+ *   9.  Desktop — Values
+ *   10. Desktop — Contact + Events
+ *   11. Desktop — Basket
+ *   12. Desktop — Order confirmation
+ *   13. Desktop — Nav scroll effect
+ *   14. Mobile — Page navigation
+ *   15. Mobile — Home page
+ *   16. Mobile — Menu
+ *   17. Mobile — Basket
+ *   18. Mobile — Order confirmation
+ *   19. Mobile — About
+ *   20. Mobile — Find Us
+ *   21. Scroll reveal
+ *   22. Init
  * ============================================================================
  */
 
 
 /* ============================================================================
-   1. MENU DATA
-   Add, remove or edit pizzas here. All UI renders from this array.
-   diet: "VE" = Vegan, "V" = Vegetarian, "🌶️" = Spicy, "" = none
+   1. THEME INJECTION
+   Reads CONFIG.theme and writes CSS custom properties onto :root so the
+   entire visual identity is driven by config.js — no CSS edits needed.
    ============================================================================ */
-const MENU = [
-  {
-    id: 1,
-    name: 'Marinara',
-    desc: 'Tomato base, garlic, oregano, olive oil with fresh basil',
-    price: 8,
-    diet: 'VE'
-  },
-  {
-    id: 2,
-    name: 'Margherita',
-    desc: 'Tomato base, Parmesan, Fior di latte mozzarella, fresh basil and olive oil',
-    price: 9,
-    diet: 'V'
-  },
-  {
-    id: 3,
-    name: 'Prosciutto e Funghi',
-    desc: 'Tomato base, Parmesan, Fior di latte mozzarella, prosciutto, mushrooms, fresh basil with olive oil',
-    price: 10,
-    diet: ''
-  },
-  {
-    id: 4,
-    name: 'Bella Pepperoni',
-    desc: 'Tomato base, Parmesan, Fior di latte mozzarella, pepperoni, fresh basil with olive oil',
-    price: 10,
-    diet: ''
-  },
-  {
-    id: 5,
-    name: 'Capricciosa',
-    desc: 'Tomato base, Parmesan, Fior di latte mozzarella, ham, mushrooms, würstel, artichokes, black olives, fresh basil and olive oil',
-    price: 11,
-    diet: ''
-  },
-  {
-    id: 6,
-    name: 'La Mamma Muletti',
-    desc: 'Tomato base, Parmesan, Fior di latte mozzarella, fresh basil, salame di Napoli, nduja, red onions, hot honey',
-    price: 12,
-    diet: '🌶️'
-  }
-];
+function applyTheme() {
+  const t = CONFIG.theme;
+  const r = document.documentElement;
+  r.style.setProperty('--fire',  t.primary);
+  r.style.setProperty('--ember', t.primaryHover);
+  r.style.setProperty('--gold',  t.accent);
+  r.style.setProperty('--dark',  t.dark);
+  r.style.setProperty('--char',  t.darkMid);
+  r.style.setProperty('--cream', t.light);
+  r.style.setProperty('--ash',   t.muted);
+}
 
 
 /* ============================================================================
-   2. SHARED STATE
-   basket is keyed by pizza id (number), value is quantity (number).
-   Both desktop and mobile read/write the same object so they stay in sync.
+   2. PAGE BOOTSTRAP
+   Sets title, meta description, PWA tags and hero background image from
+   CONFIG so index.html contains no hardcoded business content.
+   ============================================================================ */
+function bootstrapPage() {
+  // Browser tab title
+  document.title = CONFIG.meta.title;
+
+  // Meta description
+  let metaDesc = document.querySelector('meta[name="description"]');
+  if (metaDesc) metaDesc.content = CONFIG.meta.description;
+
+  // PWA / apple app title
+  let appTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+  if (appTitle) appTitle.content = CONFIG.meta.appTitle;
+
+  // Theme colour
+  let themeColor = document.querySelector('meta[name="theme-color"]');
+  if (themeColor) themeColor.content = CONFIG.theme.dark;
+
+  // Touch icon
+  let icon = document.querySelector('link[rel="apple-touch-icon"]');
+  if (icon) icon.href = CONFIG.images.icon;
+
+  // Hero background (desktop)
+  let heroBg = document.querySelector('.d-hero-bg');
+  if (heroBg) heroBg.style.backgroundImage = `url('${CONFIG.images.hero}')`;
+}
+
+
+/* ============================================================================
+   3. SHARED STATE
+   basket: keyed by item id (number), value is quantity.
+   Both desktop and mobile read/write the same object — always in sync.
    ============================================================================ */
 const basket = {};
-
-/** Running order counter — persists across the session for sequential ref numbers */
 let orderCount = 0;
 
 
 /* ============================================================================
-   3. UTILITY FUNCTIONS
+   4. UTILITY FUNCTIONS
    ============================================================================ */
 
-/**
- * Returns the total number of items across all basket entries.
- * @returns {number}
- */
 function basketTotalQty() {
   return Object.values(basket).reduce((sum, qty) => sum + qty, 0);
 }
 
-/**
- * Returns the total cost of all basket items in pounds.
- * @returns {number}
- */
 function basketTotalPrice() {
   return Object.keys(basket).reduce((sum, id) => {
-    const item = MENU.find(m => m.id === Number(id));
+    const item = CONFIG.menu.find(m => m.id === Number(id));
     return sum + (item ? item.price * basket[id] : 0);
   }, 0);
 }
 
-/**
- * Adjusts qty for a given pizza id by delta, clamps to 0, removes if zero.
- * Triggers a full re-render of both desktop and mobile views.
- * @param {number} id    - pizza id
- * @param {number} delta - +1 or -1
- */
 function updateBasket(id, delta) {
   id = Number(id);
   basket[id] = Math.max(0, (basket[id] || 0) + delta);
   if (basket[id] === 0) delete basket[id];
-
-  // Keep all views in sync
   renderDesktopMenu();
   renderMobileMenu();
   refreshDesktopBasket();
   refreshMobileBadge();
 }
 
-/**
- * Generates a zero-padded order reference string, e.g. "#LM0012"
- * @returns {string}
- */
 function generateOrderRef() {
   orderCount++;
-  return 'LM' + String(orderCount).padStart(4, '0');
+  return CONFIG.ordering.refPrefix + String(orderCount).padStart(4, '0');
 }
 
-/**
- * Builds the HTML rows for an order summary (used in both desktop + mobile modals).
- * @param {string} rowClass - CSS class for each row element
- * @returns {{ rows: string, total: number }}
- */
 function buildOrderSummaryHTML(rowClass) {
   let total = 0;
-  let rows = '';
-
+  let rows  = '';
   Object.keys(basket).map(Number).forEach(id => {
-    const item = MENU.find(m => m.id === id);
+    const item = CONFIG.menu.find(m => m.id === id);
     const qty  = basket[id];
     const sub  = item.price * qty;
     total += sub;
     rows += `<div class="${rowClass}">
                <span>${item.name} × ${qty}</span>
-               <strong>£${sub.toFixed(2)}</strong>
+               <strong>${CONFIG.business.currency}${sub.toFixed(2)}</strong>
              </div>`;
   });
-
-  // Total row
   rows += `<div class="${rowClass}" style="border-top:1px solid rgba(212,160,67,0.15);margin-top:8px;padding-top:8px;">
              <span>Total</span>
-             <strong style="color:var(--gold)">£${total.toFixed(2)}</strong>
+             <strong style="color:var(--gold)">${CONFIG.business.currency}${total.toFixed(2)}</strong>
            </div>`;
-
-  // Payment method
   rows += `<div class="${rowClass}">
              <span>Payment</span>
-             <strong>💵 Cash / card on collection</strong>
+             <strong>${CONFIG.ordering.paymentNote}</strong>
            </div>`;
-
   return { rows, total };
 }
 
-/**
- * Clears all items from the basket and re-renders all views.
- */
 function clearBasket() {
   Object.keys(basket).forEach(k => delete basket[k]);
   renderDesktopMenu();
@@ -179,18 +153,58 @@ function clearBasket() {
 
 
 /* ============================================================================
-   4. DESKTOP — MENU RENDERING
-   Generates pizza card HTML and injects into #d-menu-grid.
-   Buttons use data-id / data-delta attributes caught by event delegation below.
+   5. DESKTOP — NAV + HERO
+   ============================================================================ */
+function renderDesktopNav() {
+  // Logo: wrap the last word in a <span> for gold colour
+  const logo = document.querySelector('.d-nav-logo');
+  if (logo) {
+    const parts = CONFIG.business.nameShort.split(' ');
+    const last  = parts.pop();
+    logo.innerHTML = `${parts.join(' ')} <span>${last}</span>`;
+  }
+
+  // Nav CTA text
+  const navCta = document.querySelector('.d-nav-cta');
+  if (navCta) navCta.textContent = CONFIG.hero.navCta;
+}
+
+function renderDesktopHero() {
+  const h = CONFIG.hero;
+  const set = (sel, html) => { const el = document.querySelector(sel); if (el) el.innerHTML = html; };
+  set('.d-hero-eyebrow',  h.eyebrow);
+  set('.d-hero-title',    `${h.titleLine1}<br><em>${h.titleLine2}</em>`);
+  set('.d-hero-sub',      h.subtitle.replace(/&/g, '&amp;'));
+  const primary   = document.querySelector('.d-btn-primary');
+  const secondary = document.querySelector('.d-btn-ghost');
+  if (primary)   primary.textContent   = h.ctaPrimary;
+  if (secondary) secondary.textContent = h.ctaSecondary;
+}
+
+
+/* ============================================================================
+   6. DESKTOP — STRIP BAR
+   ============================================================================ */
+function renderDesktopStrip() {
+  const strip = document.querySelector('.d-strip');
+  if (!strip) return;
+  strip.innerHTML = CONFIG.stripItems
+    .map(i => `<div class="d-strip-item"><span>${i.icon}</span> ${i.text}</div>`)
+    .join('');
+}
+
+
+/* ============================================================================
+   7. DESKTOP — MENU
    ============================================================================ */
 function renderDesktopMenu() {
   const grid = document.getElementById('d-menu-grid');
   if (!grid) return;
 
-  grid.innerHTML = MENU.map((item, i) => {
-    const qty = basket[item.id] || 0;
+  const items = CONFIG.menu.filter(m => m.available !== false);
 
-    // Show qty controls only when item is in basket
+  grid.innerHTML = items.map((item, i) => {
+    const qty = basket[item.id] || 0;
     const controls = qty > 0
       ? `<button class="d-qty-btn"     data-id="${item.id}" data-delta="-1">−</button>
          <span   class="d-qty-num">${qty}</span>
@@ -203,7 +217,7 @@ function renderDesktopMenu() {
         <div class="d-pizza-name">${item.name}</div>
         <div class="d-pizza-desc">${item.desc}</div>
         <div class="d-pizza-footer">
-          <div class="d-pizza-price">£${item.price.toFixed(2)}</div>
+          <div class="d-pizza-price">${CONFIG.business.currency}${item.price.toFixed(2)}</div>
           <div style="display:flex;align-items:center;gap:8px;">
             ${item.diet ? `<div class="d-pizza-diet">${item.diet}</div>` : ''}
             ${controls}
@@ -213,10 +227,7 @@ function renderDesktopMenu() {
   }).join('');
 }
 
-/**
- * Event delegation for all desktop qty buttons (both menu cards and basket panel).
- * Catches clicks on any element with data-id + data-delta attributes.
- */
+// Event delegation — catches all qty clicks across desktop menu + basket panel
 document.addEventListener('click', function (e) {
   const btn = e.target.closest('[data-id][data-delta]');
   if (btn) {
@@ -228,18 +239,135 @@ document.addEventListener('click', function (e) {
 
 
 /* ============================================================================
-   5. DESKTOP — BASKET
+   8. DESKTOP — STORY / ABOUT
    ============================================================================ */
+function renderDesktopStory() {
+  const a = CONFIG.about;
 
-/**
- * Re-renders the basket panel body + footer, and updates the floating button.
- */
+  // Image + caption
+  const img = document.querySelector('.d-story-img img');
+  if (img) { img.src = CONFIG.images.founders; img.alt = a.imageCaption; }
+  const caption = document.querySelector('.d-story-img-caption');
+  if (caption) caption.textContent = a.imageCaption;
+
+  // Eyebrow + title
+  const eyebrow = document.querySelector('#d-story .d-eyebrow');
+  if (eyebrow) eyebrow.textContent = a.eyebrow;
+  const title = document.querySelector('#d-story .d-title');
+  if (title) title.innerHTML = `${a.titleLine1}<em>${a.titleLine2}</em>`;
+
+  // Story paragraphs
+  const bodyEl = document.querySelector('.d-story-text');
+  if (bodyEl) {
+    // Remove any existing p.d-body elements and re-add
+    bodyEl.querySelectorAll('p.d-body').forEach(p => p.remove());
+    const foundersEl = bodyEl.querySelector('.d-founders-mini');
+    a.storyParagraphs.forEach(text => {
+      const p = document.createElement('p');
+      p.className = 'd-body';
+      p.textContent = text;
+      bodyEl.insertBefore(p, foundersEl);
+    });
+  }
+
+  // Founder pills
+  const pills = document.querySelector('.d-founders-mini');
+  if (pills) {
+    pills.innerHTML = a.founders.map(f => `
+      <div class="d-founder-pill">
+        <div class="d-founder-pill-avatar">${f.avatar}</div>
+        <div class="d-founder-pill-name">${f.name}</div>
+        <div class="d-founder-pill-role">${f.role}</div>
+      </div>`).join('');
+  }
+}
+
+
+/* ============================================================================
+   9. DESKTOP — VALUES
+   ============================================================================ */
+function renderDesktopValues() {
+  const v = CONFIG.values;
+
+  const eyebrow = document.querySelector('#d-values .d-eyebrow');
+  if (eyebrow) eyebrow.textContent = v.eyebrow;
+  const title = document.querySelector('#d-values .d-title');
+  if (title) title.innerHTML = `${v.titleLine1} <em>${v.titleLine2}</em>`;
+
+  const grid = document.querySelector('.d-values-grid');
+  if (grid) {
+    grid.innerHTML = v.items.map(item => `
+      <div class="d-value-card reveal">
+        <div class="d-value-icon">${item.icon}</div>
+        <div class="d-value-name">${item.name}</div>
+        <div class="d-value-desc">${item.desc}</div>
+      </div>`).join('');
+  }
+}
+
+
+/* ============================================================================
+   10. DESKTOP — CONTACT + EVENTS
+   ============================================================================ */
+function renderDesktopContact() {
+  const c = CONFIG.contact;
+  const grid = document.querySelector('.d-contact-grid');
+  if (grid) {
+    grid.innerHTML = `
+      <a href="tel:${c.phone.replace(/\s/g,'')}" class="d-contact-card">
+        <div class="d-contact-icon">📞</div>
+        <div class="d-contact-label">Phone</div>
+        <div class="d-contact-value">${c.phone}</div>
+      </a>
+      <a href="mailto:${c.email}" class="d-contact-card">
+        <div class="d-contact-icon">✉️</div>
+        <div class="d-contact-label">Email</div>
+        <div class="d-contact-value">${c.email}</div>
+      </a>
+      <a href="${c.websiteUrl}" target="_blank" rel="noopener" class="d-contact-card">
+        <div class="d-contact-icon">🌐</div>
+        <div class="d-contact-label">Website</div>
+        <div class="d-contact-value">${c.website}</div>
+      </a>
+      <a href="${c.facebookUrl}" target="_blank" rel="noopener" class="d-contact-card">
+        <div class="d-contact-icon">📘</div>
+        <div class="d-contact-label">Facebook</div>
+        <div class="d-contact-value">${c.facebook}</div>
+      </a>`;
+  }
+
+  renderEventsList('.d-popup-list', 'd-popup-card', 'd-popup-date', 'd-popup-day', 'd-popup-month', 'd-popup-event', 'd-popup-loc');
+}
+
+function renderEventsList(containerSel, cardCls, dateCls, dayCls, monthCls, nameCls, locCls) {
+  const el = document.querySelector(containerSel);
+  if (!el) return;
+  if (!CONFIG.events || CONFIG.events.length === 0) {
+    el.innerHTML = `<p style="color:rgba(253,246,236,0.45);font-size:14px;">No upcoming events — follow us on socials for updates!</p>`;
+    return;
+  }
+  el.innerHTML = CONFIG.events.map(ev => `
+    <div class="${cardCls}">
+      <div class="${dateCls}">
+        <div class="${dayCls}">${ev.day}</div>
+        <div class="${monthCls}">${ev.month}</div>
+      </div>
+      <div>
+        <div class="${nameCls}">${ev.name}</div>
+        <div class="${locCls}">${ev.location}</div>
+      </div>
+    </div>`).join('');
+}
+
+
+/* ============================================================================
+   11. DESKTOP — BASKET
+   ============================================================================ */
 function refreshDesktopBasket() {
-  const ids   = Object.keys(basket).map(Number);
   const count = basketTotalQty();
   const total = basketTotalPrice();
+  const ids   = Object.keys(basket).map(Number);
 
-  // Floating basket button — add/remove .show class (avoids inline style conflicts)
   const btn = document.getElementById('d-basket-btn');
   if (btn) btn.className = count > 0 ? 'd-basket-btn show' : 'd-basket-btn';
 
@@ -251,17 +379,13 @@ function refreshDesktopBasket() {
   if (!body || !footer) return;
 
   if (ids.length === 0) {
-    body.innerHTML = `
-      <div class="d-basket-panel-empty">
-        <div>🍕</div>Your basket is empty.<br>Add pizzas from the menu above.
-      </div>`;
+    body.innerHTML = `<div class="d-basket-panel-empty"><div>🍕</div>Your basket is empty.<br>Add some ${CONFIG.business.type} from the menu above.</div>`;
     footer.style.display = 'none';
     return;
   }
 
-  // Render basket line items (use data-id/data-delta so event delegation handles them)
   body.innerHTML = ids.map(id => {
-    const item = MENU.find(m => m.id === id);
+    const item = CONFIG.menu.find(m => m.id === id);
     const qty  = basket[id];
     return `
       <div class="d-bitem">
@@ -271,16 +395,15 @@ function refreshDesktopBasket() {
           <span   class="d-qty-num">${qty}</span>
           <button class="d-qty-btn add" data-id="${id}" data-delta="1">+</button>
         </div>
-        <div class="d-bitem-price">£${(item.price * qty).toFixed(2)}</div>
+        <div class="d-bitem-price">${CONFIG.business.currency}${(item.price * qty).toFixed(2)}</div>
       </div>`;
   }).join('');
 
   footer.style.display = 'block';
   const totalEl = document.getElementById('d-basket-total');
-  if (totalEl) totalEl.textContent = '£' + total.toFixed(2);
+  if (totalEl) totalEl.textContent = CONFIG.business.currency + total.toFixed(2);
 }
 
-/** Opens / closes the desktop basket slide-in panel. */
 function dToggleBasket() {
   const panel = document.getElementById('d-basket-panel');
   if (panel) panel.classList.toggle('open');
@@ -288,31 +411,25 @@ function dToggleBasket() {
 
 
 /* ============================================================================
-   6. DESKTOP — ORDER CONFIRMATION
+   12. DESKTOP — ORDER CONFIRMATION
    ============================================================================ */
-
-/** Places the desktop order — populates the modal and clears the basket. */
 function dPlaceOrder() {
   const ref = generateOrderRef();
   const { rows } = buildOrderSummaryHTML('d-order-row');
-
-  document.getElementById('d-order-ref').textContent = 'Order ref #' + ref;
-  document.getElementById('d-order-details').innerHTML = rows;
+  document.getElementById('d-order-ref').textContent     = 'Order ref #' + ref;
+  document.getElementById('d-order-details').innerHTML   = rows;
   document.getElementById('d-order-overlay').classList.add('show');
   document.getElementById('d-basket-panel').classList.remove('open');
-
   clearBasket();
 }
 
-/** Hides the desktop order confirmation modal. */
 function dDismissOrder() {
   document.getElementById('d-order-overlay').classList.remove('show');
 }
 
 
 /* ============================================================================
-   7. DESKTOP — NAV SCROLL EFFECT
-   Adds .scrolled class to nav when page is scrolled past 60px.
+   13. DESKTOP — NAV SCROLL EFFECT
    ============================================================================ */
 window.addEventListener('scroll', () => {
   const nav = document.getElementById('d-nav');
@@ -321,105 +438,101 @@ window.addEventListener('scroll', () => {
 
 
 /* ============================================================================
-   8. MOBILE — PAGE NAVIGATION
-   Switches between app pages by toggling .active class.
+   14. MOBILE — PAGE NAVIGATION
    ============================================================================ */
-
-/**
- * Shows a named mobile page and activates its nav item.
- * @param {string} page - one of: 'home' | 'menu' | 'basket' | 'about' | 'findus'
- */
 function mShowPage(page) {
-  // Render basket on-demand when navigating to it
   if (page === 'basket') renderMobileBasket();
-
-  // Deactivate all pages and nav items
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.m-nav-item').forEach(n => n.classList.remove('active'));
-
-  // Activate target page and nav item
   const pageEl = document.getElementById('page-' + page);
-  const navEl  = document.getElementById('m-nav-' + page);
+  const navEl  = document.getElementById('m-nav-'  + page);
   if (pageEl) { pageEl.classList.add('active'); pageEl.scrollTop = 0; }
   if (navEl)  navEl.classList.add('active');
 }
 
 
 /* ============================================================================
-   9. MOBILE — MENU RENDERING
-   Generates menu card HTML and injects into #m-menu-list.
-   Uses inline onclick for mobile (no event delegation needed — simpler in PWA).
+   15. MOBILE — HOME PAGE
+   ============================================================================ */
+function renderMobileHome() {
+  // Hero image
+  document.querySelectorAll('.m-hero img').forEach(img => {
+    if (img.closest('#page-home')) img.src = CONFIG.images.hero;
+  });
+
+  // Business name overlay
+  const heroTitle = document.querySelector('#page-home .m-hero-title');
+  if (heroTitle) heroTitle.textContent = CONFIG.business.name;
+
+  // Feature pills
+  const pillsEl = document.querySelector('#page-home .m-pills');
+  if (pillsEl) {
+    pillsEl.innerHTML = CONFIG.homePills.map(p => `
+      <div class="m-pill">
+        <div class="m-pill-icon">${p.icon}</div>
+        <div class="m-pill-text"><strong>${p.title}</strong><span>${p.desc}</span></div>
+      </div>`).join('');
+  }
+}
+
+
+/* ============================================================================
+   16. MOBILE — MENU
    ============================================================================ */
 function renderMobileMenu() {
   const list = document.getElementById('m-menu-list');
   if (!list) return;
 
-  list.innerHTML = MENU.map(item => {
+  const items = CONFIG.menu.filter(m => m.available !== false);
+
+  list.innerHTML = items.map(item => {
     const qty = basket[item.id] || 0;
-
     const controls = qty > 0
-      ? `<button class="qty-btn"     onclick="mQty(${item.id}, -1)">−</button>
+      ? `<button class="qty-btn"     onclick="mQty(${item.id},-1)">−</button>
          <span   class="qty-display">${qty}</span>
-         <button class="qty-btn add" onclick="mQty(${item.id},  1)">+</button>`
-      : `<button class="qty-btn add" onclick="mQty(${item.id},  1)">+</button>`;
-
-    const dietTag = item.diet
-      ? ` <span class="m-card-diet">${item.diet}</span>`
-      : '';
-
+         <button class="qty-btn add" onclick="mQty(${item.id}, 1)">+</button>`
+      : `<button class="qty-btn add" onclick="mQty(${item.id}, 1)">+</button>`;
+    const dietTag = item.diet ? ` <span class="m-card-diet">${item.diet}</span>` : '';
     return `
       <div class="m-menu-card">
         <div class="m-card-info">
           <div class="m-card-name">${item.name}${dietTag}</div>
           <div class="m-card-desc">${item.desc}</div>
-          <div class="m-card-price">£${item.price.toFixed(2)}</div>
+          <div class="m-card-price">${CONFIG.business.currency}${item.price.toFixed(2)}</div>
         </div>
         <div class="m-card-controls">${controls}</div>
       </div>`;
   }).join('');
 }
 
-/**
- * Mobile quantity change handler.
- * @param {number} id    - pizza id
- * @param {number} delta - +1 or -1
- */
-function mQty(id, delta) {
-  updateBasket(id, delta);
-}
+function mQty(id, delta) { updateBasket(id, delta); }
 
 
 /* ============================================================================
-   10. MOBILE — BASKET
+   17. MOBILE — BASKET
    ============================================================================ */
-
-/** Updates the basket item-count badge on the nav bar. */
 function refreshMobileBadge() {
   const count = basketTotalQty();
   const badge = document.getElementById('m-basket-badge');
   if (!badge) return;
   badge.textContent = count;
-  badge.className = count > 0 ? 'm-basket-badge show' : 'm-basket-badge';
+  badge.className   = count > 0 ? 'm-basket-badge show' : 'm-basket-badge';
 }
 
-/** Re-renders the mobile basket page (called when navigating to basket tab). */
 function renderMobileBasket() {
   const ids   = Object.keys(basket).map(Number);
   const empty = ids.length === 0;
-
   const emptyEl   = document.getElementById('m-basket-empty');
   const contentEl = document.getElementById('m-basket-content');
   if (!emptyEl || !contentEl) return;
-
   emptyEl.style.display   = empty ? 'block' : 'none';
   contentEl.style.display = empty ? 'none'  : 'block';
-
   if (empty) return;
 
   let total = 0;
   const listEl = document.getElementById('m-basket-list');
   listEl.innerHTML = ids.map(id => {
-    const item = MENU.find(m => m.id === id);
+    const item = CONFIG.menu.find(m => m.id === id);
     const qty  = basket[id];
     const sub  = item.price * qty;
     total += sub;
@@ -427,19 +540,15 @@ function renderMobileBasket() {
       <div class="m-basket-item">
         <div class="m-bi-name">${item.name}</div>
         <div class="m-bi-qty">× ${qty}</div>
-        <div class="m-bi-price">£${sub.toFixed(2)}</div>
+        <div class="m-bi-price">${CONFIG.business.currency}${sub.toFixed(2)}</div>
         <button class="m-bi-remove" onclick="mRemoveItem(${id})">×</button>
       </div>`;
   }).join('');
 
   const totalEl = document.getElementById('m-basket-total');
-  if (totalEl) totalEl.textContent = '£' + total.toFixed(2);
+  if (totalEl) totalEl.textContent = CONFIG.business.currency + total.toFixed(2);
 }
 
-/**
- * Removes an item entirely from the basket (mobile basket page).
- * @param {number} id - pizza id
- */
 function mRemoveItem(id) {
   delete basket[Number(id)];
   refreshMobileBadge();
@@ -449,23 +558,19 @@ function mRemoveItem(id) {
 
 
 /* ============================================================================
-   11. MOBILE — ORDER CONFIRMATION
+   18. MOBILE — ORDER CONFIRMATION
    ============================================================================ */
-
-/** Places the mobile order — populates confirm overlay and clears basket. */
 function mPlaceOrder() {
   const ref = generateOrderRef();
   const { rows } = buildOrderSummaryHTML('m-confirm-row');
-
-  document.getElementById('m-confirm-time').textContent  = '~15 mins';
-  document.getElementById('m-confirm-ref').textContent   = 'Order ref #' + ref;
-  document.getElementById('m-confirm-details').innerHTML = rows;
+  document.getElementById('m-confirm-time').textContent    = `~${CONFIG.ordering.waitMins} mins`;
+  document.getElementById('m-confirm-ref').textContent     = 'Order ref #' + ref;
+  document.getElementById('m-confirm-details').innerHTML   = rows;
+  document.getElementById('m-confirm-msg').textContent     = CONFIG.ordering.confirmMsg;
   document.getElementById('m-order-confirm').classList.add('show');
-
   clearBasket();
 }
 
-/** Hides the mobile order confirmation and returns to the home page. */
 function mDismissOrder() {
   document.getElementById('m-order-confirm').classList.remove('show');
   mShowPage('home');
@@ -473,33 +578,117 @@ function mDismissOrder() {
 
 
 /* ============================================================================
-   12. SCROLL REVEAL
-   Uses IntersectionObserver to animate .reveal elements into view as they
-   enter the viewport. Runs only once per element then stops observing.
+   19. MOBILE — ABOUT
    ============================================================================ */
-function initScrollReveal() {
-  const elements = document.querySelectorAll('.reveal');
-  if (!elements.length) return;
+function renderMobileAbout() {
+  const a = CONFIG.about;
 
-  const observer = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('visible');
-        observer.unobserve(entry.target);   // fire once only
-      }
-    });
-  }, { threshold: 0.12 });
+  // Founders image
+  const cartoon = document.querySelector('.m-cartoon img');
+  if (cartoon) { cartoon.src = CONFIG.images.founders; cartoon.alt = a.imageCaption; }
 
-  elements.forEach(el => observer.observe(el));
+  // Story paragraphs
+  const storyBody = document.querySelector('.m-story-body');
+  if (storyBody) {
+    storyBody.innerHTML = a.storyParagraphs.map(p => `<p>${p}</p>`).join('');
+  }
+
+  // Founder cards
+  const cards = document.querySelector('.m-founder-cards');
+  if (cards) {
+    cards.innerHTML = a.founders.map(f => `
+      <div class="m-founder-card">
+        <div class="m-founder-avatar">${f.avatar}</div>
+        <div>
+          <div class="m-founder-name">${f.name}</div>
+          <div class="m-founder-role">${f.role}</div>
+          <div class="m-founder-bio">${f.bio}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  // Values grid
+  const valGrid = document.querySelector('#page-about .m-values-grid');
+  if (valGrid) {
+    valGrid.innerHTML = CONFIG.values.items.map(item => `
+      <div class="m-value-card">
+        <div class="m-value-icon">${item.icon}</div>
+        <div class="m-value-name">${item.name}</div>
+        <div class="m-value-desc">${item.desc}</div>
+      </div>`).join('');
+  }
 }
 
 
 /* ============================================================================
-   13. INIT
-   Runs once the DOM is ready.
+   20. MOBILE — FIND US
+   ============================================================================ */
+function renderMobileFindUs() {
+  const c = CONFIG.contact;
+  const contactList = document.querySelector('.m-contact-list');
+  if (contactList) {
+    contactList.innerHTML = `
+      <a href="tel:${c.phone.replace(/\s/g,'')}" class="m-contact-card"><div class="m-ci">📞</div><div><div class="m-cl">Phone</div><div class="m-cv">${c.phone}</div></div><div class="m-ca">›</div></a>
+      <a href="mailto:${c.email}" class="m-contact-card"><div class="m-ci">✉️</div><div><div class="m-cl">Email</div><div class="m-cv">${c.email}</div></div><div class="m-ca">›</div></a>
+      <a href="${c.websiteUrl}" target="_blank" rel="noopener" class="m-contact-card"><div class="m-ci">🌐</div><div><div class="m-cl">Website</div><div class="m-cv">${c.website}</div></div><div class="m-ca">›</div></a>
+      <a href="${c.facebookUrl}" target="_blank" rel="noopener" class="m-contact-card"><div class="m-ci">📘</div><div><div class="m-cl">Facebook / Socials</div><div class="m-cv">${c.facebook}</div></div><div class="m-ca">›</div></a>`;
+  }
+
+  renderEventsList('.m-popup-list', 'm-popup-card', 'm-popup-date', 'm-popup-day', 'm-popup-month', 'm-popup-ename', 'm-popup-loc');
+}
+
+
+/* ============================================================================
+   21. SCROLL REVEAL
+   ============================================================================ */
+function initScrollReveal() {
+  const els = document.querySelectorAll('.reveal');
+  if (!els.length) return;
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12 });
+  els.forEach(el => observer.observe(el));
+}
+
+
+/* ============================================================================
+   22. INIT
    ============================================================================ */
 document.addEventListener('DOMContentLoaded', function () {
-  renderDesktopMenu();  // Populate desktop menu grid
-  renderMobileMenu();   // Populate mobile menu list
-  initScrollReveal();   // Wire up scroll animations
+  applyTheme();           // CSS variables — must run first (before paint)
+  bootstrapPage();        // Title, meta, hero bg
+
+  // Desktop
+  renderDesktopNav();
+  renderDesktopHero();
+  renderDesktopStrip();
+  renderDesktopMenu();
+  renderDesktopStory();
+  renderDesktopValues();
+  renderDesktopContact();
+
+  // Mobile
+  renderMobileHome();
+  renderMobileMenu();
+  renderMobileAbout();
+  renderMobileFindUs();
+
+  // Footer
+  const footerLogo = document.querySelector('.d-footer-logo');
+  if (footerLogo) {
+    const parts = CONFIG.business.nameShort.split(' ');
+    const last  = parts.pop();
+    footerLogo.innerHTML = `${parts.join(' ')} <span>${last}</span> Pizza`;
+  }
+  const footerCopy = document.querySelector('.d-footer-copy');
+  if (footerCopy) {
+    footerCopy.textContent = `© ${CONFIG.business.year} ${CONFIG.business.name} · ${CONFIG.business.location} · ${CONFIG.contact.email}`;
+  }
+
+  initScrollReveal();
 });
