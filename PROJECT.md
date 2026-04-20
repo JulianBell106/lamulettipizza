@@ -1,5 +1,5 @@
 # VendorApp — Project Bible
-> Last updated: April 2026 — Session 4 (Order Submission Design continued)
+> Last updated: April 2026 — Session 4 (Kitchen Dashboard Design — Order Card)
 > Read this file at the start of every session to get fully up to speed. JB
 
 ---
@@ -33,7 +33,7 @@ Julian has ~30 years IT experience and a development background but no longer co
 - Julian tests on real devices and reports findings back
 
 **Session startup prompt:**
-> "New session — read PROJECT.md: https://github.com/JulianBell106/lamulettipizza/blob/main/PROJECT.md — today we're working on [task]"
+> "New session — ignore the project file attachment, read the live PROJECT.md from GitHub instead: https://raw.githubusercontent.com/JulianBell106/lamulettipizza/refs/heads/main/PROJECT.md — today we're working on [task]"
 
 ---
 
@@ -155,7 +155,6 @@ No setup fee on Starter. No commission ever.
 - Multi-vendor event mode
 - Review and rating system
 - Revenue / analytics dashboard
-- MI & Reporting — daily order count, revenue totals, product breakdown. Export via CSV or Looker Studio. Data captured automatically from order object from day one. *(Roadmap discussion scheduled)*
 - Sell-out warnings / scarcity nudges
 - Weather-triggered deal suggestions
 - End-of-night clearance prompts
@@ -203,7 +202,7 @@ users/{uid}/
 
 ---
 
-## 9a. Order Submission — Detailed Design
+## 9a. Order Submission — Detailed Design ✅ LOCKED
 
 **Key principle: data model is vendor-agnostic. Display language is vendor-specific via config.js.**
 
@@ -262,7 +261,7 @@ users/{uid}/
 ```
 pending → accepted → preparing → ready
 ```
-Status values are vendor-agnostic. Customer-facing copy is configured per vendor in config.js.
+Status values are vendor-agnostic. Customer-facing copy configured per vendor in config.js.
 Example: La Muletti maps `preparing` → "In the oven 🔥". A burger van maps it → "On the grill 🍔".
 
 **Item-level notes:**
@@ -299,7 +298,7 @@ Example: La Muletti maps `preparing` → "In the oven 🔥". A burger van maps i
 
 ---
 
-## 9b. Kitchen Close Feature — Spec
+## 9b. Kitchen Close Feature — Spec ✅ LOCKED
 
 Vendor can close the kitchen at any time from the dashboard. Prevents new orders being placed.
 
@@ -318,6 +317,36 @@ Vendor can close the kitchen at any time from the dashboard. Prevents new orders
 - Existing orders already in queue are unaffected and continue through status flow
 - Kitchen dashboard shows prominent "Kitchen is CLOSED" banner
 - One tap to reopen
+
+---
+
+## 9c. Kitchen Dashboard — Order Card Design 🔨 IN PROGRESS
+
+**Core design principle: the card must work at a glance, under pressure, in a noisy environment.**
+
+**Card always shows:**
+- Order ref — large, primary identifier (e.g. `#007`)
+- Customer first name — for calling out at collection
+- Item count badge — e.g. "3 pizzas" — quick reconciliation before handover
+- Item list — capped at 3 lines, then "+ N more" tap to expand in place
+- Item notes — same visual weight as item name, never subordinate
+- Time elapsed — urgency at a glance
+- One primary action button — single tap to advance status
+
+**Off the card:** phone number, order total, payment status — available elsewhere, not in working view.
+
+**Large order handling:**
+- Large order threshold: vendor-configurable in config.js (no platform default — a pizza van with one oven is different to a noodle van with 8 burners)
+- Large orders get a distinct card colour in the queue — not just a badge
+- Accept flow for large orders surfaces two additional options:
+  - Set a longer custom wait time
+  - Close kitchen to new orders at the same moment as accepting — one action, not two
+- No max order size enforced on customer side — handle gracefully on kitchen side
+- No cap: forcing customers to split orders or walk away loses them to more expensive competitors
+
+**Progressive disclosure:**
+- Small orders (1–3 items): full detail visible immediately
+- Large orders: card stays compact, "+ N more" expands in place when kitchen is ready to start
 
 ---
 
@@ -384,34 +413,55 @@ Broadcast to: geofence subscribers only OR full list.
 - Repeat customers: already authenticated + name pre-filled = genuinely one tap to reorder
 - Order status flow: `pending → accepted → preparing → ready` — vendor-agnostic values, vendor-specific display copy in config.js
 - Item-level notes: notes on each line item not order level. Same item different customisation = separate line items
-- Basket UI: "Add another with changes" button to handle same item with different notes (e.g. family ordering same pizza with different toppings)
+- Basket UI: "Add another with changes" button to handle same item with different notes
 - Kitchen close: four states — open / closed_busy / closed_end / closed_today. Disables ordering, existing queue unaffected
 - Order timeout: 10 min default, escalate visually then auto-cancel with customer notification. Vendor configurable. `expiresAt` field on order object
+- Large order threshold: vendor-configurable in config.js — not a platform default
+- Large orders: distinct card colour in queue, not just a badge
+- No customer-side max order size — handle gracefully on kitchen side
+- Large order accept flow: surfaces close-kitchen option at same moment as accept — one tap, not two
+- Kitchen dashboard card: minimal information under pressure — ref, name, item count badge, item list (capped + expandable), notes prominent, elapsed time, one action button
 
 ---
 
-## 14. Pitch Deck
+## 14. Core Product Principle — Kitchen Management Co-pilot
+
+**Established Session 4. Must feed into pitch deck and marketing.**
+
+Independent food vendors are brilliant at their craft but are not trained kitchen managers. When orders pile up they have no system — they react. Quality drops, customers wait without knowing why, the experience falls apart.
+
+**VendorApp is a kitchen management co-pilot for people who've never had one.**
+
+The app promotes good decisions at exactly the moments when a vendor is most likely to make bad ones — a large order lands, a queue builds, the oven is at capacity. The system surfaces the right options at the right time: close the kitchen, set a longer wait, keep the customer informed. One tap.
+
+**Pitch deck headline:** *"VendorApp keeps small kitchens flowing under pressure — giving independent vendors the kitchen management instincts they never had time to learn."*
+
+**The customer transparency angle:** Customers appreciate honesty about wait times far more than silence. A vendor who communicates is a vendor customers trust and return to.
+
+---
+
+## 15. Pitch Deck
 
 **File:** `vendorapp-pitch-v2.pptx` (11 slides)
 **TODO:** Update slide 11 with real Endoo contact details. Add QR code to slide 7.
+**TODO:** Add kitchen management co-pilot angle — slide on how app handles pressure moments.
 
 Slide order: Cover → Problem → Solution → USPs → Geofence → Flash Sales → Live Demo → Pricing → Partnership (Sophie) → Roadmap → Close
 
 ---
 
-## 15. Next Actions
+## 16. Next Actions
 
 **Before next session:**
 - [ ] Push this updated PROJECT.md to GitHub
 - [ ] Meet with Daniele & Danielle — agree arrangement, understand workflow, ask WhatsApp vs dashboard preference
 - [ ] Julian creates Firebase project + shares credentials
 
-**Next session — Kitchen Dashboard Design:**
-- [ ] What does the kitchen dashboard need to show?
-- [ ] Order card design — what does the kitchen see per order?
-- [ ] Status progression UX — how does kitchen tap through stages?
-- [ ] Kitchen close toggle design
-- [ ] Owner login / auth
+**Next session — Kitchen Dashboard Design continued:**
+- [ ] #2 — Order queue layout and prioritisation
+- [ ] #3 — Status progression UX
+- [ ] #4 — Kitchen close toggle placement
+- [ ] #5 — Owner login / auth
 
 **Upcoming build queue (in order):**
 - [ ] Firebase order submission — app → Firestore
@@ -431,9 +481,9 @@ Slide order: Cover → Problem → Solution → USPs → Geofence → Flash Sale
 
 ---
 
-## 16. Working Rhythm
+## 17. Working Rhythm
 
-**Start:** "New session — read PROJECT.md: https://github.com/JulianBell106/lamulettipizza/blob/main/PROJECT.md — today we're working on [task]"
+**Start:** "New session — ignore the project file attachment, read the live PROJECT.md from GitHub instead: https://raw.githubusercontent.com/JulianBell106/lamulettipizza/refs/heads/main/PROJECT.md — today we're working on [task]"
 
 **End:** "Update PROJECT.md" → download → copy to repo → commit → push
 
