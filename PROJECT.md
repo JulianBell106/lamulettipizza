@@ -1,5 +1,5 @@
 # VendorApp — Project Bible
-> Last updated: April 2026 — Session 3 (Order Submission Design)
+> Last updated: April 2026 — Session 4 (Order Submission Design continued)
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -139,7 +139,7 @@ No setup fee on Starter. No commission ever.
 | 02 | White-label Config | ✅ Done | config.js — one file per customer |
 | 03 | Firebase Backend | 🔨 Next | Real-time order processing |
 | 04 | Kitchen Dashboard | 🔨 Next | Owner login, accept/manage orders |
-| 05 | Real-time Order Status | ⏳ Planned | Preparing → Oven → Ready to Collect |
+| 05 | Real-time Order Status | ⏳ Planned | Preparing → Ready to Collect |
 | 06 | Geofence Notifications | ⏳ Planned | Van enters area → subscriber phone buzzes |
 | 07 | Flash Sales & Broadcasts | ⏳ Planned | Vendor launches deal in seconds |
 | 08 | Offers & Coupons | ⏳ Planned | Event deals, first order discount |
@@ -171,7 +171,7 @@ No setup fee on Starter. No commission ever.
 **Order flow:**
 1. Customer places order → status: `pending`
 2. Owner accepts → status: `accepted`, wait time set
-3. `accepted` → `making` → `in_oven` → `ready`
+3. `accepted` → `preparing` → `ready`
 4. Customer sees live status in real time
 5. Customer collects and pays
 
@@ -180,35 +180,45 @@ No setup fee on Starter. No commission ever.
 - Accept + wait time entry (10/15/20/25 mins or manual)
 - Tap through status stages
 - Walk-up order entry
+- Close kitchen toggle (see section 9b)
 
 **Firestore structure:**
 ```
 vendors/{vendorId}/
   config, menu, events
+  kitchenStatus: "open" | "closed_busy" | "closed_end" | "closed_today"
   counters/daily → { date, count }  ← order ref counter, resets midnight
 
 orders/{orderId}/
   vendorId, orderRef, customerId, customerName, customerPhone,
-  items, orderTotal, payment, status, waitMins, createdAt, updatedAt
+  items, orderTotal, payment, status, waitMins,
+  expiresAt, createdAt, updatedAt
 
 subscribers/{subscriberId}/
   vendorId, location, radius, notifyVia, lastNotified
 
 users/{uid}/
-  name, phone (verified), createdAt
+  firstName, phone (verified), createdAt
 ```
 
 ---
 
 ## 9a. Order Submission — Detailed Design
 
+**Key principle: data model is vendor-agnostic. Display language is vendor-specific via config.js.**
+
 **Customer journey:**
 1. Basket review → customer reviews items + total
-2. Auth check → already logged in? Skip to step 4
-3. Phone verification → enter mobile → receive SMS code → verified (Firebase Phone Auth)
-4. Name confirmation → pre-filled from profile, editable
+2. Auth check → already logged in? Skip to step 5
+3. Enter mobile number → receive SMS code → verified (Firebase Phone Auth)
+4. Enter first name → stored against uid for all future orders
 5. Confirm order → single tap "Place Order"
 6. Confirmation screen → shows order ref e.g. `#007`, "We'll have your order ready shortly"
+
+**Repeat customer journey (steps 2-4 skipped):**
+1. Basket review
+2. Confirm order — name pre-filled, one tap
+3. Confirmation screen
 
 **Order object (Firestore):**
 ```json
@@ -224,7 +234,15 @@ users/{uid}/
       "id": "margherita",
       "name": "Margherita",
       "price": 9.00,
-      "quantity": 2
+      "quantity": 1,
+      "notes": null
+    },
+    {
+      "id": "margherita",
+      "name": "Margherita",
+      "price": 9.00,
+      "quantity": 1,
+      "notes": "No onion please"
     }
   ],
   "orderTotal": 18.00,
@@ -234,16 +252,37 @@ users/{uid}/
   },
   "status": "pending",
   "waitMins": null,
+  "expiresAt": "createdAt + 10 mins",
   "createdAt": "timestamp",
   "updatedAt": "timestamp"
 }
 ```
+
+**Order status flow:**
+```
+pending → accepted → preparing → ready
+```
+Status values are vendor-agnostic. Customer-facing copy is configured per vendor in config.js.
+Example: La Muletti maps `preparing` → "In the oven 🔥". A burger van maps it → "On the grill 🍔".
+
+**Item-level notes:**
+- Notes sit on each line item, not at order level
+- Same item with different customisations = separate line items
+- Example: two Margheritas — one plain, one no onion = two line items, same id, different notes
+- UI will support "Add another with changes" to handle this cleanly
+- Quantity counter only used when items are truly identical
 
 **Order reference — daily sequential counter:**
 - Format: `#001`, `#002` — resets at midnight each day
 - Stored in: `vendors/lamuletti/counters/daily` → `{ date, count }`
 - Implemented as a Firestore transaction to prevent duplicate numbers on concurrent orders
 - Daily count doubles as MI data point (orders per day)
+
+**Order timeout:**
+- If order sits in `pending` for 10 minutes with no kitchen action, escalate visually on dashboard (order card turns red)
+- Auto-cancel with customer notification after timeout
+- Timeout duration vendor-configurable, default 10 minutes
+- `expiresAt` field = `createdAt + timeout duration`
 
 **Payment hook:**
 - MVP: `method: "cash_on_collection"` — no payment integration
@@ -252,10 +291,33 @@ users/{uid}/
 
 **Authentication — Firebase Phone Auth:**
 - Customer enters mobile number → SMS verification code → verified
+- First name collected once after verification, stored against uid
 - Captures a verified phone number automatically — feeds campaign lists, WhatsApp pipeline, loyalty system
 - `uid` becomes foreign key across orders, loyalty stamps, geofence subscriptions
 - Customer authenticated once, remembered on device thereafter
 - Phone Auth as primary; email/password as future option
+
+---
+
+## 9b. Kitchen Close Feature — Spec
+
+Vendor can close the kitchen at any time from the dashboard. Prevents new orders being placed.
+
+**Kitchen status values:**
+
+| Status | Customer-facing message | Use case |
+|--------|------------------------|----------|
+| `open` | Normal ordering | Default |
+| `closed_busy` | "We're really busy right now — back shortly!" | Queue overwhelmed |
+| `closed_end` | "We're closing up for tonight — see you next time!" | End of service |
+| `closed_today` | "We're not trading today — see you soon!" | No service today |
+
+**Behaviour when closed:**
+- App/website shows clear closed message (copy from config.js per vendor)
+- Order button disabled — no new orders can be placed
+- Existing orders already in queue are unaffected and continue through status flow
+- Kitchen dashboard shows prominent "Kitchen is CLOSED" banner
+- One tap to reopen
 
 ---
 
@@ -316,6 +378,15 @@ Broadcast to: geofence subscribers only OR full list.
 - Order ref: daily sequential (`#001` format), resets midnight, Firestore transaction for concurrency safety
 - MI data: captured automatically from order object from day one — no extra instrumentation needed
 - Analytics: export to CSV or Looker Studio — no in-app reporting UI in MVP
+- No guest checkout — Phone Auth IS the guest experience. Friction is minimal: mobile → SMS code → done
+- UI copy frames phone verification as a benefit not a gate: "Enter your mobile and we'll text you when your order is ready"
+- Customer name: first name only, entered once after first SMS verification, stored against uid, pre-filled on all subsequent orders
+- Repeat customers: already authenticated + name pre-filled = genuinely one tap to reorder
+- Order status flow: `pending → accepted → preparing → ready` — vendor-agnostic values, vendor-specific display copy in config.js
+- Item-level notes: notes on each line item not order level. Same item different customisation = separate line items
+- Basket UI: "Add another with changes" button to handle same item with different notes (e.g. family ordering same pizza with different toppings)
+- Kitchen close: four states — open / closed_busy / closed_end / closed_today. Disables ordering, existing queue unaffected
+- Order timeout: 10 min default, escalate visually then auto-cancel with customer notification. Vendor configurable. `expiresAt` field on order object
 
 ---
 
@@ -335,10 +406,12 @@ Slide order: Cover → Problem → Solution → USPs → Geofence → Flash Sale
 - [ ] Meet with Daniele & Danielle — agree arrangement, understand workflow, ask WhatsApp vs dashboard preference
 - [ ] Julian creates Firebase project + shares credentials
 
-**Next session — Order submission design continued:**
-- [ ] Confirm: sign-up as part of checkout flow vs separate "create account" flow
-- [ ] Any missing fields on order object?
-- [ ] Then move to kitchen dashboard design
+**Next session — Kitchen Dashboard Design:**
+- [ ] What does the kitchen dashboard need to show?
+- [ ] Order card design — what does the kitchen see per order?
+- [ ] Status progression UX — how does kitchen tap through stages?
+- [ ] Kitchen close toggle design
+- [ ] Owner login / auth
 
 **Upcoming build queue (in order):**
 - [ ] Firebase order submission — app → Firestore
