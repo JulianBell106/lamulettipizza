@@ -1,5 +1,5 @@
 # VendorApp — Project Bible
-> Last updated: April 2026 — Session 2 (Market Research, Pitch Deck, Setup)
+> Last updated: April 2026 — Session 3 (Order Submission Design)
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -147,6 +147,7 @@ No setup fee on Starter. No commission ever.
 | 10 | WhatsApp Order Alerts | ⏳ Planned | Orders to WhatsApp via Twilio |
 | 11 | Pre-order Time Slots | ⏳ Planned | Order now, collect at chosen time |
 | 12 | Vendor Self-Service | ⏳ Planned | Vendor manages own menu/events/location |
+| 13 | MI & Reporting | ⏳ Planned | Daily order count, revenue totals, product breakdown — export via CSV or Looker Studio. Data captured automatically from order object. |
 
 **Feature backlog (future):**
 - Corporate catering module
@@ -154,6 +155,7 @@ No setup fee on Starter. No commission ever.
 - Multi-vendor event mode
 - Review and rating system
 - Revenue / analytics dashboard
+- MI & Reporting — daily order count, revenue totals, product breakdown. Export via CSV or Looker Studio. Data captured automatically from order object from day one. *(Roadmap discussion scheduled)*
 - Sell-out warnings / scarcity nudges
 - Weather-triggered deal suggestions
 - End-of-night clearance prompts
@@ -183,14 +185,77 @@ No setup fee on Starter. No commission ever.
 ```
 vendors/{vendorId}/
   config, menu, events
+  counters/daily → { date, count }  ← order ref counter, resets midnight
 
 orders/{orderId}/
-  vendorId, items, customerName, phone,
-  status, waitMins, orderRef, createdAt
+  vendorId, orderRef, customerId, customerName, customerPhone,
+  items, orderTotal, payment, status, waitMins, createdAt, updatedAt
 
 subscribers/{subscriberId}/
   vendorId, location, radius, notifyVia, lastNotified
+
+users/{uid}/
+  name, phone (verified), createdAt
 ```
+
+---
+
+## 9a. Order Submission — Detailed Design
+
+**Customer journey:**
+1. Basket review → customer reviews items + total
+2. Auth check → already logged in? Skip to step 4
+3. Phone verification → enter mobile → receive SMS code → verified (Firebase Phone Auth)
+4. Name confirmation → pre-filled from profile, editable
+5. Confirm order → single tap "Place Order"
+6. Confirmation screen → shows order ref e.g. `#007`, "We'll have your order ready shortly"
+
+**Order object (Firestore):**
+```json
+{
+  "orderId": "auto — Firestore generated",
+  "orderRef": "#007",
+  "vendorId": "lamuletti",
+  "customerId": "firebase-uid",
+  "customerName": "Julian",
+  "customerPhone": "+447911123456",
+  "items": [
+    {
+      "id": "margherita",
+      "name": "Margherita",
+      "price": 9.00,
+      "quantity": 2
+    }
+  ],
+  "orderTotal": 18.00,
+  "payment": {
+    "method": "cash_on_collection",
+    "status": "pending"
+  },
+  "status": "pending",
+  "waitMins": null,
+  "createdAt": "timestamp",
+  "updatedAt": "timestamp"
+}
+```
+
+**Order reference — daily sequential counter:**
+- Format: `#001`, `#002` — resets at midnight each day
+- Stored in: `vendors/lamuletti/counters/daily` → `{ date, count }`
+- Implemented as a Firestore transaction to prevent duplicate numbers on concurrent orders
+- Daily count doubles as MI data point (orders per day)
+
+**Payment hook:**
+- MVP: `method: "cash_on_collection"` — no payment integration
+- Future: populate `method: "card"` + `status: "paid"` when payment added
+- No other changes required to order object or kitchen dashboard
+
+**Authentication — Firebase Phone Auth:**
+- Customer enters mobile number → SMS verification code → verified
+- Captures a verified phone number automatically — feeds campaign lists, WhatsApp pipeline, loyalty system
+- `uid` becomes foreign key across orders, loyalty stamps, geofence subscriptions
+- Customer authenticated once, remembered on device thereafter
+- Phone Auth as primary; email/password as future option
 
 ---
 
@@ -246,6 +311,11 @@ Broadcast to: geofence subscribers only OR full list.
 - Dedicated Android device in van for geofence tracking
 - Midsummer Place vendors = secondary market year 2+
 - Approach Sophie once La Muletti has real orders flowing
+- Payment: cash on collection for MVP — single `payment` field added to order object as hook for future card integration
+- Auth: Firebase Phone Auth — verified mobile number captured at first order, remembered on device thereafter
+- Order ref: daily sequential (`#001` format), resets midnight, Firestore transaction for concurrency safety
+- MI data: captured automatically from order object from day one — no extra instrumentation needed
+- Analytics: export to CSV or Looker Studio — no in-app reporting UI in MVP
 
 ---
 
@@ -263,19 +333,23 @@ Slide order: Cover → Problem → Solution → USPs → Geofence → Flash Sale
 **Before next session:**
 - [ ] Push this updated PROJECT.md to GitHub
 - [ ] Meet with Daniele & Danielle — agree arrangement, understand workflow, ask WhatsApp vs dashboard preference
-
-**Next session — Firebase MVP:**
 - [ ] Julian creates Firebase project + shares credentials
-- [ ] Firestore data structure
-- [ ] Order submission from app → Firestore
-- [ ] Kitchen dashboard — real-time orders, accept, status flow
-- [ ] End-to-end test
 
-**Upcoming build queue:**
+**Next session — Order submission design continued:**
+- [ ] Confirm: sign-up as part of checkout flow vs separate "create account" flow
+- [ ] Any missing fields on order object?
+- [ ] Then move to kitchen dashboard design
+
+**Upcoming build queue (in order):**
+- [ ] Firebase order submission — app → Firestore
+- [ ] Kitchen dashboard — real-time orders, accept, status flow
 - [ ] Real-time order status (customer-facing)
 - [ ] WhatsApp notifications via Twilio
 - [ ] Geofence
 - [ ] Flash sales
+
+**Roadmap discussion (scheduled next week):**
+- [ ] MI & Reporting — feature 13
 
 **Product:**
 - [ ] Finalise name (Rovr / Nearli / Localo)
