@@ -1,6 +1,6 @@
 # VendorApp — Project Bible
 > Last updated: April 2026 — Session 4 (Order Submission Design continued)
-> Read this file at the start of every session to get fully up to speed.
+> Read this file at the start of every session to get fully up to speed. JB
 
 ---
 
