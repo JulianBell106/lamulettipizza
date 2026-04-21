@@ -1,5 +1,5 @@
 # Stalliq — Project Bible
-> Last updated: April 2026 — Session 5 (Firebase Order Submission — Complete)
+> Last updated: April 2026 — Session 6 (Kitchen Dashboard — Build, Kanban, Drill-down, Contrast)
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -34,6 +34,8 @@ Julian has ~30 years IT experience and a development background but no longer co
 
 **Session startup prompt:**
 > "New session — ignore the project file attachment, read the live PROJECT.md from GitHub instead: https://raw.githubusercontent.com/JulianBell106/lamulettipizza/refs/heads/main/PROJECT.md — today we're working on [task]"
+
+**⚠️ Raw URL note:** GitHub raw URLs are sometimes served cached. If Claude fetches files and the content looks wrong or outdated, paste the file content directly into chat.
 
 ---
 
@@ -94,21 +96,23 @@ No setup fee on Starter. No commission ever.
 
 ## 6. Current Codebase — Architecture
 
-**Five files — all pushed to GitHub and live on Netlify ✅**
+**Six files — all pushed to GitHub and live on Netlify ✅**
 
 | File | Purpose |
 |------|---------|
-| `index.html` | Pure structure — zero hardcoded business content |
+| `index.html` | Customer app — pure structure, zero hardcoded business content |
 | `css/styles.css` | All styling — desktop + mobile |
 | `js/config.js` | ALL customer-specific data lives here |
-| `js/firebase.js` | Firebase initialisation — exposes `db` and `auth` |
+| `js/firebase.js` | Firebase initialisation — exposes `db` and `auth` globals |
 | `js/app.js` | All logic — reads entirely from CONFIG, integrates Firebase |
+| `kitchen.html` | Kitchen dashboard — PIN protected, separate URL |
+| `js/kitchen.js` | All kitchen dashboard logic |
 
 **Key principle:** `config.js` is the ONLY file that changes between customers.
 
-**Script load order in index.html:**
+**Script load order (both index.html and kitchen.html):**
 ```
-Firebase SDK (CDN compat) → js/config.js → js/firebase.js → js/app.js
+Firebase SDK (CDN compat v10.12.2) → js/config.js → js/firebase.js → js/app.js / js/kitchen.js
 ```
 
 **Output files location:** `/mnt/user-data/outputs/lamuletti/`
@@ -123,6 +127,9 @@ Firebase SDK (CDN compat) → js/config.js → js/firebase.js → js/app.js
 - Background: `#1A0A00` (near black)
 - Light: `#FDF6EC` (cream)
 - Fonts: Playfair Display, DM Sans, Cormorant Garamond
+
+**Contrast rule (established Session 6):**
+Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm cream at low opacity on warm dark backgrounds renders as brown-on-brown. White-based opacity renders as readable neutral grey.
 
 ---
 
@@ -146,8 +153,8 @@ Firebase SDK (CDN compat) → js/config.js → js/firebase.js → js/app.js
 | 01 | PWA & Ordering | ✅ Done | Mobile + desktop, full order flow |
 | 02 | White-label Config | ✅ Done | config.js — one file per customer |
 | 03 | Firebase Backend | ✅ Done | Order submission, Phone Auth, Firestore |
-| 04 | Kitchen Dashboard | 🔨 Next | Owner login, accept/manage orders |
-| 05 | Real-time Order Status | ⏳ Planned | Preparing → Ready to Collect |
+| 04 | Kitchen Dashboard | ✅ Done | PIN, kanban, accept/status/drill-down, kitchen close toggle |
+| 05 | Real-time Order Status | 🔨 Next | Customer sees live status + actual wait time |
 | 06 | Geofence Notifications | ⏳ Planned | Van enters area → subscriber phone buzzes |
 | 07 | Flash Sales & Broadcasts | ⏳ Planned | Vendor launches deal in seconds |
 | 08 | Offers & Coupons | ⏳ Planned | Event deals, first order discount |
@@ -155,7 +162,7 @@ Firebase SDK (CDN compat) → js/config.js → js/firebase.js → js/app.js
 | 10 | WhatsApp Order Alerts | ⏳ Planned | Orders to WhatsApp via Twilio |
 | 11 | Pre-order Time Slots | ⏳ Planned | Order now, collect at chosen time |
 | 12 | Vendor Self-Service | ⏳ Planned | Vendor manages own menu/events/location |
-| 13 | MI & Reporting | ⏳ Planned | Daily order count, revenue totals, product breakdown — export via CSV or Looker Studio. Data captured automatically from order object. |
+| 13 | MI & Reporting | ⏳ Planned | Daily order count, revenue totals, product breakdown — export via CSV or Looker Studio |
 
 **Feature backlog (future):**
 - Corporate catering module
@@ -177,6 +184,8 @@ Firebase SDK (CDN compat) → js/config.js → js/firebase.js → js/app.js
 
 **Firebase project:** `stalliq` (stalliq.firebaseapp.com)
 **Firebase account:** julian@endoo.co.uk (Google account linked to M365 email)
+**Firebase SDK version:** 10.12.2 (CDN compat — no bundler needed)
+**Firebase Phone Auth test number:** +44 7700 900001 / code: 123456
 
 **Order flow:**
 1. Customer places order → status: `pending`
@@ -185,17 +194,9 @@ Firebase SDK (CDN compat) → js/config.js → js/firebase.js → js/app.js
 4. Customer sees live status in real time
 5. Customer collects and pays
 
-**Kitchen dashboard:**
-- Sound alert on new order
-- Accept + wait time entry (10/15/20/25 mins or manual)
-- Tap through status stages
-- Walk-up order entry
-- Close kitchen toggle (see section 9b)
-
 **Firestore structure:**
 ```
 vendors/{vendorId}/
-  config, menu, events
   kitchenStatus: "open" | "closed_busy" | "closed_end" | "closed_today"
   counters/daily → { date, count }  ← order ref counter, resets midnight
 
@@ -204,18 +205,16 @@ orders/{orderId}/
   items, orderTotal, payment, status, waitMins,
   expiresAt, createdAt, updatedAt
 
-subscribers/{subscriberId}/
-  vendorId, location, radius, notifyVia, lastNotified
-
 users/{uid}/
   firstName, phone (verified), createdAt
+
+subscribers/{subscriberId}/
+  vendorId, location, radius, notifyVia, lastNotified
 ```
 
 ---
 
-## 9a. Order Submission — Detailed Design ✅ COMPLETE
-
-**Implemented and tested in Session 5.**
+## 9a. Order Submission — ✅ COMPLETE
 
 **Customer journey:**
 1. Basket review → customer reviews items + total
@@ -225,55 +224,11 @@ users/{uid}/
 5. Confirm order → single tap "Place Order"
 6. Confirmation screen → shows order ref e.g. `#007`
 
-**Repeat customer journey (steps 2-4 skipped):**
-1. Basket review
-2. Confirm order — name pre-filled, one tap
-3. Confirmation screen
-
-**Order object (Firestore):**
-```json
-{
-  "orderId": "auto — Firestore generated",
-  "orderRef": "#007",
-  "vendorId": "lamuletti",
-  "customerId": "firebase-uid",
-  "customerName": "Julian",
-  "customerPhone": "+447911123456",
-  "items": [
-    { "id": "margherita", "name": "Margherita", "price": 9.00, "quantity": 1, "notes": null }
-  ],
-  "orderTotal": 9.00,
-  "payment": { "method": "cash_on_collection", "status": "pending" },
-  "status": "pending",
-  "waitMins": null,
-  "expiresAt": "createdAt + 10 mins",
-  "createdAt": "timestamp",
-  "updatedAt": "timestamp"
-}
-```
-
-**Order status flow:**
-```
-pending → accepted → preparing → ready
-```
-
-**Order reference — daily sequential counter:**
-- Format: `#001`, `#002` — resets at midnight each day
-- Stored in: `vendors/lamuletti/counters/daily` → `{ date, count }`
-- Implemented as a Firestore transaction — concurrency safe
-
-**Authentication — Firebase Phone Auth:**
-- Customer enters mobile → SMS verification → verified
-- First name collected once, stored in `users/{uid}`
-- Authenticated once, remembered on device thereafter
-
-**Firebase test number:** +44 7700 900001 / code: 123456
+**Repeat customer:** steps 2-4 skipped — one tap to confirm.
 
 ---
 
-## 9b. Kitchen Close Feature — Spec ✅ LOCKED
-
-Vendor can close the kitchen at any time from the dashboard. Prevents new orders being placed.
+## 9b. Kitchen Close Feature — ✅ COMPLETE
 
 | Status | Customer-facing message | Use case |
 |--------|------------------------|----------|
@@ -282,60 +237,32 @@ Vendor can close the kitchen at any time from the dashboard. Prevents new orders
 | `closed_end` | "We're closing up for tonight — see you next time!" | End of service |
 | `closed_today` | "We're not trading today — see you soon!" | No service today |
 
+> ⚠️ Customer app does not yet read kitchenStatus — blocking ordering on close is **Session 7 work**.
+
 ---
 
-## 9c. Kitchen Dashboard — Full Design ✅ LOCKED
+## 9c. Kitchen Dashboard — ✅ COMPLETE (MVP scope)
 
-### Order Card
+**URL:** `stalliq-demo.netlify.app/kitchen.html`
+**PIN:** 1234 (set in `CONFIG.kitchen.pin`)
 
-**Core principle: works at a glance, under pressure, in a noisy environment.**
+**Built in Session 6:**
+- PIN screen on load — 4-digit, auto-submits, shakes on wrong entry
+- Kanban board — 4 columns: Pending | Accepted | Preparing | Ready
+- Horizontal drag/scroll between columns (Pointer Events API — works on Windows touch, mouse, iPad)
+- Order cards — ref, customer name, items, elapsed time, status badge, action button
+- Accept order + wait time modal — options from `CONFIG.ordering.waitOptions`, custom entry if `allowCustomWait: true`
+- Status tap-through: `accepted → preparing` (single tap), `preparing → ready` (confirm modal — two tap)
+- Collected (removes from queue)
+- Kitchen close toggle — 4-option modal in header, writes to Firestore immediately
+- Order detail drill-down — tap card body to open full detail modal (customer phone as tappable call link, all items, total, timestamps)
+- Sound alert on new pending order (two beeps via Web Audio API)
+- Elapsed time counter per card — turns amber at 10 mins, red at 20 mins
 
-**Card always shows:**
-- Order ref — large, primary identifier (e.g. `#007`)
-- Customer first name
-- Item count badge
-- Item list — capped at 3 lines, then "+ N more" expands in place
-- Item notes — same visual weight as item name
-- Time elapsed
-- One primary action button
-
-**Large order handling:**
-- Threshold: vendor-configurable in config.js
-- Large orders: distinct card colour in queue
-- Large order accept flow surfaces: longer wait time option + close kitchen option simultaneously
-
-### Order Queue
-
-- Strictly chronological — first in, first out. Queue position never changes.
-- Timed-out orders escalate visually (card turns red) in place
-
-### Status Progression
-
-```
-accepted → preparing → ready
-```
-
-- `accepted → preparing` — single tap, no confirmation
-- `preparing → ready` — confirm prompt, second tap confirms. Fires collection notification.
-- Backwards movement — long press, confirmation required
-
-### Kitchen Close Toggle
-
-- Fixed in dashboard header
-- Single tap opens four-option menu — selection is confirmation
-- Reopening is single tap
-
-### Owner Login — MVP
-
-- Firebase Phone Auth + 4-digit PIN on every dashboard open
-- Separate URL from customer app
-- Both Daniele and Danielle authorised from day one
-
-### Owner Login — v1.1
-
-- Named credentials, role-based access (owner vs staff)
-- Every action stamped with userId + timestamp
-- Audit trail in MI/reporting
+**Pending (locked spec — Session 7+):**
+- Large order handling (distinct card colour + surfaces close kitchen option)
+- Backwards status movement (long press + confirm)
+- Named credentials / role-based access (owner vs staff)
 
 ---
 
@@ -371,7 +298,7 @@ Broadcast to: geofence subscribers only OR full list.
 
 **Workflow:**
 1. Claude produces files in `/mnt/user-data/outputs/lamuletti/`
-2. Julian downloads + copies into local repo (maintaining css/ and js/ folders)
+2. Julian downloads + copies into local repo (maintaining `css/` and `js/` folders)
 3. GitHub Desktop → commit → Push origin
 4. Netlify auto-deploys in ~30 seconds
 
@@ -380,7 +307,7 @@ Broadcast to: geofence subscribers only OR full list.
 ## 13. Key Decisions Made
 
 - Multi-tenancy: one deployment per customer for 0-5, then scale
-- config.js is single file that changes per customer
+- `config.js` is single file that changes per customer
 - Desktop = landing page, Mobile = PWA app shell, 768px breakpoint
 - Endoo stays as IT services holding company
 - Platform trades as Stalliq (stalliq.co.uk)
@@ -396,26 +323,22 @@ Broadcast to: geofence subscribers only OR full list.
 - MI data: captured automatically from order object from day one
 - No guest checkout — Phone Auth IS the guest experience
 - Firebase project named `stalliq` — vendor ID `lamuletti` in Firestore
-- Firebase account: julian@endoo.co.uk (Google account linked to M365)
-- Demo URL: stalliq-demo.netlify.app — noindex tag prevents search engine discovery
-- Firebase Phone Auth enabled; test number +44 7700 900001 / 123456 added
-- Email/Password auth left enabled in Firebase — harmless, not used by app
-- ES module syntax rejected — CDN compat approach used (no bundler needed)
-- Kitchen dashboard = separate Netlify site (e.g. stalliq-kitchen.netlify.app) — separate session
+- Firebase SDK: CDN compat v10.12.2 — no bundler needed
+- Kitchen dashboard = same Netlify deployment as customer app (`/kitchen.html`)
+- Wait time options configurable per vendor in `CONFIG.ordering.waitOptions`
+- Secondary text colour must use `rgba(255,255,255,0.X)` not cream-based opacity (brown-on-brown problem)
+- `kitchen.html` CSS is embedded (not separate file) — branding is data-driven via CONFIG at runtime
+- Item notes field (`notes: null`) already in order data model — UI to be built Session 7
 
 ---
 
 ## 14. Core Product Principle — Kitchen Management Co-pilot
 
-**Established Session 4. Must feed into pitch deck and marketing.**
-
 Independent food vendors are brilliant at their craft but are not trained kitchen managers. When orders pile up they have no system — they react. Quality drops, customers wait without knowing why, the experience falls apart.
 
 **Stalliq is a kitchen management co-pilot for people who've never had one.**
 
-The app promotes good decisions at exactly the moments when a vendor is most likely to make bad ones — a large order lands, a queue builds, the oven is at capacity. The system surfaces the right options at the right time: close the kitchen, set a longer wait, keep the customer informed. One tap.
-
-**Pitch deck headline:** *"Stalliq keeps small kitchens flowing under pressure — giving independent vendors the kitchen management instincts they never had time to learn."*
+The app promotes good decisions at exactly the moments when a vendor is most likely to make bad ones. The system surfaces the right options at the right time: close the kitchen, set a longer wait, keep the customer informed. One tap.
 
 ---
 
@@ -424,38 +347,23 @@ The app promotes good decisions at exactly the moments when a vendor is most lik
 **File:** `vendorapp-pitch-v2.pptx` (11 slides)
 **TODO:** Rename/update to reflect Stalliq branding.
 **TODO:** Update slide 11 with real Endoo contact details. Add QR code to slide 7.
-**TODO:** Add kitchen management co-pilot angle — slide on how app handles pressure moments.
-
-Slide order: Cover → Problem → Solution → USPs → Geofence → Flash Sales → Live Demo → Pricing → Partnership (Sophie) → Roadmap → Close
+**TODO:** Add kitchen management co-pilot angle.
 
 ---
 
-## 16. Next Actions
+## 16. Next Session — Session 7: MVP Completion
 
-**Before next session:**
-- [ ] Meet with Daniele & Danielle — agree arrangement, understand workflow, ask WhatsApp vs dashboard preference
+**Priority order:**
 
-**Next session — Kitchen Dashboard build:**
-- [ ] Build kitchen dashboard as separate HTML page / Netlify site
-- [ ] Real-time Firestore listener — orders collection, vendor filtered
-- [ ] Order cards — ref, name, items, elapsed time, action button
-- [ ] Accept order + set wait time
-- [ ] Status tap-through: accepted → preparing → ready
-- [ ] Kitchen close toggle
-- [ ] PIN protection on open
-- [ ] End-to-end test: customer orders → kitchen receives → status updates
+1. **Text contrast** — bump all secondary text opacity to 0.75-0.85 across `styles.css` and `kitchen.html`. Quick win first.
 
-**Upcoming build queue (in order):**
-- [ ] Kitchen dashboard (next)
-- [ ] Real-time order status (customer-facing)
-- [ ] WhatsApp notifications via Twilio
-- [ ] Geofence
-- [ ] Flash sales
+2. **Kitchen closed → customer app** — `app.js` reads `kitchenStatus` from Firestore on load and blocks ordering when closed. Shows correct closed message on mobile and desktop. Without this the kitchen close toggle is decorative only.
 
-**Product:**
-- [ ] Finalise one-page commercial agreement for founding customers
-- [ ] Approach Sophie once live
-- [ ] Update pitch deck to Stalliq branding
+3. **Real-time order status — customer side (Feature 05)** — Firestore listener on the customer's order doc. When kitchen sets `waitMins`, customer sees actual time not static 15 mins. Mobile status screen: Pending → Accepted (X mins) → Preparing → Ready to Collect.
+
+4. **Item notes** — "no onions on the Margherita". Notes input per item in basket (`app.js` + `styles.css`). Data model already supports it (`notes: null` on each item). Kitchen card and drill-down already wired to display notes when present.
+
+Items 2 and 3 together are the MVP moment: customer orders → kitchen receives → kitchen responds → customer sees it live.
 
 ---
 
