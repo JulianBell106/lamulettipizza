@@ -15,6 +15,14 @@
 const CONFIG = {
 
   /* --------------------------------------------------------------------------
+     VENDOR IDENTITY
+     id: Firestore document key — never change once orders are live.
+  -------------------------------------------------------------------------- */
+  vendor: {
+    id: 'lamuletti',
+  },
+
+  /* --------------------------------------------------------------------------
      BUSINESS IDENTITY
   -------------------------------------------------------------------------- */
   business: {
@@ -166,7 +174,6 @@ const CONFIG = {
   -------------------------------------------------------------------------- */
   events: [
     { day: '10', month: 'Mar', name: 'Tuesday Pop-Up', location: 'Airfields, Apollo Avenue, Milton Keynes' },
-    // { day: '17', month: 'Mar', name: 'Saturday Market', location: 'Campbell Park, MK' },
   ],
 
   /* --------------------------------------------------------------------------
@@ -174,6 +181,7 @@ const CONFIG = {
   -------------------------------------------------------------------------- */
   ordering: {
     waitMins:    15,
+    timeoutMins: 10,
     refPrefix:   'LM',
     paymentNote: '💵 Cash or card on collection',
     confirmMsg:  'Thanks for your order! Please collect and pay on pickup. Your fresh pizza will be ready soon 🍕',

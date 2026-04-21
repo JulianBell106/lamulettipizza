@@ -2,7 +2,7 @@
  * La Muletti Pizza — App JS
  * ============================================================================
  * All customer-specific data comes from CONFIG (js/config.js).
- * This file should never need editing when onboarding a new customer.
+ * Firebase initialised in js/firebase.js — exposes: db, auth
  *
  * Structure:
  *   1.  Theme injection
@@ -27,14 +27,19 @@
  *   20. Mobile — Find Us
  *   21. Scroll reveal
  *   22. Init
+ *   23. Auth — State helpers
+ *   24. Auth — Gateway (intercepts Place Order)
+ *   25. Auth — Send SMS code
+ *   26. Auth — Verify code
+ *   27. Auth — Save name (first order only)
+ *   28. Firebase — Get next order ref (daily counter)
+ *   29. Firebase — Submit order to Firestore
  * ============================================================================
  */
 
 
 /* ============================================================================
    1. THEME INJECTION
-   Reads CONFIG.theme and writes CSS custom properties onto :root so the
-   entire visual identity is driven by config.js — no CSS edits needed.
    ============================================================================ */
 function applyTheme() {
   const t = CONFIG.theme;
@@ -51,30 +56,22 @@ function applyTheme() {
 
 /* ============================================================================
    2. PAGE BOOTSTRAP
-   Sets title, meta description, PWA tags and hero background image from
-   CONFIG so index.html contains no hardcoded business content.
    ============================================================================ */
 function bootstrapPage() {
-  // Browser tab title
   document.title = CONFIG.meta.title;
 
-  // Meta description
   let metaDesc = document.querySelector('meta[name="description"]');
   if (metaDesc) metaDesc.content = CONFIG.meta.description;
 
-  // PWA / apple app title
   let appTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
   if (appTitle) appTitle.content = CONFIG.meta.appTitle;
 
-  // Theme colour
   let themeColor = document.querySelector('meta[name="theme-color"]');
   if (themeColor) themeColor.content = CONFIG.theme.dark;
 
-  // Touch icon
   let icon = document.querySelector('link[rel="apple-touch-icon"]');
   if (icon) icon.href = CONFIG.images.icon;
 
-  // Hero background (desktop)
   let heroBg = document.querySelector('.d-hero-bg');
   if (heroBg) heroBg.style.backgroundImage = `url('${CONFIG.images.hero}')`;
 }
@@ -82,11 +79,11 @@ function bootstrapPage() {
 
 /* ============================================================================
    3. SHARED STATE
-   basket: keyed by item id (number), value is quantity.
-   Both desktop and mobile read/write the same object — always in sync.
    ============================================================================ */
 const basket = {};
-let orderCount = 0;
+let orderCount      = 0;
+let customerName    = null;   // cached after phone auth
+let pendingOrderFn  = null;   // called after auth completes
 
 
 /* ============================================================================
@@ -156,15 +153,12 @@ function clearBasket() {
    5. DESKTOP — NAV + HERO
    ============================================================================ */
 function renderDesktopNav() {
-  // Logo: wrap the last word in a <span> for gold colour
   const logo = document.querySelector('.d-nav-logo');
   if (logo) {
     const parts = CONFIG.business.nameShort.split(' ');
     const last  = parts.pop();
     logo.innerHTML = `${parts.join(' ')} <span>${last}</span>`;
   }
-
-  // Nav CTA text
   const navCta = document.querySelector('.d-nav-cta');
   if (navCta) navCta.textContent = CONFIG.hero.navCta;
 }
@@ -244,22 +238,18 @@ document.addEventListener('click', function (e) {
 function renderDesktopStory() {
   const a = CONFIG.about;
 
-  // Image + caption
   const img = document.querySelector('.d-story-img img');
   if (img) { img.src = CONFIG.images.founders; img.alt = a.imageCaption; }
   const caption = document.querySelector('.d-story-img-caption');
   if (caption) caption.textContent = a.imageCaption;
 
-  // Eyebrow + title
   const eyebrow = document.querySelector('#d-story .d-eyebrow');
   if (eyebrow) eyebrow.textContent = a.eyebrow;
   const title = document.querySelector('#d-story .d-title');
   if (title) title.innerHTML = `${a.titleLine1}<em>${a.titleLine2}</em>`;
 
-  // Story paragraphs
   const bodyEl = document.querySelector('.d-story-text');
   if (bodyEl) {
-    // Remove any existing p.d-body elements and re-add
     bodyEl.querySelectorAll('p.d-body').forEach(p => p.remove());
     const foundersEl = bodyEl.querySelector('.d-founders-mini');
     a.storyParagraphs.forEach(text => {
@@ -270,7 +260,6 @@ function renderDesktopStory() {
     });
   }
 
-  // Founder pills
   const pills = document.querySelector('.d-founders-mini');
   if (pills) {
     pills.innerHTML = a.founders.map(f => `
@@ -412,15 +401,29 @@ function dToggleBasket() {
 
 /* ============================================================================
    12. DESKTOP — ORDER CONFIRMATION
+   Now routes through authGateway → Firestore submission.
    ============================================================================ */
 function dPlaceOrder() {
-  const ref = generateOrderRef();
-  const { rows } = buildOrderSummaryHTML('d-order-row');
-  document.getElementById('d-order-ref').textContent     = 'Order ref #' + ref;
-  document.getElementById('d-order-details').innerHTML   = rows;
-  document.getElementById('d-order-overlay').classList.add('show');
-  document.getElementById('d-basket-panel').classList.remove('open');
-  clearBasket();
+  authGateway(async () => {
+    const btn = document.querySelector('#d-basket-footer .d-btn-primary');
+    if (btn) { btn.textContent = 'Placing order...'; btn.disabled = true; }
+    try {
+      const orderRef = await submitOrderToFirestore();
+      const { rows } = buildOrderSummaryHTML('d-order-row');
+      document.getElementById('d-order-ref').textContent   = 'Order ref ' + orderRef;
+      document.getElementById('d-order-details').innerHTML = rows;
+      document.getElementById('d-order-overlay').classList.add('show');
+      document.getElementById('d-basket-panel').classList.remove('open');
+      clearBasket();
+    } catch (err) {
+      console.error('Order error:', err);
+      // Show error in basket footer
+      const errEl = document.getElementById('d-order-err');
+      if (errEl) errEl.textContent = 'Could not place order. Please try again.';
+    } finally {
+      if (btn) { btn.textContent = 'Place Order'; btn.disabled = false; }
+    }
+  });
 }
 
 function dDismissOrder() {
@@ -455,16 +458,13 @@ function mShowPage(page) {
    15. MOBILE — HOME PAGE
    ============================================================================ */
 function renderMobileHome() {
-  // Hero image
   document.querySelectorAll('.m-hero img').forEach(img => {
     if (img.closest('#page-home')) img.src = CONFIG.images.hero;
   });
 
-  // Business name overlay
   const heroTitle = document.querySelector('#page-home .m-hero-title');
   if (heroTitle) heroTitle.textContent = CONFIG.business.name;
 
-  // Feature pills
   const pillsEl = document.querySelector('#page-home .m-pills');
   if (pillsEl) {
     pillsEl.innerHTML = CONFIG.homePills.map(p => `
@@ -559,16 +559,31 @@ function mRemoveItem(id) {
 
 /* ============================================================================
    18. MOBILE — ORDER CONFIRMATION
+   Now routes through authGateway → Firestore submission.
    ============================================================================ */
 function mPlaceOrder() {
-  const ref = generateOrderRef();
-  const { rows } = buildOrderSummaryHTML('m-confirm-row');
-  document.getElementById('m-confirm-time').textContent    = `~${CONFIG.ordering.waitMins} mins`;
-  document.getElementById('m-confirm-ref').textContent     = 'Order ref #' + ref;
-  document.getElementById('m-confirm-details').innerHTML   = rows;
-  document.getElementById('m-confirm-msg').textContent     = CONFIG.ordering.confirmMsg;
-  document.getElementById('m-order-confirm').classList.add('show');
-  clearBasket();
+  authGateway(async () => {
+    const btn = document.querySelector('#page-basket .m-btn');
+    if (btn) { btn.textContent = 'Placing order...'; btn.disabled = true; }
+    // Clear any previous error
+    const errEl = document.getElementById('m-order-err');
+    if (errEl) errEl.textContent = '';
+    try {
+      const orderRef = await submitOrderToFirestore();
+      const { rows } = buildOrderSummaryHTML('m-confirm-row');
+      document.getElementById('m-confirm-time').textContent  = `~${CONFIG.ordering.waitMins} mins`;
+      document.getElementById('m-confirm-ref').textContent   = 'Order ref ' + orderRef;
+      document.getElementById('m-confirm-details').innerHTML = rows;
+      document.getElementById('m-confirm-msg').textContent   = CONFIG.ordering.confirmMsg;
+      document.getElementById('m-order-confirm').classList.add('show');
+      clearBasket();
+    } catch (err) {
+      console.error('Order error:', err);
+      if (errEl) errEl.textContent = 'Could not place order. Please try again.';
+    } finally {
+      if (btn) { btn.textContent = 'Place Order'; btn.disabled = false; }
+    }
+  });
 }
 
 function mDismissOrder() {
@@ -583,17 +598,14 @@ function mDismissOrder() {
 function renderMobileAbout() {
   const a = CONFIG.about;
 
-  // Founders image
   const cartoon = document.querySelector('.m-cartoon img');
   if (cartoon) { cartoon.src = CONFIG.images.founders; cartoon.alt = a.imageCaption; }
 
-  // Story paragraphs
   const storyBody = document.querySelector('.m-story-body');
   if (storyBody) {
     storyBody.innerHTML = a.storyParagraphs.map(p => `<p>${p}</p>`).join('');
   }
 
-  // Founder cards
   const cards = document.querySelector('.m-founder-cards');
   if (cards) {
     cards.innerHTML = a.founders.map(f => `
@@ -607,7 +619,6 @@ function renderMobileAbout() {
       </div>`).join('');
   }
 
-  // Values grid
   const valGrid = document.querySelector('#page-about .m-values-grid');
   if (valGrid) {
     valGrid.innerHTML = CONFIG.values.items.map(item => `
@@ -660,8 +671,8 @@ function initScrollReveal() {
    22. INIT
    ============================================================================ */
 document.addEventListener('DOMContentLoaded', function () {
-  applyTheme();           // CSS variables — must run first (before paint)
-  bootstrapPage();        // Title, meta, hero bg
+  applyTheme();
+  bootstrapPage();
 
   // Desktop
   renderDesktopNav();
@@ -692,3 +703,271 @@ document.addEventListener('DOMContentLoaded', function () {
 
   initScrollReveal();
 });
+
+
+/* ============================================================================
+   23. AUTH — STATE HELPERS
+   ============================================================================ */
+
+function authShowScreen(name) {
+  document.querySelectorAll('.auth-screen').forEach(s => s.style.display = 'none');
+  const screen = document.getElementById('auth-screen-' + name);
+  if (screen) screen.style.display = 'block';
+}
+
+function authShowOverlay(firstScreen) {
+  authShowScreen(firstScreen || 'phone');
+  document.getElementById('auth-overlay').classList.add('show');
+  // Auto-focus the first input
+  setTimeout(() => {
+    const input = document.querySelector('#auth-screen-' + firstScreen + ' .auth-input');
+    if (input) input.focus();
+  }, 150);
+}
+
+function authClose() {
+  document.getElementById('auth-overlay').classList.remove('show');
+  pendingOrderFn = null;
+}
+
+function authSetError(screen, msg) {
+  const el = document.getElementById('auth-' + screen + '-err');
+  if (el) el.textContent = msg;
+}
+
+function authClearErrors() {
+  ['phone', 'code', 'name'].forEach(s => authSetError(s, ''));
+}
+
+
+/* ============================================================================
+   24. AUTH — GATEWAY
+   Called by mPlaceOrder() and dPlaceOrder() before submitting.
+   Checks auth state and routes to the right screen.
+   ============================================================================ */
+function authGateway(orderFn) {
+  pendingOrderFn = orderFn;
+  const user = auth.currentUser;
+
+  if (user) {
+    // Already authenticated this session
+    if (customerName) {
+      // Name cached — submit directly
+      orderFn();
+    } else {
+      // Need to check Firestore for their name
+      db.collection('users').doc(user.uid).get()
+        .then(doc => {
+          if (doc.exists && doc.data().firstName) {
+            customerName = doc.data().firstName;
+            orderFn();
+          } else {
+            // Authenticated but no name stored yet
+            authClearErrors();
+            authShowOverlay('name');
+          }
+        })
+        .catch(() => authShowOverlay('name'));
+    }
+  } else {
+    // Not authenticated — start phone flow
+    authClearErrors();
+    authShowOverlay('phone');
+  }
+}
+
+
+/* ============================================================================
+   25. AUTH — SEND SMS CODE
+   ============================================================================ */
+async function authSendCode() {
+  authSetError('phone', '');
+
+  const raw   = document.getElementById('auth-phone-input').value.trim().replace(/\s/g, '');
+  const phone = '+44' + raw;
+
+  // Basic UK mobile validation: starts with 7, 10 digits total
+  if (!/^7\d{9}$/.test(raw)) {
+    authSetError('phone', 'Please enter a valid UK mobile (e.g. 7911 123456)');
+    return;
+  }
+
+  const btn = document.getElementById('auth-send-btn');
+  btn.textContent = 'Sending…';
+  btn.disabled    = true;
+
+  try {
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier(
+        'recaptcha-container',
+        { size: 'invisible' }
+      );
+    }
+    window.confirmationResult = await auth.signInWithPhoneNumber(phone, window.recaptchaVerifier);
+    // Update the sub-text on the code screen
+    document.getElementById('auth-code-msg').textContent =
+      `We sent a 6-digit code to +44 ${raw}`;
+    authShowScreen('code');
+    setTimeout(() => document.getElementById('auth-code-input').focus(), 150);
+  } catch (err) {
+    console.error('SMS send error:', err);
+    authSetError('phone', 'Could not send code. Check the number and try again.');
+    // Reset reCAPTCHA so user can retry
+    if (window.recaptchaVerifier) {
+      try { window.recaptchaVerifier.clear(); } catch (_) {}
+      window.recaptchaVerifier = null;
+    }
+  } finally {
+    btn.textContent = 'Send verification code';
+    btn.disabled    = false;
+  }
+}
+
+
+/* ============================================================================
+   26. AUTH — VERIFY SMS CODE
+   ============================================================================ */
+async function authVerifyCode() {
+  authSetError('code', '');
+
+  const code = document.getElementById('auth-code-input').value.trim();
+  if (code.length !== 6 || !/^\d{6}$/.test(code)) {
+    authSetError('code', 'Please enter the 6-digit code');
+    return;
+  }
+
+  const btn = document.querySelector('#auth-screen-code .auth-primary-btn');
+  btn.textContent = 'Verifying…';
+  btn.disabled    = true;
+
+  try {
+    const result = await window.confirmationResult.confirm(code);
+    const user   = result.user;
+
+    // Check if we already have their name
+    const userDoc = await db.collection('users').doc(user.uid).get();
+    if (userDoc.exists && userDoc.data().firstName) {
+      customerName = userDoc.data().firstName;
+      document.getElementById('auth-overlay').classList.remove('show');
+      if (pendingOrderFn) pendingOrderFn();
+    } else {
+      // First order — ask for their name
+      authShowScreen('name');
+      setTimeout(() => document.getElementById('auth-name-input').focus(), 150);
+    }
+  } catch (err) {
+    console.error('Verify error:', err);
+    authSetError('code', 'Incorrect code — please try again.');
+  } finally {
+    btn.textContent = 'Verify →';
+    btn.disabled    = false;
+  }
+}
+
+
+/* ============================================================================
+   27. AUTH — SAVE NAME (first order only)
+   ============================================================================ */
+async function authSaveName() {
+  authSetError('name', '');
+
+  const firstName = document.getElementById('auth-name-input').value.trim();
+  if (!firstName || firstName.length < 2) {
+    authSetError('name', 'Please enter your first name');
+    return;
+  }
+
+  const btn = document.querySelector('#auth-screen-name .auth-primary-btn');
+  btn.textContent = 'Saving…';
+  btn.disabled    = true;
+
+  try {
+    const user = auth.currentUser;
+    await db.collection('users').doc(user.uid).set({
+      firstName,
+      phone:     user.phoneNumber,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    customerName = firstName;
+    document.getElementById('auth-overlay').classList.remove('show');
+    if (pendingOrderFn) pendingOrderFn();
+  } catch (err) {
+    console.error('Save name error:', err);
+    authSetError('name', 'Something went wrong. Please try again.');
+  } finally {
+    btn.textContent = 'Continue →';
+    btn.disabled    = false;
+  }
+}
+
+
+/* ============================================================================
+   28. FIREBASE — GET NEXT ORDER REF
+   Daily sequential counter via Firestore transaction.
+   Resets to #001 each day. Concurrency-safe.
+   ============================================================================ */
+async function getNextOrderRef() {
+  const today      = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const counterRef = db.collection('vendors').doc(CONFIG.vendor.id)
+                       .collection('counters').doc('daily');
+  let count = 1;
+
+  await db.runTransaction(async (tx) => {
+    const doc = await tx.get(counterRef);
+    if (!doc.exists || doc.data().date !== today) {
+      tx.set(counterRef, { date: today, count: 1 });
+      count = 1;
+    } else {
+      count = doc.data().count + 1;
+      tx.update(counterRef, { count });
+    }
+  });
+
+  return '#' + String(count).padStart(3, '0');
+}
+
+
+/* ============================================================================
+   29. FIREBASE — SUBMIT ORDER TO FIRESTORE
+   ============================================================================ */
+async function submitOrderToFirestore() {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  const orderRef     = await getNextOrderRef();
+  const timeoutMins  = CONFIG.ordering.timeoutMins || 10;
+  const expiresAt    = new Date(Date.now() + timeoutMins * 60 * 1000);
+
+  const items = Object.keys(basket).map(Number).map(id => {
+    const item = CONFIG.menu.find(m => m.id === id);
+    return {
+      id:       item.id,
+      name:     item.name,
+      price:    item.price,
+      quantity: basket[id],
+      notes:    null
+    };
+  });
+
+  const orderDoc = {
+    orderRef,
+    vendorId:      CONFIG.vendor.id,
+    customerId:    user.uid,
+    customerName,
+    customerPhone: user.phoneNumber,
+    items,
+    orderTotal:    basketTotalPrice(),
+    payment: {
+      method: 'cash_on_collection',
+      status: 'pending'
+    },
+    status:    'pending',
+    waitMins:  null,
+    expiresAt,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  await db.collection('orders').add(orderDoc);
+  return orderRef;
+}
