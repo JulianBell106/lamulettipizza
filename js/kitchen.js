@@ -308,9 +308,10 @@ function orderCardHTML(order) {
           <div class="k-card-elapsed" id="elapsed-${order.id}">0:00</div>
         </div>
       </div>
-      <div class="k-card-body">
+      <div class="k-card-body k-card-tappable" onclick="openDetailModal('${order.id}')">
         <ul class="k-card-items">${itemsHTML}</ul>
         <div class="k-card-total">£${(order.orderTotal || 0).toFixed(2)} · cash on collection</div>
+        <div class="k-card-drill-hint">Tap for full details</div>
       </div>
       <div class="k-card-status-bar">
         <span class="k-card-status-badge">${statusLabels[order.status] || order.status}</span>
@@ -444,9 +445,95 @@ async function markCollected(orderId) {
 
 
 /* ============================================================================
-   12. READY CONFIRM MODAL
-   preparing → ready requires explicit confirmation (two-tap as per spec).
+   12b. ORDER DETAIL MODAL
+   Full drill-down — phone, timestamp, all items, total, wait time set.
+   Opened by tapping the card body. Action buttons remain on the card.
    ============================================================================ */
+function openDetailModal(orderId) {
+  const order = currentOrders[orderId];
+  if (!order) return;
+
+  const statusLabels = {
+    pending:   'Awaiting Acceptance',
+    accepted:  'Accepted',
+    preparing: 'In Progress',
+    ready:     'Ready to Collect',
+    collected: 'Collected',
+  };
+
+  // Format placed time
+  const placed  = order.createdAt?.toDate?.();
+  const timeStr = placed
+    ? placed.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+    : '—';
+  const dateStr = placed
+    ? placed.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+    : '';
+
+  // Phone — format for display and tel: link
+  const phone    = order.customerPhone || null;
+  const phoneEl  = phone
+    ? `<a href="tel:${phone}" class="k-detail-phone">${phone} 📞</a>`
+    : `<span class="k-detail-phone muted">No phone on record</span>`;
+
+  // Items
+  const itemsHTML = (order.items || []).map(item => {
+    const noteEl = item.notes
+      ? `<div class="k-detail-item-note">📝 ${item.notes}</div>`
+      : '';
+    return `
+      <div class="k-detail-item">
+        <div>
+          <span class="k-detail-item-name">${item.name}</span>
+          ${noteEl}
+        </div>
+        <span class="k-detail-item-qty">× ${item.quantity}</span>
+        <span class="k-detail-item-price">£${(item.price * item.quantity).toFixed(2)}</span>
+      </div>`;
+  }).join('');
+
+  // Wait time
+  const waitEl = order.waitMins
+    ? `<div class="k-detail-row"><span>Wait set</span><strong>${order.waitMins} mins</strong></div>`
+    : '';
+
+  document.getElementById('detail-modal-body').innerHTML = `
+    <div class="k-detail-header">
+      <div class="k-detail-ref status-${order.status}">${order.orderRef || '—'}</div>
+      <div class="k-detail-status status-${order.status}">${statusLabels[order.status] || order.status}</div>
+    </div>
+
+    <div class="k-detail-section">
+      <div class="k-detail-label">Customer</div>
+      <div class="k-detail-value">${order.customerName || '—'}</div>
+      <div class="k-detail-value">${phoneEl}</div>
+    </div>
+
+    <div class="k-detail-section">
+      <div class="k-detail-label">Order placed</div>
+      <div class="k-detail-value">${timeStr}${dateStr ? ' · ' + dateStr : ''}</div>
+    </div>
+
+    <div class="k-detail-section">
+      <div class="k-detail-label">Items</div>
+      <div class="k-detail-items">${itemsHTML}</div>
+    </div>
+
+    <div class="k-detail-section k-detail-totals">
+      <div class="k-detail-row"><span>Order total</span><strong>£${(order.orderTotal || 0).toFixed(2)}</strong></div>
+      <div class="k-detail-row"><span>Payment</span><strong>Cash on collection</strong></div>
+      ${waitEl}
+    </div>`;
+
+  document.getElementById('detail-modal').classList.add('show');
+}
+
+function closeDetailModal() {
+  document.getElementById('detail-modal').classList.remove('show');
+}
+
+
+
 function openReadyModal(orderId) {
   pendingReadyId = orderId;
   const order = currentOrders[orderId];

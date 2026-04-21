@@ -623,6 +623,113 @@
     .k-close-opt.opt-open .k-close-opt-title { color: var(--s-ready); }
 
     /* ============================================================
+       CARD TAP HINT
+    ============================================================ */
+    .k-card-tappable {
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .k-card-tappable:active { background: rgba(253,246,236,0.03); }
+
+    .k-card-drill-hint {
+      font-size: 10px;
+      color: rgba(139,99,71,0.5);
+      text-align: right;
+      margin-top: 8px;
+      letter-spacing: 0.5px;
+    }
+
+    /* ============================================================
+       ORDER DETAIL MODAL
+    ============================================================ */
+    .k-modal-detail { max-height: 85vh; overflow-y: auto; }
+
+    .k-detail-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(253,246,236,0.08);
+    }
+    .k-detail-ref {
+      font-family: 'Playfair Display', serif;
+      font-size: 36px;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .k-detail-ref.status-pending   { color: var(--s-pending); }
+    .k-detail-ref.status-accepted  { color: var(--s-accepted); }
+    .k-detail-ref.status-preparing { color: var(--s-preparing); }
+    .k-detail-ref.status-ready     { color: var(--s-ready); }
+
+    .k-detail-status {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-weight: 600;
+    }
+    .k-detail-status.status-pending   { color: var(--s-pending); }
+    .k-detail-status.status-accepted  { color: var(--s-accepted); }
+    .k-detail-status.status-preparing { color: var(--s-preparing); }
+    .k-detail-status.status-ready     { color: var(--s-ready); }
+
+    .k-detail-section {
+      margin-bottom: 18px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid rgba(253,246,236,0.06);
+    }
+    .k-detail-section:last-child { border-bottom: none; margin-bottom: 0; }
+
+    .k-detail-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--ash);
+      margin-bottom: 6px;
+    }
+    .k-detail-value {
+      font-size: 15px;
+      color: var(--cream);
+      margin-bottom: 3px;
+    }
+
+    .k-detail-phone {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--gold);
+      text-decoration: none;
+    }
+    .k-detail-phone:active { opacity: 0.7; }
+    .k-detail-phone.muted  { color: var(--ash); font-weight: 400; font-size: 14px; }
+
+    .k-detail-items { display: flex; flex-direction: column; gap: 10px; }
+    .k-detail-item {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(253,246,236,0.05);
+    }
+    .k-detail-item:last-child { border-bottom: none; }
+    .k-detail-item > div { flex: 1; }
+    .k-detail-item-name  { font-size: 14px; color: var(--cream); }
+    .k-detail-item-note  { font-size: 12px; color: var(--gold); margin-top: 3px; }
+    .k-detail-item-qty   { font-size: 13px; color: var(--ash); white-space: nowrap; }
+    .k-detail-item-price { font-size: 14px; font-weight: 600; color: var(--cream); white-space: nowrap; }
+
+    .k-detail-totals { background: rgba(0,0,0,0.12); border-radius: 8px; padding: 12px 14px; }
+    .k-detail-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      padding: 4px 0;
+      color: rgba(253,246,236,0.7);
+    }
+    .k-detail-row strong { color: var(--cream); }
+
+    /* ============================================================
        READY CONFIRM MODAL
     ============================================================ */
     .k-confirm-ref {
@@ -742,6 +849,19 @@
       <div class="k-modal-actions">
         <button class="k-modal-btn secondary" onclick="closeReadyModal()">Not yet</button>
         <button class="k-modal-btn primary" onclick="confirmReady()">Mark as Ready ✓</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ============================================================
+       ORDER DETAIL MODAL
+  ============================================================ -->
+  <div class="k-modal-overlay" id="detail-modal">
+    <div class="k-modal k-modal-detail">
+      <div id="detail-modal-body"></div>
+      <div class="k-modal-actions">
+        <button class="k-modal-btn secondary" onclick="closeDetailModal()">Close</button>
       </div>
     </div>
   </div>
