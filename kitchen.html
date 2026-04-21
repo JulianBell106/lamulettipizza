@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Kitchen Dashboard</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+
+  <style>
+    /* ============================================================
+       CSS CUSTOM PROPERTIES
+       Base values — overwritten at runtime by kitchen.js from CONFIG
+    ============================================================ */
+    :root {
+      --fire:  #C8410B;
+      --ember: #E85D2A;
+      --gold:  #D4A043;
+      --dark:  #1A0A00;
+      --char:  #2C1A0A;
+      --cream: #FDF6EC;
+      --ash:   #8B6347;
+
+      /* Status colours — fixed, not configurable */
+      --s-pending:   #D4A043;
+      --s-accepted:  #4A90D9;
+      --s-preparing: #C8410B;
+      --s-ready:     #27AE60;
+      --s-warning:   #E67E22;
+      --s-urgent:    #E74C3C;
+    }
+
+    /* ============================================================
+       RESET + BASE
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--dark);
+      color: var(--cream);
+      font-family: 'DM Sans', system-ui, sans-serif;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button { cursor: pointer; font-family: inherit; }
+
+    /* ============================================================
+       PIN OVERLAY
+    ============================================================ */
+    #pin-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--dark);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+    }
+    #pin-overlay.hidden { display: none; }
+
+    .pin-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 26px;
+      color: var(--cream);
+      letter-spacing: -0.5px;
+    }
+    .pin-logo span { color: var(--gold); }
+
+    .pin-subtitle {
+      font-size: 11px;
+      color: var(--ash);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-top: -20px;
+    }
+
+    .pin-dots {
+      display: flex;
+      gap: 18px;
+    }
+    .pin-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid var(--ash);
+      transition: background 0.12s, border-color 0.12s, transform 0.12s;
+    }
+    .pin-dot.filled {
+      background: var(--gold);
+      border-color: var(--gold);
+      transform: scale(1.1);
+    }
+
+    .pin-error {
+      font-size: 13px;
+      color: var(--s-urgent);
+      min-height: 18px;
+      text-align: center;
+    }
+
+    .pin-keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 72px);
+      gap: 12px;
+    }
+    .pin-key {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      border: 1px solid rgba(253,246,236,0.12);
+      background: rgba(253,246,236,0.04);
+      color: var(--cream);
+      font-size: 22px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.1s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .pin-key:active {
+      background: rgba(212,160,67,0.18);
+      transform: scale(0.94);
+    }
+    .pin-key.zero  { grid-column: 2; }
+    .pin-key.back  { border-color: transparent; background: transparent; color: var(--ash); }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%       { transform: translateX(-10px); }
+      40%       { transform: translateX(10px); }
+      60%       { transform: translateX(-10px); }
+      80%       { transform: translateX(10px); }
+    }
+    .pin-dots.shake { animation: shake 0.4s ease; }
+
+    /* ============================================================
+       HEADER
+    ============================================================ */
+    .k-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      background: var(--char);
+      border-bottom: 1px solid rgba(212,160,67,0.12);
+    }
+
+    .k-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 17px;
+      color: var(--cream);
+    }
+    .k-logo span { color: var(--gold); }
+
+    .k-header-sub {
+      font-size: 10px;
+      color: var(--ash);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-top: 2px;
+    }
+
+    .k-header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .k-time {
+      font-size: 13px;
+      color: var(--ash);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .k-status-btn {
+      padding: 7px 14px;
+      border-radius: 20px;
+      border: 1px solid transparent;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      transition: opacity 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .k-status-btn:active { opacity: 0.75; }
+    .k-status-btn.open {
+      background: rgba(39,174,96,0.12);
+      color: var(--s-ready);
+      border-color: rgba(39,174,96,0.25);
+    }
+    .k-status-btn.closed {
+      background: rgba(231,76,60,0.12);
+      color: var(--s-urgent);
+      border-color: rgba(231,76,60,0.25);
+    }
+
+    /* ============================================================
+       QUEUE BAR
+    ============================================================ */
+    .k-queue-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px 6px;
+    }
+    .k-queue-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      color: var(--ash);
+    }
+    .k-queue-count {
+      font-size: 12px;
+      color: var(--ash);
+    }
+
+    /* ============================================================
+       ORDER GRID
+    ============================================================ */
+    .k-orders {
+      padding: 8px 12px 32px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    @media (min-width: 640px) {
+      .k-orders { grid-template-columns: repeat(2, 1fr); padding: 8px 16px 32px; }
+    }
+    @media (min-width: 1024px) {
+      .k-orders { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    /* Empty state */
+    .k-empty {
+      grid-column: 1 / -1;
+      padding: 64px 24px;
+      text-align: center;
+      color: var(--ash);
+    }
+    .k-empty-icon { font-size: 44px; margin-bottom: 14px; }
+    .k-empty-text { font-size: 15px; }
+
+    /* ============================================================
+       ORDER CARD
+    ============================================================ */
+    .k-card {
+      background: var(--char);
+      border-radius: 14px;
+      border: 1px solid rgba(253,246,236,0.07);
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .k-card.status-pending   { border-color: rgba(212,160,67,0.45); }
+    .k-card.status-accepted  { border-color: rgba(74,144,217,0.4); }
+    .k-card.status-preparing { border-color: rgba(200,65,11,0.5); }
+    .k-card.status-ready     { border-color: rgba(39,174,96,0.5); }
+
+    /* Coloured top accent stripe per status */
+    .k-card::before {
+      content: '';
+      display: block;
+      height: 3px;
+    }
+    .k-card.status-pending::before   { background: var(--s-pending); }
+    .k-card.status-accepted::before  { background: var(--s-accepted); }
+    .k-card.status-preparing::before { background: var(--s-preparing); }
+    .k-card.status-ready::before     { background: var(--s-ready); }
+
+    .k-card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 14px 16px 10px;
+    }
+
+    .k-card-ref {
+      font-family: 'Playfair Display', serif;
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .status-pending   .k-card-ref { color: var(--s-pending); }
+    .status-accepted  .k-card-ref { color: var(--s-accepted); }
+    .status-preparing .k-card-ref { color: var(--s-preparing); }
+    .status-ready     .k-card-ref { color: var(--s-ready); }
+
+    .k-card-meta { text-align: right; }
+    .k-card-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--cream);
+    }
+    .k-card-elapsed {
+      font-size: 12px;
+      color: var(--ash);
+      margin-top: 3px;
+      font-variant-numeric: tabular-nums;
+    }
+    .k-card-elapsed.warning { color: var(--s-warning); }
+    .k-card-elapsed.urgent  { color: var(--s-urgent); font-weight: 600; }
+
+    .k-card-body {
+      padding: 0 16px 10px;
+      border-bottom: 1px solid rgba(253,246,236,0.05);
+    }
+    .k-card-items { list-style: none; }
+    .k-card-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+      padding: 4px 0;
+      color: rgba(253,246,236,0.88);
+      border-bottom: 1px solid rgba(253,246,236,0.04);
+    }
+    .k-card-item:last-child { border-bottom: none; }
+    .k-card-item-qty {
+      color: var(--ash);
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .k-card-total {
+      font-size: 12px;
+      color: var(--ash);
+      margin-top: 8px;
+    }
+
+    .k-card-status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+      background: rgba(0,0,0,0.12);
+    }
+    .k-card-status-badge {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      font-weight: 600;
+    }
+    .status-pending   .k-card-status-badge { color: var(--s-pending); }
+    .status-accepted  .k-card-status-badge { color: var(--s-accepted); }
+    .status-preparing .k-card-status-badge { color: var(--s-preparing); }
+    .status-ready     .k-card-status-badge { color: var(--s-ready); }
+
+    .k-card-wait { font-size: 12px; color: var(--ash); }
+
+    .k-card-footer { padding: 12px 14px 14px; }
+
+    /* ============================================================
+       ACTION BUTTONS (card)
+    ============================================================ */
+    .k-btn {
+      width: 100%;
+      padding: 13px 12px;
+      border-radius: 9px;
+      border: 1px solid transparent;
+      font-size: 14px;
+      font-weight: 600;
+      transition: opacity 0.12s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+      letter-spacing: 0.1px;
+    }
+    .k-btn:active { transform: scale(0.97); opacity: 0.85; }
+
+    .k-btn-accept {
+      background: var(--gold);
+      color: var(--dark);
+      border-color: var(--gold);
+    }
+    .k-btn-preparing {
+      background: rgba(74,144,217,0.1);
+      color: var(--s-accepted);
+      border-color: rgba(74,144,217,0.3);
+    }
+    .k-btn-ready {
+      background: rgba(200,65,11,0.1);
+      color: var(--fire);
+      border-color: rgba(200,65,11,0.3);
+    }
+    .k-btn-collected {
+      background: rgba(39,174,96,0.1);
+      color: var(--s-ready);
+      border-color: rgba(39,174,96,0.3);
+    }
+
+    /* ============================================================
+       MODALS — SHARED
+    ============================================================ */
+    .k-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.72);
+      z-index: 500;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .k-modal-overlay.show { display: flex; }
+
+    @media (min-width: 560px) {
+      .k-modal-overlay { align-items: center; }
+    }
+
+    .k-modal {
+      background: var(--char);
+      border-radius: 20px 20px 0 0;
+      padding: 24px 20px;
+      width: 100%;
+      max-width: 480px;
+      border: 1px solid rgba(253,246,236,0.08);
+      border-bottom: none;
+    }
+    @media (min-width: 560px) {
+      .k-modal { border-radius: 16px; border-bottom: 1px solid rgba(253,246,236,0.08); margin: 0 16px; }
+    }
+
+    .k-modal-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      margin-bottom: 4px;
+    }
+    .k-modal-sub {
+      font-size: 13px;
+      color: var(--ash);
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    /* Modal action row */
+    .k-modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    .k-modal-btn {
+      flex: 1;
+      padding: 14px;
+      border-radius: 10px;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      transition: opacity 0.12s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .k-modal-btn:active { opacity: 0.8; transform: scale(0.98); }
+    .k-modal-btn.primary  { background: var(--gold); color: var(--dark); }
+    .k-modal-btn.secondary {
+      background: rgba(253,246,236,0.07);
+      color: var(--ash);
+      border: 1px solid rgba(253,246,236,0.1);
+    }
+
+    /* ============================================================
+       WAIT TIME MODAL
+    ============================================================ */
+    .k-wait-options {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .k-wait-opt {
+      padding: 13px 6px;
+      border-radius: 10px;
+      border: 1px solid rgba(253,246,236,0.13);
+      background: rgba(253,246,236,0.04);
+      color: var(--cream);
+      font-size: 18px;
+      font-weight: 600;
+      text-align: center;
+      line-height: 1.1;
+      transition: background 0.12s, border-color 0.12s, color 0.12s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .k-wait-opt span {
+      display: block;
+      font-size: 10px;
+      font-weight: 400;
+      color: var(--ash);
+      margin-top: 3px;
+    }
+    .k-wait-opt:active, .k-wait-opt.selected {
+      background: rgba(212,160,67,0.15);
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+    .k-wait-opt.selected span { color: rgba(212,160,67,0.6); }
+
+    .k-custom-wait {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+    .k-custom-input {
+      flex: 1;
+      padding: 12px 14px;
+      border-radius: 9px;
+      border: 1px solid rgba(253,246,236,0.13);
+      background: rgba(253,246,236,0.04);
+      color: var(--cream);
+      font-size: 15px;
+      font-family: inherit;
+    }
+    .k-custom-input::placeholder { color: var(--ash); }
+    .k-custom-input:focus {
+      outline: none;
+      border-color: var(--gold);
+    }
+    .k-custom-label { font-size: 13px; color: var(--ash); white-space: nowrap; }
+
+    /* ============================================================
+       KITCHEN STATUS MODAL
+    ============================================================ */
+    .k-close-options { display: flex; flex-direction: column; gap: 10px; }
+
+    .k-close-opt {
+      padding: 15px 16px;
+      border-radius: 10px;
+      border: 1px solid rgba(253,246,236,0.08);
+      background: rgba(253,246,236,0.03);
+      text-align: left;
+      transition: background 0.12s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .k-close-opt:active { background: rgba(253,246,236,0.08); }
+    .k-close-opt-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--cream);
+      margin-bottom: 2px;
+    }
+    .k-close-opt-desc { font-size: 12px; color: var(--ash); line-height: 1.4; }
+
+    .k-close-opt.opt-open  { border-color: rgba(39,174,96,0.25); }
+    .k-close-opt.opt-open .k-close-opt-title { color: var(--s-ready); }
+
+    /* ============================================================
+       READY CONFIRM MODAL
+    ============================================================ */
+    .k-confirm-ref {
+      font-family: 'Playfair Display', serif;
+      font-size: 42px;
+      color: var(--s-ready);
+      text-align: center;
+      margin: 16px 0 8px;
+      line-height: 1;
+    }
+    .k-confirm-msg {
+      text-align: center;
+      font-size: 13px;
+      color: var(--ash);
+      line-height: 1.5;
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- ============================================================
+       PIN OVERLAY
+  ============================================================ -->
+  <div id="pin-overlay">
+    <div class="pin-logo" id="pin-logo">Kitchen</div>
+    <div class="pin-subtitle">Dashboard</div>
+
+    <div class="pin-dots">
+      <div class="pin-dot" id="pin-dot-0"></div>
+      <div class="pin-dot" id="pin-dot-1"></div>
+      <div class="pin-dot" id="pin-dot-2"></div>
+      <div class="pin-dot" id="pin-dot-3"></div>
+    </div>
+
+    <div class="pin-error" id="pin-error"></div>
+
+    <div class="pin-keypad">
+      <button class="pin-key" onclick="pinPress('1')">1</button>
+      <button class="pin-key" onclick="pinPress('2')">2</button>
+      <button class="pin-key" onclick="pinPress('3')">3</button>
+      <button class="pin-key" onclick="pinPress('4')">4</button>
+      <button class="pin-key" onclick="pinPress('5')">5</button>
+      <button class="pin-key" onclick="pinPress('6')">6</button>
+      <button class="pin-key" onclick="pinPress('7')">7</button>
+      <button class="pin-key" onclick="pinPress('8')">8</button>
+      <button class="pin-key" onclick="pinPress('9')">9</button>
+      <button class="pin-key back" onclick="pinBackspace()">⌫</button>
+      <button class="pin-key zero" onclick="pinPress('0')">0</button>
+      <div></div>
+    </div>
+  </div>
+
+
+  <!-- ============================================================
+       MAIN DASHBOARD (hidden until PIN verified)
+  ============================================================ -->
+  <div id="k-dashboard" style="display:none">
+
+    <header class="k-header">
+      <div>
+        <div class="k-logo" id="k-logo">Kitchen</div>
+        <div class="k-header-sub">Kitchen Dashboard</div>
+      </div>
+      <div class="k-header-right">
+        <div class="k-time" id="k-time">--:--</div>
+        <button class="k-status-btn open" id="k-status-btn" onclick="openKitchenModal()">
+          🟢 Open
+        </button>
+      </div>
+    </header>
+
+    <div class="k-queue-bar">
+      <div class="k-queue-label">Live Orders</div>
+      <div class="k-queue-count" id="k-queue-count"></div>
+    </div>
+
+    <div class="k-orders" id="k-orders">
+      <div class="k-empty">
+        <div class="k-empty-icon">🍕</div>
+        <div class="k-empty-text">No active orders — standing by</div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- ============================================================
+       WAIT TIME MODAL
+  ============================================================ -->
+  <div class="k-modal-overlay" id="wait-modal">
+    <div class="k-modal">
+      <div class="k-modal-title">How long will this take?</div>
+      <div class="k-modal-sub" id="wait-modal-ref">Order #001</div>
+      <div class="k-wait-options" id="wait-options"></div>
+      <div class="k-custom-wait" id="custom-wait-row">
+        <input type="number" class="k-custom-input" id="custom-wait-input"
+               placeholder="Custom" min="1" max="240">
+        <span class="k-custom-label">mins</span>
+      </div>
+      <div class="k-modal-actions">
+        <button class="k-modal-btn secondary" onclick="closeWaitModal()">Cancel</button>
+        <button class="k-modal-btn primary" id="wait-confirm-btn" onclick="confirmAccept()">Accept Order →</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ============================================================
+       READY CONFIRM MODAL
+  ============================================================ -->
+  <div class="k-modal-overlay" id="ready-modal">
+    <div class="k-modal">
+      <div class="k-modal-title">Ready for collection?</div>
+      <div class="k-confirm-ref" id="ready-modal-ref">#001</div>
+      <div class="k-confirm-msg">Customer will see their order is ready to collect.</div>
+      <div class="k-modal-actions">
+        <button class="k-modal-btn secondary" onclick="closeReadyModal()">Not yet</button>
+        <button class="k-modal-btn primary" onclick="confirmReady()">Mark as Ready ✓</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ============================================================
+       KITCHEN STATUS MODAL
+  ============================================================ -->
+  <div class="k-modal-overlay" id="kitchen-modal">
+    <div class="k-modal">
+      <div class="k-modal-title">Kitchen Status</div>
+      <div class="k-modal-sub">Tap a status — takes effect immediately.</div>
+      <div class="k-close-options">
+        <button class="k-close-opt opt-open" onclick="setKitchenStatus('open')">
+          <div class="k-close-opt-title">🟢 Open — taking orders</div>
+          <div class="k-close-opt-desc">Normal service</div>
+        </button>
+        <button class="k-close-opt" onclick="setKitchenStatus('closed_busy')">
+          <div class="k-close-opt-title">🟡 Busy — back shortly</div>
+          <div class="k-close-opt-desc">"We're really busy right now — back shortly!"</div>
+        </button>
+        <button class="k-close-opt" onclick="setKitchenStatus('closed_end')">
+          <div class="k-close-opt-title">🔴 Closing up for tonight</div>
+          <div class="k-close-opt-desc">"We're closing up for tonight — see you next time!"</div>
+        </button>
+        <button class="k-close-opt" onclick="setKitchenStatus('closed_today')">
+          <div class="k-close-opt-title">⚫ Not trading today</div>
+          <div class="k-close-opt-desc">"We're not trading today — see you soon!"</div>
+        </button>
+      </div>
+      <div class="k-modal-actions">
+        <button class="k-modal-btn secondary" onclick="closeKitchenModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Firebase SDK (compat) — version locked to match index.html -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <!-- Same config + firebase init as customer app -->
+  <script src="js/config.js"></script>
+  <script src="js/firebase.js"></script>
+
+  <!-- Kitchen-specific logic -->
+  <script src="js/kitchen.js"></script>
+
+</body>
+</html>

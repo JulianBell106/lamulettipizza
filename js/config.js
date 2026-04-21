@@ -180,11 +180,27 @@ const CONFIG = {
      ORDER SETTINGS
   -------------------------------------------------------------------------- */
   ordering: {
-    waitMins:    15,
-    timeoutMins: 10,
-    refPrefix:   'LM',
-    paymentNote: '💵 Cash or card on collection',
-    confirmMsg:  'Thanks for your order! Please collect and pay on pickup. Your fresh pizza will be ready soon 🍕',
+    waitMins:       15,
+    timeoutMins:    10,
+    refPrefix:      'LM',
+    paymentNote:    '💵 Cash or card on collection',
+    confirmMsg:     'Thanks for your order! Please collect and pay on pickup. Your fresh pizza will be ready soon 🍕',
+
+    // Kitchen dashboard — wait time options (mins).
+    // Customise per vendor: a sushi bar might use [15, 20, 30, 45].
+    waitOptions:    [10, 15, 20, 25],
+
+    // Set to false to hide the custom wait time input entirely.
+    allowCustomWait: true,
+  },
+
+  /* --------------------------------------------------------------------------
+     KITCHEN DASHBOARD
+     pin:  4-digit PIN protecting the kitchen dashboard.
+           Change this before going live with a real vendor.
+  -------------------------------------------------------------------------- */
+  kitchen: {
+    pin: '1234',
   },
 
   /* --------------------------------------------------------------------------
