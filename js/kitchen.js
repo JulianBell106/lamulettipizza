@@ -621,33 +621,51 @@ function playOrderAlert() {
    14. KANBAN DRAG SCROLL
    Uses Pointer Events API — works on mouse, Windows touch screens,
    stylus, iOS, and Android in a single unified handler.
+
+   Uses a distance threshold to distinguish a tap from a drag.
+   Taps pass through to child onclick handlers (card detail, buttons).
+   Drags scroll the kanban board.
    ============================================================================ */
 function initKanbanDrag() {
   const el = document.getElementById('k-orders');
   if (!el) return;
 
   let isDragging = false;
+  let hasDragged = false;
   let startX     = 0;
   let scrollLeft = 0;
 
+  const DRAG_THRESHOLD = 6; // px — below this is a tap, above is a drag
+
   el.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
     isDragging = true;
-    startX     = e.clientX - el.offsetLeft;
+    hasDragged = false;
+    startX     = e.clientX;
     scrollLeft = el.scrollLeft;
     el.classList.add('dragging');
-    el.setPointerCapture(e.pointerId);
+    // NOTE: no setPointerCapture — that blocks child click events
   });
 
   el.addEventListener('pointerup',     () => { isDragging = false; el.classList.remove('dragging'); });
-  el.addEventListener('pointercancel', () => { isDragging = false; el.classList.remove('dragging'); });
+  el.addEventListener('pointercancel', () => { isDragging = false; hasDragged = false; el.classList.remove('dragging'); });
 
   el.addEventListener('pointermove', e => {
     if (!isDragging) return;
-    e.preventDefault();
-    const x    = e.clientX - el.offsetLeft;
-    const walk = (x - startX) * 1.4;
-    el.scrollLeft = scrollLeft - walk;
+    const dx = e.clientX - startX;
+    if (Math.abs(dx) > DRAG_THRESHOLD) {
+      hasDragged = true;
+      el.scrollLeft = scrollLeft - dx;
+    }
   });
+
+  // Block the click event if the pointer actually moved (was a drag, not a tap)
+  el.addEventListener('click', e => {
+    if (hasDragged) {
+      e.stopPropagation();
+      hasDragged = false;
+    }
+  }, true); // capture phase — fires before child onclick handlers
 }
 
 
