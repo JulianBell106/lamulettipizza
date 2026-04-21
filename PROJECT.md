@@ -1,13 +1,5 @@
 # VendorApp — Project Bible
-<<<<<<< Updated upstream
-> Last updated: April 2026 — Session 4 (Kitchen Dashboard Design — Complete)
-=======
-<<<<<<< HEAD
 > Last updated: April 2026 — Session 5 (Kitchen Dashboard Design — Kanban & Drag)
-=======
-> Last updated: April 2026 — Session 4 (Kitchen Dashboard Design — Complete)
->>>>>>> b30f46066d5f680ce6b8826bf16609edf42f30e7
->>>>>>> Stashed changes
 > Read this file at the start of every session to get fully up to speed. JB
 
 ---
@@ -327,9 +319,6 @@ Vendor can close the kitchen at any time from the dashboard. Prevents new orders
 
 ## 9c. Kitchen Dashboard — Full Design ✅ LOCKED
 
-<<<<<<< Updated upstream
-=======
-<<<<<<< HEAD
 ### Layout
 
 **Primary: Kanban — three columns, tablet landscape**
@@ -340,9 +329,6 @@ Vendor can close the kitchen at any time from the dashboard. Prevents new orders
 - Cards move rightward as status progresses
 - Fallback for phone: single scrolling chronological list
 
-=======
->>>>>>> b30f46066d5f680ce6b8826bf16609edf42f30e7
->>>>>>> Stashed changes
 ### Order Card
 
 **Core principle: works at a glance, under pressure, in a noisy environment.**
@@ -361,43 +347,14 @@ Vendor can close the kitchen at any time from the dashboard. Prevents new orders
 **Large order handling:**
 - Threshold: vendor-configurable in config.js — no platform default imposed
 - Large orders: distinct card colour in queue, not just a badge
-<<<<<<< Updated upstream
-- Large order accept flow surfaces two additional options simultaneously:
-=======
-<<<<<<< HEAD
 - Large order accept flow surfaces two options simultaneously:
-=======
-- Large order accept flow surfaces two additional options simultaneously:
->>>>>>> b30f46066d5f680ce6b8826bf16609edf42f30e7
->>>>>>> Stashed changes
   - Set a longer custom wait time
   - Close kitchen to new orders at same moment as accepting — one action, not two
 - No max order size on customer side — handle gracefully on kitchen side
 
-<<<<<<< Updated upstream
-=======
-<<<<<<< HEAD
 **Progressive disclosure:**
 - Small orders (1–3 items): full detail visible immediately
 - Large orders: card stays compact, "+ N more" expands in place when ready
-=======
->>>>>>> Stashed changes
-### Order Queue
-
-- **Strictly chronological — first in, first out. Queue position never changes.**
-- Large orders flagged visually but do not jump the queue
-- Priority sorting draws attention without reordering — the customer contract is never broken
-- Timed-out orders escalate visually (card turns red) in place
-
-**Order bumping — v1.1 (not MVP):**
-- Vendor can manually bump an order down the queue if operationally necessary
-- Bump automatically triggers customer notification — "Your order is taking a little longer than expected"
-- Bump is logged in Firestore for audit and MI purposes
-- Vendor never has to choose between kitchen management and customer communication
-<<<<<<< Updated upstream
-=======
->>>>>>> b30f46066d5f680ce6b8826bf16609edf42f30e7
->>>>>>> Stashed changes
 
 ### Status Progression
 
@@ -405,9 +362,6 @@ Vendor can close the kitchen at any time from the dashboard. Prevents new orders
 accepted → preparing → ready
 ```
 
-<<<<<<< Updated upstream
-=======
-<<<<<<< HEAD
 **Two interaction models — both supported:**
 - **Tap buttons** on card (existing)
 - **Drag card left/right** — right to advance, left to go backwards (tablet gesture, faster mid-service)
@@ -450,42 +404,6 @@ accepted → preparing → ready
 
 - `kitchen-dashboard.html` — single column list version
 - `kitchen-dashboard-kanban.html` — three column kanban version ✅ preferred
-=======
->>>>>>> Stashed changes
-- `accepted → preparing` — single tap, no confirmation. Low stakes.
-- `preparing → ready` — tap shows "Confirm Ready?" prompt, second tap confirms. Fires customer collection notification.
-- Backwards movement — available via long press or secondary menu on card. Confirmation required. Exception not workflow — not prominent.
-
-### Kitchen Close Toggle
-
-- Fixed position in dashboard header — always visible regardless of queue length
-- Status indicator: green (open) / amber (busy) / red (closed)
-- Single tap opens four-option menu — selection is the confirmation step. Two deliberate actions, hard to trigger accidentally.
-- **Reopening is a single tap** — when queue is clear, friction is wrong. Closing is the dangerous action, not opening.
-
-### Owner Login — MVP
-
-- Firebase Phone Auth — same as customer. Consistent, no extra infrastructure.
-- Device session remembered — Daniele not re-authenticating every service.
-- **4-digit PIN required every time dashboard is opened or returns from background.**
-  - Protects against anyone with an unlocked phone accessing the dashboard
-  - PIN set by Daniele on first login, stored securely against uid
-  - Julian can reset via Firebase console — admin escape hatch for MVP
-- Separate kitchen dashboard URL from customer app (e.g. `lamuletti-kitchen.netlify.app`)
-- Both Daniele and Danielle authorised from day one — each with own Phone Auth + PIN
-
-### Owner Login — v1.1
-
-- Named individual credentials (email/password or phone) — no shared sessions
-- Role-based access: owner vs staff
-- Staff restrictions (TBD): cannot close kitchen, cannot bump orders
-- Every dashboard action stamped with `userId` + timestamp in Firestore
-- Audit trail available to owner in MI/reporting feature
-- **Action logging designed into Firestore from day one** — data captured in MVP, surfaced in v1.1
-<<<<<<< Updated upstream
-=======
->>>>>>> b30f46066d5f680ce6b8826bf16609edf42f30e7
->>>>>>> Stashed changes
 
 ---
 
@@ -556,24 +474,11 @@ Broadcast to: geofence subscribers only OR full list.
 - Large orders: distinct card colour in queue
 - No customer-side max order size — handle gracefully on kitchen side
 - Large order accept: surfaces close-kitchen option simultaneously — one tap, not two
-<<<<<<< Updated upstream
-=======
-<<<<<<< HEAD
 - Queue order: strictly chronological within each column, never reordered. Visual flagging only.
 - Order bump: v1.1 — auto-notifies customer, logged in Firestore
 - Status progression: tap buttons OR drag left/right on tablet. Both supported.
 - Drag right = advance status. Drag left = move backwards. Confirm prompt on "ready" fires regardless of method.
 - Kitchen dashboard: kanban three-column layout for tablet landscape. Single list fallback for phone.
-=======
->>>>>>> Stashed changes
-- Queue order: strictly chronological, never reordered. Visual flagging only.
-- Order bump: v1.1 — auto-notifies customer, logged in Firestore
-- Status progression: single tap for accepted→preparing, double tap (confirm prompt) for preparing→ready
-- Backwards movement: long press, confirmation required, exception not workflow
-<<<<<<< Updated upstream
-=======
->>>>>>> b30f46066d5f680ce6b8826bf16609edf42f30e7
->>>>>>> Stashed changes
 - Kitchen close toggle: fixed in header, two deliberate actions to close, single tap to reopen
 - Dashboard auth MVP: Phone Auth + 4-digit PIN on every open. Separate URL from customer app.
 - Dashboard auth v1.1: named credentials, role-based access, full audit trail
@@ -614,23 +519,10 @@ Slide order: Cover → Problem → Solution → USPs → Geofence → Flash Sale
 - [ ] Julian creates Firebase project + shares credentials with Claude
 - [ ] Meet with Daniele & Danielle — agree arrangement, workflow, WhatsApp vs dashboard preference
 
-<<<<<<< Updated upstream
-=======
-<<<<<<< HEAD
 **Next session — Build starts:**
 - [ ] Firebase project setup — Firestore, Auth, credentials
 - [ ] Order submission — app → Firestore
 - [ ] Kitchen dashboard build — kanban, real-time orders, accept, drag/tap status flow
-=======
->>>>>>> Stashed changes
-**Next session — Build begins:**
-- [ ] Julian creates Firebase project + shares credentials
-- [ ] Firebase order submission — app → Firestore
-- [ ] Kitchen dashboard build — real-time orders, accept, status flow
-<<<<<<< Updated upstream
-=======
->>>>>>> b30f46066d5f680ce6b8826bf16609edf42f30e7
->>>>>>> Stashed changes
 - [ ] End-to-end test: customer orders → kitchen receives → status updates → customer sees
 
 **Upcoming build queue (in order):**
