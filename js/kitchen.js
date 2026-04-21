@@ -531,12 +531,47 @@ function playOrderAlert() {
 
 
 /* ============================================================================
-   14. DASHBOARD START + INIT
+   14. KANBAN DRAG SCROLL
+   Uses Pointer Events API — works on mouse, Windows touch screens,
+   stylus, iOS, and Android in a single unified handler.
+   ============================================================================ */
+function initKanbanDrag() {
+  const el = document.getElementById('k-orders');
+  if (!el) return;
+
+  let isDragging = false;
+  let startX     = 0;
+  let scrollLeft = 0;
+
+  el.addEventListener('pointerdown', e => {
+    isDragging = true;
+    startX     = e.clientX - el.offsetLeft;
+    scrollLeft = el.scrollLeft;
+    el.classList.add('dragging');
+    el.setPointerCapture(e.pointerId);
+  });
+
+  el.addEventListener('pointerup',     () => { isDragging = false; el.classList.remove('dragging'); });
+  el.addEventListener('pointercancel', () => { isDragging = false; el.classList.remove('dragging'); });
+
+  el.addEventListener('pointermove', e => {
+    if (!isDragging) return;
+    e.preventDefault();
+    const x    = e.clientX - el.offsetLeft;
+    const walk = (x - startX) * 1.4;
+    el.scrollLeft = scrollLeft - walk;
+  });
+}
+
+
+/* ============================================================================
+   15. DASHBOARD START + INIT
    ============================================================================ */
 function startDashboard() {
   startClock();
   listenKitchenStatus();
   listenOrders();
+  initKanbanDrag();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
