@@ -204,9 +204,9 @@ function listenOrders() {
 
 
 /* ============================================================================
-   7. RENDER ORDERS
-   Clears and rebuilds the order grid on every Firestore update.
-   Restarts per-card elapsed timers after re-render.
+   7. RENDER ORDERS — KANBAN
+   Four columns: Pending | Accepted | Preparing | Ready
+   Each column sorted chronologically. Timers restart after every re-render.
    ============================================================================ */
 function renderOrders() {
   const container = document.getElementById('k-orders');
@@ -214,13 +214,14 @@ function renderOrders() {
 
   const orders = Object.values(currentOrders);
 
-  // Queue count — excludes ready orders
+  // Active count (excludes ready)
   const active  = orders.filter(o => o.status !== 'ready').length;
   const countEl = document.getElementById('k-queue-count');
   if (countEl) countEl.textContent = active > 0 ? `${active} active` : '';
 
+  clearElapsedTimers();
+
   if (orders.length === 0) {
-    clearElapsedTimers();
     container.innerHTML = `
       <div class="k-empty">
         <div class="k-empty-icon">🍕</div>
@@ -229,20 +230,34 @@ function renderOrders() {
     return;
   }
 
-  // Sort: pending first, then by createdAt ascending
-  const statusOrder = { pending: 0, accepted: 1, preparing: 2, ready: 3 };
-  const sorted = orders.sort((a, b) => {
-    if (statusOrder[a.status] !== statusOrder[b.status]) {
-      return statusOrder[a.status] - statusOrder[b.status];
-    }
-    const aTime = a.createdAt?.toDate?.()?.getTime() || 0;
-    const bTime = b.createdAt?.toDate?.()?.getTime() || 0;
-    return aTime - bTime;
-  });
+  const statuses = ['pending', 'accepted', 'preparing', 'ready'];
+  const labels   = { pending: 'Pending', accepted: 'Accepted', preparing: 'Preparing', ready: 'Ready' };
 
-  clearElapsedTimers();
-  container.innerHTML = sorted.map(order => orderCardHTML(order)).join('');
-  sorted.forEach(order => {
+  container.innerHTML = statuses.map(status => {
+    const colOrders = orders
+      .filter(o => o.status === status)
+      .sort((a, b) => {
+        const aTime = a.createdAt?.toDate?.()?.getTime() || 0;
+        const bTime = b.createdAt?.toDate?.()?.getTime() || 0;
+        return aTime - bTime;
+      });
+
+    const cardsHTML = colOrders.length > 0
+      ? colOrders.map(o => orderCardHTML(o)).join('')
+      : `<div class="k-col-empty">No orders</div>`;
+
+    return `
+      <div class="k-col k-col-${status}">
+        <div class="k-col-header">
+          <span class="k-col-title">${labels[status]}</span>
+          <span class="k-col-count">${colOrders.length}</span>
+        </div>
+        <div class="k-col-cards">${cardsHTML}</div>
+      </div>`;
+  }).join('');
+
+  // Restart elapsed timers for all non-ready orders
+  orders.forEach(order => {
     if (order.status !== 'ready') startElapsedTimer(order.id);
   });
 }

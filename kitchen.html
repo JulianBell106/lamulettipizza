@@ -227,28 +227,95 @@
     }
 
     /* ============================================================
-       ORDER GRID
+       KANBAN BOARD
     ============================================================ */
     .k-orders {
-      padding: 8px 12px 32px;
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 14px;
+      display: flex;
+      gap: 12px;
+      padding: 12px 16px 40px;
+      overflow-x: auto;
+      align-items: flex-start;
+      min-height: calc(100vh - 110px);
+      /* Smooth momentum scroll on iOS */
+      -webkit-overflow-scrolling: touch;
     }
 
-    @media (min-width: 640px) {
-      .k-orders { grid-template-columns: repeat(2, 1fr); padding: 8px 16px 32px; }
-    }
-    @media (min-width: 1024px) {
-      .k-orders { grid-template-columns: repeat(3, 1fr); }
+    /* Snap columns into view on mobile */
+    @media (max-width: 768px) {
+      .k-orders { scroll-snap-type: x mandatory; }
     }
 
-    /* Empty state */
+    /* Column */
+    .k-col {
+      flex: 0 0 272px;
+      min-width: 272px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      scroll-snap-align: start;
+    }
+
+    /* On wide screens let columns grow to fill space */
+    @media (min-width: 1200px) {
+      .k-col { flex: 1; min-width: 240px; }
+    }
+
+    .k-col-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px 10px 12px;
+      border-radius: 10px 10px 0 0;
+      background: rgba(0,0,0,0.18);
+      border-left: 3px solid transparent;
+      margin-bottom: 10px;
+    }
+    .k-col-pending   .k-col-header { border-left-color: var(--s-pending); }
+    .k-col-accepted  .k-col-header { border-left-color: var(--s-accepted); }
+    .k-col-preparing .k-col-header { border-left-color: var(--s-preparing); }
+    .k-col-ready     .k-col-header { border-left-color: var(--s-ready); }
+
+    .k-col-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      font-weight: 600;
+    }
+    .k-col-pending   .k-col-title { color: var(--s-pending); }
+    .k-col-accepted  .k-col-title { color: var(--s-accepted); }
+    .k-col-preparing .k-col-title { color: var(--s-preparing); }
+    .k-col-ready     .k-col-title { color: var(--s-ready); }
+
+    .k-col-count {
+      font-size: 11px;
+      font-weight: 600;
+      background: rgba(253,246,236,0.07);
+      color: var(--ash);
+      padding: 2px 9px;
+      border-radius: 10px;
+      min-width: 26px;
+      text-align: center;
+    }
+
+    .k-col-cards { display: flex; flex-direction: column; gap: 12px; }
+
+    /* Per-column empty state */
+    .k-col-empty {
+      padding: 28px 14px;
+      text-align: center;
+      font-size: 13px;
+      color: rgba(139,99,71,0.45);
+      border: 1px dashed rgba(253,246,236,0.07);
+      border-radius: 10px;
+    }
+
+    /* Global empty (no orders at all) */
     .k-empty {
-      grid-column: 1 / -1;
-      padding: 64px 24px;
+      flex: 1;
+      padding: 80px 24px;
       text-align: center;
       color: var(--ash);
+      align-self: center;
     }
     .k-empty-icon { font-size: 44px; margin-bottom: 14px; }
     .k-empty-text { font-size: 15px; }
