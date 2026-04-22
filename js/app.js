@@ -34,6 +34,7 @@
  *   27. Auth — Save name (first order only)
  *   28. Firebase — Get next order ref (daily counter)
  *   29. Firebase — Submit order to Firestore
+ *   30. Firebase — Kitchen status listener          ← NEW Session 7b
  * ============================================================================
  */
 
@@ -84,6 +85,7 @@ const basket = {};
 let orderCount      = 0;
 let customerName    = null;   // cached after phone auth
 let pendingOrderFn  = null;   // called after auth completes
+let kitchenStatus   = 'open'; // updated live by Firestore listener (Section 30)
 
 
 /* ============================================================================
@@ -404,6 +406,9 @@ function dToggleBasket() {
    Now routes through authGateway → Firestore submission.
    ============================================================================ */
 function dPlaceOrder() {
+  // Guard: block if kitchen is closed
+  if (kitchenStatus !== 'open') return;
+
   authGateway(async () => {
     const btn = document.querySelector('#d-basket-footer .d-btn-primary');
     if (btn) { btn.textContent = 'Placing order...'; btn.disabled = true; }
@@ -417,7 +422,6 @@ function dPlaceOrder() {
       clearBasket();
     } catch (err) {
       console.error('Order error:', err);
-      // Show error in basket footer
       const errEl = document.getElementById('d-order-err');
       if (errEl) errEl.textContent = 'Could not place order. Please try again.';
     } finally {
@@ -562,10 +566,12 @@ function mRemoveItem(id) {
    Now routes through authGateway → Firestore submission.
    ============================================================================ */
 function mPlaceOrder() {
+  // Guard: block if kitchen is closed
+  if (kitchenStatus !== 'open') return;
+
   authGateway(async () => {
     const btn = document.querySelector('#page-basket .m-btn');
     if (btn) { btn.textContent = 'Placing order...'; btn.disabled = true; }
-    // Clear any previous error
     const errEl = document.getElementById('m-order-err');
     if (errEl) errEl.textContent = '';
     try {
@@ -702,6 +708,9 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   initScrollReveal();
+
+  // Kitchen status — live Firestore listener (Section 30)
+  initKitchenStatusListener();
 });
 
 
@@ -718,7 +727,6 @@ function authShowScreen(name) {
 function authShowOverlay(firstScreen) {
   authShowScreen(firstScreen || 'phone');
   document.getElementById('auth-overlay').classList.add('show');
-  // Auto-focus the first input
   setTimeout(() => {
     const input = document.querySelector('#auth-screen-' + firstScreen + ' .auth-input');
     if (input) input.focus();
@@ -750,19 +758,15 @@ function authGateway(orderFn) {
   const user = auth.currentUser;
 
   if (user) {
-    // Already authenticated this session
     if (customerName) {
-      // Name cached — submit directly
       orderFn();
     } else {
-      // Need to check Firestore for their name
       db.collection('users').doc(user.uid).get()
         .then(doc => {
           if (doc.exists && doc.data().firstName) {
             customerName = doc.data().firstName;
             orderFn();
           } else {
-            // Authenticated but no name stored yet
             authClearErrors();
             authShowOverlay('name');
           }
@@ -770,7 +774,6 @@ function authGateway(orderFn) {
         .catch(() => authShowOverlay('name'));
     }
   } else {
-    // Not authenticated — start phone flow
     authClearErrors();
     authShowOverlay('phone');
   }
@@ -786,7 +789,6 @@ async function authSendCode() {
   const raw   = document.getElementById('auth-phone-input').value.trim().replace(/\s/g, '');
   const phone = '+44' + raw;
 
-  // Basic UK mobile validation: starts with 7, 10 digits total
   if (!/^7\d{9}$/.test(raw)) {
     authSetError('phone', 'Please enter a valid UK mobile (e.g. 7911 123456)');
     return;
@@ -804,7 +806,6 @@ async function authSendCode() {
       );
     }
     window.confirmationResult = await auth.signInWithPhoneNumber(phone, window.recaptchaVerifier);
-    // Update the sub-text on the code screen
     document.getElementById('auth-code-msg').textContent =
       `We sent a 6-digit code to +44 ${raw}`;
     authShowScreen('code');
@@ -812,7 +813,6 @@ async function authSendCode() {
   } catch (err) {
     console.error('SMS send error:', err);
     authSetError('phone', 'Could not send code. Check the number and try again.');
-    // Reset reCAPTCHA so user can retry
     if (window.recaptchaVerifier) {
       try { window.recaptchaVerifier.clear(); } catch (_) {}
       window.recaptchaVerifier = null;
@@ -844,14 +844,12 @@ async function authVerifyCode() {
     const result = await window.confirmationResult.confirm(code);
     const user   = result.user;
 
-    // Check if we already have their name
     const userDoc = await db.collection('users').doc(user.uid).get();
     if (userDoc.exists && userDoc.data().firstName) {
       customerName = userDoc.data().firstName;
       document.getElementById('auth-overlay').classList.remove('show');
       if (pendingOrderFn) pendingOrderFn();
     } else {
-      // First order — ask for their name
       authShowScreen('name');
       setTimeout(() => document.getElementById('auth-name-input').focus(), 150);
     }
@@ -907,7 +905,7 @@ async function authSaveName() {
    Resets to #001 each day. Concurrency-safe.
    ============================================================================ */
 async function getNextOrderRef() {
-  const today      = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const today      = new Date().toISOString().split('T')[0];
   const counterRef = db.collection('vendors').doc(CONFIG.vendor.id)
                        .collection('counters').doc('daily');
   let count = 1;
@@ -970,4 +968,104 @@ async function submitOrderToFirestore() {
 
   await db.collection('orders').add(orderDoc);
   return orderRef;
+}
+
+
+/* ============================================================================
+   30. FIREBASE — KITCHEN STATUS LISTENER                    NEW Session 7b
+   Reads kitchenStatus from vendors/{vendorId} in real time.
+   Updates shared state and blocks/unblocks ordering across mobile + desktop.
+   ============================================================================ */
+
+const KITCHEN_CLOSED_MESSAGES = {
+  closed_busy:  "We're really busy right now — back shortly!",
+  closed_end:   "We're closing up for tonight — see you next time!",
+  closed_today: "We're not trading today — see you soon!"
+};
+
+function applyKitchenStatus(status) {
+  kitchenStatus    = status;
+  const isOpen     = status === 'open';
+  const msg        = isOpen ? '' : (KITCHEN_CLOSED_MESSAGES[status] || 'We are currently closed.');
+
+  // ── Mobile: closed banner at top of home page ─────────────────────────────
+  let mBanner = document.getElementById('m-kitchen-closed-banner');
+  if (!isOpen) {
+    if (!mBanner) {
+      mBanner = document.createElement('div');
+      mBanner.id = 'm-kitchen-closed-banner';
+      mBanner.style.cssText = [
+        'background:#C8410B',
+        'color:#FDF6EC',
+        'padding:12px 16px',
+        'text-align:center',
+        'font-size:14px',
+        'font-weight:600',
+        'letter-spacing:0.01em',
+        'position:sticky',
+        'top:0',
+        'z-index:100'
+      ].join(';');
+      const homePage = document.getElementById('page-home');
+      if (homePage) homePage.prepend(mBanner);
+    }
+    mBanner.textContent  = '🔴  ' + msg;
+    mBanner.style.display = 'block';
+  } else if (mBanner) {
+    mBanner.style.display = 'none';
+  }
+
+  // ── Mobile: Place Order button state ──────────────────────────────────────
+  const mBtn = document.querySelector('#page-basket .m-btn');
+  if (mBtn) {
+    mBtn.disabled    = !isOpen;
+    mBtn.textContent = isOpen ? 'Place Order' : 'Kitchen Closed';
+  }
+
+  // ── Desktop: closed banner above menu section ─────────────────────────────
+  let dBanner = document.getElementById('d-kitchen-closed-banner');
+  if (!isOpen) {
+    if (!dBanner) {
+      dBanner = document.createElement('div');
+      dBanner.id = 'd-kitchen-closed-banner';
+      dBanner.style.cssText = [
+        'background:#C8410B',
+        'color:#FDF6EC',
+        'padding:14px 24px',
+        'text-align:center',
+        'font-size:15px',
+        'font-weight:600',
+        'letter-spacing:0.01em',
+        'border-radius:8px',
+        'margin-bottom:24px'
+      ].join(';');
+      const menuSection = document.getElementById('d-menu');
+      if (menuSection) menuSection.prepend(dBanner);
+    }
+    dBanner.textContent   = '🔴  ' + msg;
+    dBanner.style.display = 'block';
+  } else if (dBanner) {
+    dBanner.style.display = 'none';
+  }
+
+  // ── Desktop: Place Order button state ─────────────────────────────────────
+  const dBtn = document.querySelector('#d-basket-footer .d-btn-primary');
+  if (dBtn) {
+    dBtn.disabled    = !isOpen;
+    dBtn.textContent = isOpen ? 'Place Order' : 'Kitchen Closed';
+  }
+}
+
+function initKitchenStatusListener() {
+  const vendorRef = db.collection('vendors').doc(CONFIG.vendor.id);
+  vendorRef.onSnapshot(
+    doc => {
+      const status = (doc.exists && doc.data().kitchenStatus) || 'open';
+      applyKitchenStatus(status);
+    },
+    err => {
+      console.warn('Kitchen status listener error:', err);
+      // Fail open — do not block ordering if Firestore is unreachable
+    }
+  );
 }
