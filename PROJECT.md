@@ -1,5 +1,5 @@
 # Stalliq — Project Bible
-> Last updated: April 2026 — Session 6 + Planning (Pitch Sprint Planned, Roadmap Expanded)
+> Last updated: April 2026 — Session 7b Complete (Real-time Order Status done)
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -120,7 +120,10 @@ Firebase SDK (CDN compat v10.12.2) → js/config.js → js/firebase.js → js/ap
 
 **Responsive layout:**
 - Desktop (≥768px): Full scrolling landing page with basket sidebar
-- Mobile (<768px): PWA app shell with 5 pages and bottom navigation
+- Mobile (<768px): PWA app shell with **6 pages** and bottom navigation
+
+**Mobile nav (6 items):**
+🏠 Home · 🍕 Menu · 🛒 Basket · 👫 About · 📍 Find Us · 👤 Account
 
 **Design tokens:**
 - Primary: `#C8410B` (fire red)
@@ -129,8 +132,13 @@ Firebase SDK (CDN compat v10.12.2) → js/config.js → js/firebase.js → js/ap
 - Light: `#FDF6EC` (cream)
 - Fonts: Playfair Display, DM Sans, Cormorant Garamond
 
-**Contrast rule (established Session 6):**
+**Contrast rule (established Session 6, applied Session 7a):**
 Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm cream at low opacity on warm dark backgrounds renders as brown-on-brown. White-based opacity renders as readable neutral grey.
+
+**Contrast values (current):**
+- `--cream-60`: `rgba(255,255,255,0.75)` — body text, labels
+- `--cream-50`: `rgba(255,255,255,0.70)` — descriptions, secondary
+- `--cream-45`: `rgba(255,255,255,0.65)` — notes, hints, captions
 
 ---
 
@@ -155,23 +163,25 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 02 | White-label Config | ✅ Done | config.js — one file per customer |
 | 03 | Firebase Backend | ✅ Done | Order submission, Phone Auth, Firestore |
 | 04 | Kitchen Dashboard | ✅ Done | PIN, kanban, accept/status/drill-down, kitchen close toggle |
-| 05 | Real-time Order Status | 🔨 Session 7 | Customer sees live status + actual wait time |
-| 06 | Google Sheets Menu Management | 🔨 Session 9 | Vendor edits a Google Sheet, menu updates live in app — no deploy needed |
-| 07 | News & Locations Feed | 🔨 Session 10 | Upcoming events + where to find the van — Google Sheets driven |
-| 08 | Offers & Deal Codes | 🔨 Session 10 | Offers page on customer app, discount codes |
-| 09 | SMS & WhatsApp Status Notifications | ⏳ Planned | Customer notified on order status changes — Twilio |
-| 10 | Live Location Broadcast | ⏳ Planned | Van location shown live on customer app — foundation for geofence at scale |
-| 11 | Geofence Notifications | ⏳ Planned | Van enters subscriber's area → phone buzzes |
-| 12 | Flash Sales & Broadcasts | ⏳ Planned | Vendor launches deal in seconds, broadcasts to subscribers |
-| 13 | Loyalty Stamp Card | ⏳ Planned | Digital stamp card — no paper needed |
-| 14 | Customer Login & Order History | ⏳ Planned | Full account, past orders, saved preferences |
-| 15 | Flash Offers by Geolocation | ⏳ Planned | Customer in area gets notified of live deal |
-| 16 | Pre-order Time Slots | ⏳ Planned | Order now, collect at chosen time |
-| 17 | Vendor Self-Service | ⏳ Planned | Vendor manages own menu, events, location — full self-service portal |
-| 18 | MI & Reporting | ⏳ Planned | Daily order count, revenue totals, product breakdown — CSV or Looker Studio |
-| 19 | AI Order Assist | 🌟 Vision | Customer orders in natural language — type or dictate. AI parses into basket, normal checkout flow. |
+| 05 | Real-time Order Status | ✅ Done | Live status listener, time display, ready-state handling, diagnostics |
+| 06 | Customer Account / Members Area | 🔨 Session 8 | Account page, current orders (multi), order history, loyalty placeholder, offers placeholder |
+| 07 | Google Sheets Menu Management | 🔨 Session 9 | Vendor edits a Google Sheet, menu updates live in app — no deploy needed |
+| 08 | News & Locations Feed | 🔨 Session 10 | Upcoming events + where to find the van — Google Sheets driven |
+| 09 | Offers & Deal Codes | 🔨 Session 10 | Offers page on customer app, discount codes |
+| 10 | SMS & WhatsApp Status Notifications | ⏳ Planned | Customer notified on order status changes — Twilio |
+| 11 | Live Location Broadcast | ⏳ Planned | Van location shown live on customer app — foundation for geofence at scale |
+| 12 | Geofence Notifications | ⏳ Planned | Van enters subscriber's area → phone buzzes |
+| 13 | Flash Sales & Broadcasts | ⏳ Planned | Vendor launches deal in seconds, broadcasts to subscribers |
+| 14 | Loyalty Stamp Card | ⏳ Planned | Digital stamp card — no paper needed |
+| 15 | Customer Login & Order History | ⏳ Planned | Full account, past orders, saved preferences |
+| 16 | Flash Offers by Geolocation | ⏳ Planned | Customer in area gets notified of live deal |
+| 17 | Pre-order Time Slots | ⏳ Planned | Order now, collect at chosen time |
+| 18 | Vendor Self-Service | ⏳ Planned | Vendor manages own menu, events, location — full self-service portal |
+| 19 | MI & Reporting | ⏳ Planned | Daily order count, revenue totals, product breakdown — CSV or Looker Studio |
+| 20 | AI Order Assist | 🌟 Vision | Customer orders in natural language — type or dictate. AI parses into basket, normal checkout flow. |
 
 **Feature backlog (future):**
+- Item notes (per-item text input in basket — data model already supports `notes: null`)
 - Corporate catering module
 - Pub partnership mode
 - Multi-vendor event mode
@@ -188,8 +198,8 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 
 | Session | Focus | Goal |
 |---------|-------|------|
-| 7 | MVP Completion | Kitchen closed → app, real-time order status customer side, item notes |
-| 8 | Device tidy-up | Test on real phones, fix anything that surfaces |
+| 7 | MVP Completion | ✅ Kitchen closed → app, real-time order status customer side |
+| 8 | Customer Account / Members Area | Account page, current orders, history, loyalty + offers placeholders |
 | 9 | Google Sheets menu management | Vendor edits sheet, app updates live — no deploy |
 | 10 | News/Locations feed + Offers/Deal Codes | Customer app pages, Sheets driven |
 | 11 | Demo polish | End-to-end demo reset function, rough edges removed |
@@ -198,13 +208,15 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 **What gets demoed live at the meeting:**
 - Customer places order on phone → kitchen receives it instantly
 - Kitchen accepts, sets wait time → customer sees status update live
+- Customer can place multiple orders (forgot something) → both visible in Account
+- Account page shows loyalty stamps and offers — hints at the roadmap
 - Vendor edits menu in Google Sheet → customer app reflects it
 - News/locations and offers pages on the customer app
 
 **What goes on the roadmap slide (promised, not yet built):**
 - SMS + WhatsApp order status notifications
 - Live location broadcast → geofence at scale
-- Customer login, order history, loyalty points
+- Full loyalty stamp card + personalised offers
 - Flash offers by geolocation
 - AI Order Assist — order by voice or natural language
 
@@ -244,6 +256,17 @@ subscribers/{subscriberId}/
   vendorId, location, radius, notifyVia, lastNotified
 ```
 
+**Firestore security rules required (customer reads own orders):**
+```
+match /orders/{orderId} {
+  allow read: if request.auth != null
+              && resource.data.customerId == request.auth.uid;
+  allow create: if request.auth != null;
+}
+```
+
+**Order history query requires a composite index** (`customerId` + `createdAt` desc). Firestore will surface a direct link to create it on first query — one click, not a blocker.
+
 ---
 
 ## 10a. Order Submission — ✅ COMPLETE
@@ -254,7 +277,7 @@ subscribers/{subscriberId}/
 3. Enter mobile number → receive SMS code → verified (Firebase Phone Auth)
 4. Enter first name → stored against uid for all future orders
 5. Confirm order → single tap "Place Order"
-6. Confirmation screen → shows order ref e.g. `#007`
+6. Confirmation modal → shows order ref e.g. `#007`, live status updates
 
 **Repeat customer:** steps 2-4 skipped — one tap to confirm.
 
@@ -269,14 +292,30 @@ subscribers/{subscriberId}/
 | `closed_end` | "We're closing up for tonight — see you next time!" | End of service |
 | `closed_today` | "We're not trading today — see you soon!" | No service today |
 
-> ⚠️ Customer app does not yet read kitchenStatus — blocking ordering on close is **Session 7 work**.
-
 ---
 
 ## 10c. Kitchen Dashboard — ✅ COMPLETE (MVP scope)
 
 **URL:** `stalliq-demo.netlify.app/kitchen.html`
 **PIN:** 1234 (set in `CONFIG.kitchen.pin`)
+
+**Built in Session 7b Task 1 (Kitchen Closed → Customer App) ✅:**
+- `app.js` Section 30: `initKitchenStatusListener()` — Firestore `onSnapshot` on `vendors/lamuletti`
+- `applyKitchenStatus(status)` — updates shared `kitchenStatus` var and reacts across both views
+- Mobile: sticky red banner at top of home page + Place Order button disabled/renamed "Kitchen Closed"
+- Desktop: dark (`#1A0A00`) full-width sticky banner injected as first child of `<body>`, above nav, with fire red bottom border — visually distinct from the orange strip bar
+- All three closed statuses show correct message: `closed_busy`, `closed_end`, `closed_today`
+- Fails open — if Firestore unreachable, ordering stays available
+- Kitchen close toggle in dashboard already wrote to Firestore (Session 6) — full loop now live
+
+**Built in Session 7b Task 2 (Real-time Order Status) ✅:**
+- `app.js` Section 31: `startOrderStatusListener(orderId)` — Firestore `onSnapshot` on specific order doc
+- Status block injected into confirm modal (mobile) and overlay (desktop)
+- Time display (`m-confirm-time` / `d-order-time`) updates live: ⏳ pending → ~X mins on accept
+- Ready state: icon, title, button text all flip on mobile + desktop
+- `stopOrderStatusListener()` fully resets modal + overlay for next use
+- `[Stalliq]` console diagnostics throughout — permission-denied error surfaces Firestore rules fix
+- Handles multiple orders in same session cleanly (reset on each new order)
 
 **Built in Session 6:**
 - PIN screen on load — 4-digit, auto-submits, shakes on wrong entry
@@ -298,7 +337,43 @@ subscribers/{subscriberId}/
 
 ---
 
-## 11. Google Sheets Menu Management — Spec
+## 11. Customer Account / Members Area — Session 8 Spec
+
+**The account page is always present in the nav** (👤 Account, 6th item). Visible whether logged in or not.
+
+**Three states:**
+
+**Logged out:**
+Clean login prompt. "Sign in to track your orders and collect stamps." Taps into the existing phone auth flow. No new auth code needed.
+
+**Logged in, no activity:**
+- Welcome by first name
+- Loyalty stamp card: 0/10 stamps, "Buy 9 get your 10th free", "Coming soon" badge
+- Offers placeholder: one or two static offer cards, "Coming soon" badge
+- Empty order history with nudge to order
+
+**Logged in with activity:**
+- Current Orders section — one card per active order (status ≠ collected/cancelled). Each card shows live status with its own Firestore listener. Handles multiple concurrent orders (e.g. customer placed two orders in a row).
+- Loyalty stamp card — static for demo, shows 3/10 filled stamps
+- Offers — static for demo, one welcome offer card
+- Order history — all past orders, most recent first. Ref, date, items summary, total, status badge.
+
+**Post-order modal flow (unchanged):**
+The confirm modal stays exactly as built. It's the ephemeral "your order is placed" moment. The Account page is the persistent source of truth. Customer can dismiss the modal and find all active orders in Account.
+
+**Firestore queries for Account page:**
+- Current orders: `orders` where `customerId == uid` AND `status` not in `['collected', 'cancelled']`
+- Order history: `orders` where `customerId == uid`, ordered by `createdAt` desc
+- Both require the composite index on `customerId` + `createdAt` (Firestore provides one-click link on first run)
+
+**Multiple listener management:**
+Current `orderStatusUnsubscribe` (single var) needs to become a map keyed by `orderId`. `stopAllOrderListeners()` cleans up all. Individual listener cleaned up when order reaches `ready` and customer dismisses from Account page.
+
+**Session 8 files to produce:** `index.html` + `app.js` (Account page HTML + CSS + all JS logic)
+
+---
+
+## 12. Google Sheets Menu Management — Spec
 
 **Problem:** Menu changes require editing `config.js`, pushing to GitHub, waiting for Netlify deploy. Not vendor-manageable.
 
@@ -314,7 +389,7 @@ subscribers/{subscriberId}/
 
 ---
 
-## 12. Geofence Feature — Spec
+## 13. Geofence Feature — Spec
 
 1. Customer subscribes, sets location + radius (1/3/5 miles) + notification preference
 2. Cheap Android device in van pings GPS to Firebase every 60 seconds
@@ -326,7 +401,7 @@ subscribers/{subscriberId}/
 
 ---
 
-## 13. Flash Sales — Spec
+## 14. Flash Sales — Spec
 
 Vendor taps "Launch Flash Deal" → picks preset or custom → sets claim limit/time limit → broadcasts instantly.
 
@@ -338,7 +413,7 @@ Broadcast to: geofence subscribers only OR full list.
 
 ---
 
-## 14. AI Order Assist — Vision Feature
+## 15. AI Order Assist — Vision Feature
 
 Customer taps AI chat bubble → types or dictates order in natural language → AI parses into basket items → customer reviews and confirms → normal checkout flow.
 
@@ -348,11 +423,11 @@ Customer taps AI chat bubble → types or dictates order in natural language →
 
 **Guardrails needed:** Stay on-task (no off-menu items), handle allergy questions carefully, cost per conversation monitoring at scale.
 
-**Roadmap position:** Feature 19 — post loyalty and self-service.
+**Roadmap position:** Feature 20 — post loyalty and self-service.
 
 ---
 
-## 15. Deployment Pipeline ✅
+## 16. Deployment Pipeline ✅
 
 **Hosting:** Netlify — https://stalliq-demo.netlify.app/
 **GitHub:** https://github.com/JulianBell106/lamulettipizza
@@ -366,7 +441,7 @@ Customer taps AI chat bubble → types or dictates order in natural language →
 
 ---
 
-## 16. Key Decisions Made
+## 17. Key Decisions Made
 
 - Multi-tenancy: one deployment per customer for 0-5, then scale
 - `config.js` is single file that changes per customer
@@ -390,14 +465,22 @@ Customer taps AI chat bubble → types or dictates order in natural language →
 - Wait time options configurable per vendor in `CONFIG.ordering.waitOptions`
 - Secondary text colour must use `rgba(255,255,255,0.X)` not cream-based opacity (brown-on-brown problem)
 - `kitchen.html` CSS is embedded (not separate file) — branding is data-driven via CONFIG at runtime
-- Item notes field (`notes: null`) already in order data model — UI to be built Session 7
+- Item notes field (`notes: null`) already in order data model — UI deferred to post-pitch backlog
 - Menu management: Google Sheets approach for vendor self-service — no deploy needed
 - SMS/WhatsApp and live location: roadmap promises for pitch — not built before meeting
 - AI Order Assist: vision feature — natural language + dictation ordering, no comparable product at this price point
+- Kitchen closed banner on desktop: dark background (`#1A0A00`) injected at top of `<body>` — fire red banner blended invisibly into the orange strip bar
+- Kitchen status listener fails open — Firestore unreachable does not block ordering
+- Session chunking: large file outputs cause conversation timeouts — break each session into single-file chunks with fresh conversation per chunk
+- Order status listener: inject-into-modal approach (not separate page) — modal is ephemeral, Account page is persistent
+- Multiple concurrent orders supported — customer can dismiss modal and place second order; both visible in Account page with individual listeners
+- Account page always visible in nav (logged out shows login prompt) — loyalty card is a reason to open app even without ordering
+- Loyalty + offers: static/placeholder for demo, "Coming soon" badge — shows roadmap without over-promising
+- `stopOrderStatusListener()` fully resets modal + overlay state so second order in same session renders cleanly
 
 ---
 
-## 17. Core Product Principle — Kitchen Management Co-pilot
+## 18. Core Product Principle — Kitchen Management Co-pilot
 
 Independent food vendors are brilliant at their craft but are not trained kitchen managers. When orders pile up they have no system — they react. Quality drops, customers wait without knowing why, the experience falls apart.
 
@@ -407,7 +490,7 @@ The app promotes good decisions at exactly the moments when a vendor is most lik
 
 ---
 
-## 18. Pitch Deck
+## 19. Pitch Deck
 
 **File:** `vendorapp-pitch-v2.pptx` (11 slides)
 **TODO:** Rename/update to reflect Stalliq branding.
@@ -417,20 +500,26 @@ The app promotes good decisions at exactly the moments when a vendor is most lik
 
 ---
 
-## 19. Next Session — Session 7: MVP Completion
+## 20. Next Session — Session 8: Customer Account / Members Area
 
-**Priority order:**
+Paste the current `index.html` and `app.js` at the start of the session.
 
-1. **Text contrast** — bump all secondary text opacity to 0.75-0.85 across `styles.css` and `kitchen.html`. Quick win first.
-2. **Kitchen closed → customer app** — `app.js` reads `kitchenStatus` from Firestore on load and blocks ordering when closed. Shows correct closed message on mobile and desktop. Without this the kitchen close toggle is decorative only.
-3. **Real-time order status — customer side (Feature 05)** — Firestore listener on the customer's order doc. When kitchen sets `waitMins`, customer sees actual time not static 15 mins. Mobile status screen: Pending → Accepted (X mins) → Preparing → Ready to Collect.
-4. **Item notes** — "no onions on the Margherita". Notes input per item in basket (`app.js` + `styles.css`). Data model already supports it (`notes: null` on each item). Kitchen card and drill-down already wired to display notes when present.
+**What to build:**
+A 6th mobile page (`#page-account`, 👤 Account) always present in the nav. Three states: logged out (login prompt), logged in with no orders (welcome + placeholders), logged in with activity (current orders + history + placeholders).
 
-Items 2 and 3 together are the MVP moment: customer orders → kitchen receives → kitchen responds → customer sees it live.
+**Detailed spec:** See Section 11 above.
+
+**Key things to get right:**
+- Multiple concurrent order listeners — map keyed by orderId, not single var
+- Current orders query excludes collected/cancelled status
+- Order history composite index — Firestore will prompt on first run, one-click fix
+- Loyalty stamp card: 3/10 filled, "Coming soon" badge, visually complete
+- Offers: 1-2 static cards, "Coming soon" badge
+- Post-order modal stays exactly as is — account page is the persistent layer
 
 ---
 
-## 20. Working Rhythm
+## 21. Working Rhythm
 
 **Start:** "New session — ignore the project file attachment, read the live PROJECT.md from GitHub instead: https://raw.githubusercontent.com/JulianBell106/lamulettipizza/refs/heads/main/PROJECT.md — today we're working on [task]"
 
@@ -438,3 +527,4 @@ Items 2 and 3 together are the MVP moment: customer orders → kitchen receives 
 
 **Always work inside the La Muletti Claude Project.**
 **One session = one focused task.**
+**One chunk = one file output = one conversation.**
