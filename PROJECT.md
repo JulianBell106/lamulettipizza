@@ -1,5 +1,5 @@
 # Stalliq — Project Bible
-> Last updated: April 2026 — Session 6 (Kitchen Dashboard — Build, Kanban, Drill-down, Contrast)
+> Last updated: April 2026 — Session 6 + Planning (Pitch Sprint Planned, Roadmap Expanded)
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -48,7 +48,7 @@ Julian has ~30 years IT experience and a development background but no longer co
 **Facebook:** @lamulettipizza
 **Website:** lamulettipizza.co.uk
 
-**Commercial arrangement:** Free for year one in exchange for being a reference customer and providing feedback. Year two onwards moves to standard pricing. **Daniele has confirmed he wants to go ahead — meeting being arranged.**
+**Commercial arrangement:** Free for year one in exchange for being a reference customer and providing feedback. Year two onwards moves to standard pricing. **Daniele has confirmed he wants to go ahead — meeting in ~3 weeks.**
 
 **Demo site (live):** https://stalliq-demo.netlify.app/
 **GitHub repo:** https://github.com/JulianBell106/lamulettipizza
@@ -111,6 +111,7 @@ No setup fee on Starter. No commission ever.
 **Key principle:** `config.js` is the ONLY file that changes between customers.
 
 **Script load order (both index.html and kitchen.html):**
+
 ```
 Firebase SDK (CDN compat v10.12.2) → js/config.js → js/firebase.js → js/app.js / js/kitchen.js
 ```
@@ -154,22 +155,27 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 02 | White-label Config | ✅ Done | config.js — one file per customer |
 | 03 | Firebase Backend | ✅ Done | Order submission, Phone Auth, Firestore |
 | 04 | Kitchen Dashboard | ✅ Done | PIN, kanban, accept/status/drill-down, kitchen close toggle |
-| 05 | Real-time Order Status | 🔨 Next | Customer sees live status + actual wait time |
-| 06 | Geofence Notifications | ⏳ Planned | Van enters area → subscriber phone buzzes |
-| 07 | Flash Sales & Broadcasts | ⏳ Planned | Vendor launches deal in seconds |
-| 08 | Offers & Coupons | ⏳ Planned | Event deals, first order discount |
-| 09 | Loyalty Stamp Card | ⏳ Planned | Digital, no paper needed |
-| 10 | WhatsApp Order Alerts | ⏳ Planned | Orders to WhatsApp via Twilio |
-| 11 | Pre-order Time Slots | ⏳ Planned | Order now, collect at chosen time |
-| 12 | Vendor Self-Service | ⏳ Planned | Vendor manages own menu/events/location |
-| 13 | MI & Reporting | ⏳ Planned | Daily order count, revenue totals, product breakdown — export via CSV or Looker Studio |
+| 05 | Real-time Order Status | 🔨 Session 7 | Customer sees live status + actual wait time |
+| 06 | Google Sheets Menu Management | 🔨 Session 9 | Vendor edits a Google Sheet, menu updates live in app — no deploy needed |
+| 07 | News & Locations Feed | 🔨 Session 10 | Upcoming events + where to find the van — Google Sheets driven |
+| 08 | Offers & Deal Codes | 🔨 Session 10 | Offers page on customer app, discount codes |
+| 09 | SMS & WhatsApp Status Notifications | ⏳ Planned | Customer notified on order status changes — Twilio |
+| 10 | Live Location Broadcast | ⏳ Planned | Van location shown live on customer app — foundation for geofence at scale |
+| 11 | Geofence Notifications | ⏳ Planned | Van enters subscriber's area → phone buzzes |
+| 12 | Flash Sales & Broadcasts | ⏳ Planned | Vendor launches deal in seconds, broadcasts to subscribers |
+| 13 | Loyalty Stamp Card | ⏳ Planned | Digital stamp card — no paper needed |
+| 14 | Customer Login & Order History | ⏳ Planned | Full account, past orders, saved preferences |
+| 15 | Flash Offers by Geolocation | ⏳ Planned | Customer in area gets notified of live deal |
+| 16 | Pre-order Time Slots | ⏳ Planned | Order now, collect at chosen time |
+| 17 | Vendor Self-Service | ⏳ Planned | Vendor manages own menu, events, location — full self-service portal |
+| 18 | MI & Reporting | ⏳ Planned | Daily order count, revenue totals, product breakdown — CSV or Looker Studio |
+| 19 | AI Order Assist | 🌟 Vision | Customer orders in natural language — type or dictate. AI parses into basket, normal checkout flow. |
 
 **Feature backlog (future):**
 - Corporate catering module
 - Pub partnership mode
 - Multi-vendor event mode
 - Review and rating system
-- Revenue / analytics dashboard
 - Sell-out warnings / scarcity nudges
 - Weather-triggered deal suggestions
 - End-of-night clearance prompts
@@ -178,7 +184,33 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 
 ---
 
-## 9. Firebase Backend — Spec
+## 9. Pitch Sprint Plan — 3 Weeks to La Muletti Meeting
+
+| Session | Focus | Goal |
+|---------|-------|------|
+| 7 | MVP Completion | Kitchen closed → app, real-time order status customer side, item notes |
+| 8 | Device tidy-up | Test on real phones, fix anything that surfaces |
+| 9 | Google Sheets menu management | Vendor edits sheet, app updates live — no deploy |
+| 10 | News/Locations feed + Offers/Deal Codes | Customer app pages, Sheets driven |
+| 11 | Demo polish | End-to-end demo reset function, rough edges removed |
+| 12 | Pitch deck update | Stalliq rebrand, kitchen co-pilot angle, roadmap slide with vision features |
+
+**What gets demoed live at the meeting:**
+- Customer places order on phone → kitchen receives it instantly
+- Kitchen accepts, sets wait time → customer sees status update live
+- Vendor edits menu in Google Sheet → customer app reflects it
+- News/locations and offers pages on the customer app
+
+**What goes on the roadmap slide (promised, not yet built):**
+- SMS + WhatsApp order status notifications
+- Live location broadcast → geofence at scale
+- Customer login, order history, loyalty points
+- Flash offers by geolocation
+- AI Order Assist — order by voice or natural language
+
+---
+
+## 10. Firebase Backend — Spec
 
 **Tech stack:** Firestore + Firebase Auth + Firebase Cloud Functions
 
@@ -214,7 +246,7 @@ subscribers/{subscriberId}/
 
 ---
 
-## 9a. Order Submission — ✅ COMPLETE
+## 10a. Order Submission — ✅ COMPLETE
 
 **Customer journey:**
 1. Basket review → customer reviews items + total
@@ -228,7 +260,7 @@ subscribers/{subscriberId}/
 
 ---
 
-## 9b. Kitchen Close Feature — ✅ COMPLETE
+## 10b. Kitchen Close Feature — ✅ COMPLETE
 
 | Status | Customer-facing message | Use case |
 |--------|------------------------|----------|
@@ -241,7 +273,7 @@ subscribers/{subscriberId}/
 
 ---
 
-## 9c. Kitchen Dashboard — ✅ COMPLETE (MVP scope)
+## 10c. Kitchen Dashboard — ✅ COMPLETE (MVP scope)
 
 **URL:** `stalliq-demo.netlify.app/kitchen.html`
 **PIN:** 1234 (set in `CONFIG.kitchen.pin`)
@@ -266,7 +298,23 @@ subscribers/{subscriberId}/
 
 ---
 
-## 10. Geofence Feature — Spec
+## 11. Google Sheets Menu Management — Spec
+
+**Problem:** Menu changes require editing `config.js`, pushing to GitHub, waiting for Netlify deploy. Not vendor-manageable.
+
+**Solution:** Menu data pulled from a published Google Sheet at runtime. Vendor edits their sheet, app reflects changes within minutes. No code changes, no deploy required.
+
+**Approach:**
+- Google Sheet published as JSON via Sheets API public endpoint
+- `app.js` fetches menu data on load, falls back to `config.js` menu if Sheet unavailable
+- Sheet structure mirrors current menu format: name, price, diet flags, available toggle, description
+- Vendor given edit access to their own sheet only
+
+**Operator workflow:** Julian creates and shares the Sheet per customer. Vendor manages their own content.
+
+---
+
+## 12. Geofence Feature — Spec
 
 1. Customer subscribes, sets location + radius (1/3/5 miles) + notification preference
 2. Cheap Android device in van pings GPS to Firebase every 60 seconds
@@ -278,7 +326,7 @@ subscribers/{subscriberId}/
 
 ---
 
-## 11. Flash Sales — Spec
+## 13. Flash Sales — Spec
 
 Vendor taps "Launch Flash Deal" → picks preset or custom → sets claim limit/time limit → broadcasts instantly.
 
@@ -290,7 +338,21 @@ Broadcast to: geofence subscribers only OR full list.
 
 ---
 
-## 12. Deployment Pipeline ✅
+## 14. AI Order Assist — Vision Feature
+
+Customer taps AI chat bubble → types or dictates order in natural language → AI parses into basket items → customer reviews and confirms → normal checkout flow.
+
+**Why it works:** Menu is small and fixed. "Two Margheritas and a Bella Pepperoni" is a solved problem for an LLM. Dictation is free via smartphone keyboard.
+
+**Why it matters:** No Just Eat, no Deliveroo, no Flipdish offers this at £29/month. It's a demo moment.
+
+**Guardrails needed:** Stay on-task (no off-menu items), handle allergy questions carefully, cost per conversation monitoring at scale.
+
+**Roadmap position:** Feature 19 — post loyalty and self-service.
+
+---
+
+## 15. Deployment Pipeline ✅
 
 **Hosting:** Netlify — https://stalliq-demo.netlify.app/
 **GitHub:** https://github.com/JulianBell106/lamulettipizza
@@ -304,7 +366,7 @@ Broadcast to: geofence subscribers only OR full list.
 
 ---
 
-## 13. Key Decisions Made
+## 16. Key Decisions Made
 
 - Multi-tenancy: one deployment per customer for 0-5, then scale
 - `config.js` is single file that changes per customer
@@ -329,10 +391,13 @@ Broadcast to: geofence subscribers only OR full list.
 - Secondary text colour must use `rgba(255,255,255,0.X)` not cream-based opacity (brown-on-brown problem)
 - `kitchen.html` CSS is embedded (not separate file) — branding is data-driven via CONFIG at runtime
 - Item notes field (`notes: null`) already in order data model — UI to be built Session 7
+- Menu management: Google Sheets approach for vendor self-service — no deploy needed
+- SMS/WhatsApp and live location: roadmap promises for pitch — not built before meeting
+- AI Order Assist: vision feature — natural language + dictation ordering, no comparable product at this price point
 
 ---
 
-## 14. Core Product Principle — Kitchen Management Co-pilot
+## 17. Core Product Principle — Kitchen Management Co-pilot
 
 Independent food vendors are brilliant at their craft but are not trained kitchen managers. When orders pile up they have no system — they react. Quality drops, customers wait without knowing why, the experience falls apart.
 
@@ -342,32 +407,30 @@ The app promotes good decisions at exactly the moments when a vendor is most lik
 
 ---
 
-## 15. Pitch Deck
+## 18. Pitch Deck
 
 **File:** `vendorapp-pitch-v2.pptx` (11 slides)
 **TODO:** Rename/update to reflect Stalliq branding.
 **TODO:** Update slide 11 with real Endoo contact details. Add QR code to slide 7.
 **TODO:** Add kitchen management co-pilot angle.
+**TODO:** Add roadmap slide covering SMS/WhatsApp, live location, geofence, customer login, loyalty, AI Order Assist.
 
 ---
 
-## 16. Next Session — Session 7: MVP Completion
+## 19. Next Session — Session 7: MVP Completion
 
 **Priority order:**
 
 1. **Text contrast** — bump all secondary text opacity to 0.75-0.85 across `styles.css` and `kitchen.html`. Quick win first.
-
 2. **Kitchen closed → customer app** — `app.js` reads `kitchenStatus` from Firestore on load and blocks ordering when closed. Shows correct closed message on mobile and desktop. Without this the kitchen close toggle is decorative only.
-
 3. **Real-time order status — customer side (Feature 05)** — Firestore listener on the customer's order doc. When kitchen sets `waitMins`, customer sees actual time not static 15 mins. Mobile status screen: Pending → Accepted (X mins) → Preparing → Ready to Collect.
-
 4. **Item notes** — "no onions on the Margherita". Notes input per item in basket (`app.js` + `styles.css`). Data model already supports it (`notes: null` on each item). Kitchen card and drill-down already wired to display notes when present.
 
 Items 2 and 3 together are the MVP moment: customer orders → kitchen receives → kitchen responds → customer sees it live.
 
 ---
 
-## 17. Working Rhythm
+## 20. Working Rhythm
 
 **Start:** "New session — ignore the project file attachment, read the live PROJECT.md from GitHub instead: https://raw.githubusercontent.com/JulianBell106/lamulettipizza/refs/heads/main/PROJECT.md — today we're working on [task]"
 
