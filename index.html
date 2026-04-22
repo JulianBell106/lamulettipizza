@@ -1339,13 +1339,16 @@ html { scroll-behavior: smooth; }
   </div>
 </div>
 
-<!-- DESKTOP ORDER CONFIRM -->
+<!-- DESKTOP ORDER CONFIRM
+     d-order-time and d-order-timelabel now have IDs — JS updates them live.
+     Initial state: ⏳ / pending text. On kitchen accept: ~X mins / normal label.
+     On ready: cleared / "Head to the van" text. -->
 <div class="d-order-overlay" id="d-order-overlay">
   <div class="d-order-modal">
     <div class="d-order-icon">🙌</div>
     <div class="d-order-title">Order Placed!</div>
-    <div class="d-order-time">~15 mins</div>
-    <div class="d-order-timelabel">Estimated pickup time from now</div>
+    <div class="d-order-time" id="d-order-time">⏳</div>
+    <div class="d-order-timelabel" id="d-order-timelabel">Waiting for kitchen to accept…</div>
     <div class="d-order-ref" id="d-order-ref">Order ref #001</div>
     <div class="d-order-details" id="d-order-details"></div>
     <p class="d-order-msg">Thanks for your order! Please collect and <strong>pay on pickup</strong>. Your fresh pizza will be ready soon 🍕</p>
@@ -1431,12 +1434,15 @@ html { scroll-behavior: smooth; }
     </div>
   </div>
 
-  <!-- ORDER CONFIRM -->
+  <!-- ORDER CONFIRM
+       m-confirm-time and m-confirm-timelabel now have IDs — JS updates them live.
+       Initial state: ⏳ / pending text. On kitchen accept: ~X mins / normal label.
+       On ready: cleared / "Head to the van" text, button text also flips. -->
   <div id="m-order-confirm">
     <div class="m-confirm-icon">🙌</div>
     <div class="m-confirm-title">Order Placed!</div>
-    <div class="m-confirm-time" id="m-confirm-time">~15 mins</div>
-    <div class="m-confirm-timelabel">Estimated pickup time from now</div>
+    <div class="m-confirm-time" id="m-confirm-time">⏳</div>
+    <div class="m-confirm-timelabel" id="m-confirm-timelabel">Waiting for kitchen to accept…</div>
     <div class="m-confirm-ref" id="m-confirm-ref">Order ref #001</div>
     <div class="m-confirm-details" id="m-confirm-details"></div>
     <p class="m-confirm-msg" id="m-confirm-msg">Thanks for your order!</p>

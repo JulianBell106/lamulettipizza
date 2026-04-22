@@ -35,7 +35,7 @@
  *   28. Firebase — Get next order ref (daily counter)
  *   29. Firebase — Submit order to Firestore
  *   30. Firebase — Kitchen status listener
- *   31. Firebase — Order status listener          ← NEW Session 7b Task 2
+ *   31. Firebase — Order status listener
  * ============================================================================
  */
 
@@ -405,9 +405,11 @@ function dToggleBasket() {
 /* ============================================================================
    12. DESKTOP — ORDER CONFIRMATION
    Routes through authGateway → Firestore submission → live status listener.
+
+   The overlay starts in pending state (⏳ / "Waiting…") from HTML defaults.
+   startOrderStatusListener() takes over from there and updates elements live.
    ============================================================================ */
 function dPlaceOrder() {
-  // Guard: block if kitchen is closed
   if (kitchenStatus !== 'open') return;
 
   authGateway(async () => {
@@ -415,13 +417,28 @@ function dPlaceOrder() {
     if (btn) { btn.textContent = 'Placing order...'; btn.disabled = true; }
     try {
       const { orderRef, orderId } = await submitOrderToFirestore();
+      console.log(`[Stalliq] Order placed. orderId: ${orderId} | orderRef: ${orderRef}`);
+
       const { rows } = buildOrderSummaryHTML('d-order-row');
       document.getElementById('d-order-ref').textContent   = 'Order ref ' + orderRef;
       document.getElementById('d-order-details').innerHTML = rows;
+
+      // Reset overlay to pending state (HTML defaults already set, but reset
+      // here so it's correct if the customer places a second order this session)
+      const timeEl  = document.getElementById('d-order-time');
+      const labelEl = document.getElementById('d-order-timelabel');
+      const iconEl  = document.querySelector('#d-order-overlay .d-order-icon');
+      const titleEl = document.querySelector('#d-order-overlay .d-order-title');
+      const doneBtn = document.querySelector('#d-order-overlay .d-btn-primary');
+      if (timeEl)  timeEl.textContent  = '⏳';
+      if (labelEl) labelEl.textContent = 'Waiting for kitchen to accept…';
+      if (iconEl)  iconEl.textContent  = '🙌';
+      if (titleEl) titleEl.textContent = 'Order Placed!';
+      if (doneBtn) doneBtn.textContent = 'Done — See you soon!';
+
       document.getElementById('d-order-overlay').classList.add('show');
       document.getElementById('d-basket-panel').classList.remove('open');
       clearBasket();
-      // Start live status listener — updates injected block inside overlay
       startOrderStatusListener(orderId);
     } catch (err) {
       console.error('Order error:', err);
@@ -568,9 +585,11 @@ function mRemoveItem(id) {
 /* ============================================================================
    18. MOBILE — ORDER CONFIRMATION
    Routes through authGateway → Firestore submission → live status listener.
+
+   The modal starts in pending state (⏳ / "Waiting…") from HTML defaults.
+   startOrderStatusListener() takes over from there and updates elements live.
    ============================================================================ */
 function mPlaceOrder() {
-  // Guard: block if kitchen is closed
   if (kitchenStatus !== 'open') return;
 
   authGateway(async () => {
@@ -580,13 +599,28 @@ function mPlaceOrder() {
     if (errEl) errEl.textContent = '';
     try {
       const { orderRef, orderId } = await submitOrderToFirestore();
+      console.log(`[Stalliq] Order placed. orderId: ${orderId} | orderRef: ${orderRef}`);
+
       const { rows } = buildOrderSummaryHTML('m-confirm-row');
       document.getElementById('m-confirm-ref').textContent   = 'Order ref ' + orderRef;
       document.getElementById('m-confirm-details').innerHTML = rows;
       document.getElementById('m-confirm-msg').textContent   = CONFIG.ordering.confirmMsg;
+
+      // Reset modal to pending state (HTML defaults already set, but reset
+      // here so it's correct if the customer places a second order this session)
+      const timeEl  = document.getElementById('m-confirm-time');
+      const labelEl = document.getElementById('m-confirm-timelabel');
+      const iconEl  = document.querySelector('#m-order-confirm .m-confirm-icon');
+      const titleEl = document.querySelector('#m-order-confirm .m-confirm-title');
+      const doneBtn = document.querySelector('#m-order-confirm .m-btn');
+      if (timeEl)  timeEl.textContent  = '⏳';
+      if (labelEl) labelEl.textContent = 'Waiting for kitchen to accept…';
+      if (iconEl)  iconEl.textContent  = '🙌';
+      if (titleEl) titleEl.textContent = 'Order Placed!';
+      if (doneBtn) doneBtn.textContent = 'Done — See you soon!';
+
       document.getElementById('m-order-confirm').classList.add('show');
       clearBasket();
-      // Start live status listener — injects and updates status block above order details
       startOrderStatusListener(orderId);
     } catch (err) {
       console.error('Order error:', err);
@@ -1085,15 +1119,29 @@ function initKitchenStatusListener() {
 
 
 /* ============================================================================
-   31. FIREBASE — ORDER STATUS LISTENER               NEW Session 7b Task 2
-   After order placement, listens on the specific order document and shows
-   the customer a live status screen rather than a static confirmation.
+   31. FIREBASE — ORDER STATUS LISTENER
+   After order placement, listens on the specific order document and updates
+   the customer's confirmation modal/overlay with live status.
 
-   Mobile: injects a status block above the order summary in m-order-confirm.
-   Desktop: injects a simpler status line below the order ref in d-order-overlay.
+   Mobile:  updates m-confirm-time, m-confirm-timelabel, icon, title, button.
+   Desktop: updates d-order-time, d-order-timelabel, icon, title, button.
+   Both:    a live status block is injected below the order ref.
 
-   Unsubscribes automatically when status reaches 'ready', or when the
-   customer dismisses the screen (stopOrderStatusListener).
+   Status flow:
+     pending   → ⏳ "Waiting for kitchen to accept…"
+     accepted  → ✅ "Order accepted!" + ~X mins shown in time display
+     preparing → 👨‍🍳 "Your order is being prepared"
+     ready     → 🟢 "Ready to collect!" + button text changes + listener stops
+
+   Firestore rules required (customer must be able to read their own order):
+     match /orders/{orderId} {
+       allow read: if request.auth != null
+                   && resource.data.customerId == request.auth.uid;
+       allow create: if request.auth != null;
+     }
+
+   If the listener fires a permission-denied error, check the rules above.
+   Console will show: [Stalliq] Listener error: permission-denied
    ============================================================================ */
 
 let orderStatusUnsubscribe = null;
@@ -1103,29 +1151,28 @@ const ORDER_STATUS_CONFIG = {
   pending: {
     icon:   '⏳',
     label:  'Waiting for the kitchen to accept your order…',
-    colour: 'rgba(212,160,67,0.95)'   // gold — neutral waiting state
+    colour: 'rgba(212,160,67,0.95)'
   },
   accepted: {
     icon:   '✅',
     label:  'Order accepted!',
-    colour: '#7ec87e'                  // soft green
+    colour: '#7ec87e'
   },
   preparing: {
     icon:   '👨‍🍳',
     label:  'Your order is being prepared',
-    colour: 'rgba(212,160,67,0.95)'   // gold — active work state
+    colour: 'rgba(212,160,67,0.95)'
   },
   ready: {
     icon:   '🟢',
     label:  'Ready to collect — head to the van!',
-    colour: '#7ec87e'                  // soft green
+    colour: '#7ec87e'
   }
 };
 
 /**
  * Injects the mobile status block into m-order-confirm if not already present.
- * Inserted before m-confirm-details so it sits at the top of the confirm screen
- * below the order ref.
+ * Inserted before m-confirm-details so it sits between the ref and order summary.
  */
 function injectMobileStatusBlock() {
   if (document.getElementById('m-live-status')) return;
@@ -1150,7 +1197,7 @@ function injectMobileStatusBlock() {
 
 /**
  * Injects the desktop status block into d-order-overlay if not already present.
- * Inserted after d-order-ref for a clean header → status → details flow.
+ * Inserted after d-order-ref.
  */
 function injectDesktopStatusBlock() {
   if (document.getElementById('d-live-status')) return;
@@ -1175,7 +1222,7 @@ function injectDesktopStatusBlock() {
 
 /**
  * Renders the current status into a given status block element.
- * Shows wait time on the 'accepted' status only — once set by the kitchen.
+ * Shows wait time on 'accepted' only.
  */
 function renderStatusBlock(elId, status, waitMins) {
   const el = document.getElementById(elId);
@@ -1192,45 +1239,94 @@ function renderStatusBlock(elId, status, waitMins) {
 
 /**
  * Starts a Firestore onSnapshot listener on the placed order document.
- * Injects status blocks into both confirm screens and updates them live.
+ * Updates status blocks and key UI elements live.
  * Called immediately after successful order submission.
  */
 function startOrderStatusListener(orderId) {
-  // Clean up any previous listener (safety guard)
+  // Clean up any previous listener
   if (orderStatusUnsubscribe) {
     orderStatusUnsubscribe();
     orderStatusUnsubscribe = null;
   }
 
-  // Inject status blocks and show initial pending state
+  // Inject status blocks and render initial pending state immediately
   injectMobileStatusBlock();
   injectDesktopStatusBlock();
   renderStatusBlock('m-live-status', 'pending', null);
   renderStatusBlock('d-live-status', 'pending', null);
 
-  // Listen on the specific order document
+  console.log(`[Stalliq] Starting order status listener. orderId: ${orderId}`);
+
   const docRef = db.collection('orders').doc(orderId);
   orderStatusUnsubscribe = docRef.onSnapshot(
     snapshot => {
       if (!snapshot.exists) return;
       const { status, waitMins } = snapshot.data();
+      console.log(`[Stalliq] Status update received: ${status} | waitMins: ${waitMins ?? 'null'}`);
+
+      // Update the injected status blocks
       renderStatusBlock('m-live-status', status, waitMins);
       renderStatusBlock('d-live-status', status, waitMins);
-      // Unsubscribe once the order is ready — no further updates needed
+
+      // ── Accepted: update the big time display with actual kitchen wait time ──
+      if (status === 'accepted' && waitMins) {
+        const mTime  = document.getElementById('m-confirm-time');
+        const mLabel = document.getElementById('m-confirm-timelabel');
+        if (mTime)  mTime.textContent  = `~${waitMins} mins`;
+        if (mLabel) mLabel.textContent = 'Estimated pickup time from now';
+
+        const dTime  = document.getElementById('d-order-time');
+        const dLabel = document.getElementById('d-order-timelabel');
+        if (dTime)  dTime.textContent  = `~${waitMins} mins`;
+        if (dLabel) dLabel.textContent = 'Estimated pickup time from now';
+      }
+
+      // ── Ready: celebrate, update modal, stop listening ────────────────────
       if (status === 'ready') {
+        // Mobile
+        const mIcon  = document.querySelector('#m-order-confirm .m-confirm-icon');
+        const mTitle = document.querySelector('#m-order-confirm .m-confirm-title');
+        const mTime  = document.getElementById('m-confirm-time');
+        const mLabel = document.getElementById('m-confirm-timelabel');
+        const mBtn   = document.querySelector('#m-order-confirm .m-btn');
+        if (mIcon)  mIcon.textContent  = '🟢';
+        if (mTitle) mTitle.textContent = 'Ready to collect!';
+        if (mTime)  mTime.textContent  = '';
+        if (mLabel) mLabel.textContent = 'Head to the van — your pizza is ready! 🍕';
+        if (mBtn)   mBtn.textContent   = '✓ Thanks — on my way!';
+
+        // Desktop
+        const dIcon  = document.querySelector('#d-order-overlay .d-order-icon');
+        const dTitle = document.querySelector('#d-order-overlay .d-order-title');
+        const dTime  = document.getElementById('d-order-time');
+        const dLabel = document.getElementById('d-order-timelabel');
+        const dBtn   = document.querySelector('#d-order-overlay .d-btn-primary');
+        if (dIcon)  dIcon.textContent  = '🟢';
+        if (dTitle) dTitle.textContent = 'Ready to collect!';
+        if (dTime)  dTime.textContent  = '';
+        if (dLabel) dLabel.textContent = 'Head to the van — your pizza is ready! 🍕';
+        if (dBtn)   dBtn.textContent   = '✓ Thanks — on my way!';
+
+        // Stop listener — no further updates needed
         orderStatusUnsubscribe();
         orderStatusUnsubscribe = null;
+        console.log('[Stalliq] Order ready — listener unsubscribed.');
       }
     },
     err => {
-      // Non-fatal — status block simply won't update if Firestore is unreachable
-      console.warn('Order status listener error:', err);
+      console.error(`[Stalliq] Listener error: ${err.code} |`, err.message);
+      if (err.code === 'permission-denied') {
+        console.warn('[Stalliq] Fix: add read rule to Firestore orders collection.');
+        console.warn('  allow read: if request.auth != null && resource.data.customerId == request.auth.uid;');
+      }
     }
   );
 }
 
 /**
  * Stops the order status listener and removes the injected status blocks.
+ * Also resets the mobile modal and desktop overlay to their initial state
+ * so they're clean for the next order in the same session.
  * Called on dismiss (mDismissOrder / dDismissOrder).
  */
 function stopOrderStatusListener() {
@@ -1238,8 +1334,36 @@ function stopOrderStatusListener() {
     orderStatusUnsubscribe();
     orderStatusUnsubscribe = null;
   }
+
+  // Remove injected status blocks
   const mEl = document.getElementById('m-live-status');
   if (mEl) mEl.remove();
   const dEl = document.getElementById('d-live-status');
   if (dEl) dEl.remove();
+
+  // Reset mobile modal to initial state for next use
+  const mIcon  = document.querySelector('#m-order-confirm .m-confirm-icon');
+  const mTitle = document.querySelector('#m-order-confirm .m-confirm-title');
+  const mTime  = document.getElementById('m-confirm-time');
+  const mLabel = document.getElementById('m-confirm-timelabel');
+  const mBtn   = document.querySelector('#m-order-confirm .m-btn');
+  if (mIcon)  mIcon.textContent  = '🙌';
+  if (mTitle) mTitle.textContent = 'Order Placed!';
+  if (mTime)  mTime.textContent  = '⏳';
+  if (mLabel) mLabel.textContent = 'Waiting for kitchen to accept…';
+  if (mBtn)   mBtn.textContent   = 'Done — See you soon!';
+
+  // Reset desktop overlay to initial state for next use
+  const dIcon  = document.querySelector('#d-order-overlay .d-order-icon');
+  const dTitle = document.querySelector('#d-order-overlay .d-order-title');
+  const dTime  = document.getElementById('d-order-time');
+  const dLabel = document.getElementById('d-order-timelabel');
+  const dBtn   = document.querySelector('#d-order-overlay .d-btn-primary');
+  if (dIcon)  dIcon.textContent  = '🙌';
+  if (dTitle) dTitle.textContent = 'Order Placed!';
+  if (dTime)  dTime.textContent  = '⏳';
+  if (dLabel) dLabel.textContent = 'Waiting for kitchen to accept…';
+  if (dBtn)   dBtn.textContent   = 'Done — See you soon!';
+
+  console.log('[Stalliq] Order status listener stopped.');
 }
