@@ -34,7 +34,8 @@
  *   27. Auth — Save name (first order only)
  *   28. Firebase — Get next order ref (daily counter)
  *   29. Firebase — Submit order to Firestore
- *   30. Firebase — Kitchen status listener          ← NEW Session 7b
+ *   30. Firebase — Kitchen status listener
+ *   31. Firebase — Order status listener          ← NEW Session 7b Task 2
  * ============================================================================
  */
 
@@ -403,7 +404,7 @@ function dToggleBasket() {
 
 /* ============================================================================
    12. DESKTOP — ORDER CONFIRMATION
-   Now routes through authGateway → Firestore submission.
+   Routes through authGateway → Firestore submission → live status listener.
    ============================================================================ */
 function dPlaceOrder() {
   // Guard: block if kitchen is closed
@@ -413,13 +414,15 @@ function dPlaceOrder() {
     const btn = document.querySelector('#d-basket-footer .d-btn-primary');
     if (btn) { btn.textContent = 'Placing order...'; btn.disabled = true; }
     try {
-      const orderRef = await submitOrderToFirestore();
+      const { orderRef, orderId } = await submitOrderToFirestore();
       const { rows } = buildOrderSummaryHTML('d-order-row');
       document.getElementById('d-order-ref').textContent   = 'Order ref ' + orderRef;
       document.getElementById('d-order-details').innerHTML = rows;
       document.getElementById('d-order-overlay').classList.add('show');
       document.getElementById('d-basket-panel').classList.remove('open');
       clearBasket();
+      // Start live status listener — updates injected block inside overlay
+      startOrderStatusListener(orderId);
     } catch (err) {
       console.error('Order error:', err);
       const errEl = document.getElementById('d-order-err');
@@ -431,6 +434,7 @@ function dPlaceOrder() {
 }
 
 function dDismissOrder() {
+  stopOrderStatusListener();
   document.getElementById('d-order-overlay').classList.remove('show');
 }
 
@@ -563,7 +567,7 @@ function mRemoveItem(id) {
 
 /* ============================================================================
    18. MOBILE — ORDER CONFIRMATION
-   Now routes through authGateway → Firestore submission.
+   Routes through authGateway → Firestore submission → live status listener.
    ============================================================================ */
 function mPlaceOrder() {
   // Guard: block if kitchen is closed
@@ -575,14 +579,15 @@ function mPlaceOrder() {
     const errEl = document.getElementById('m-order-err');
     if (errEl) errEl.textContent = '';
     try {
-      const orderRef = await submitOrderToFirestore();
+      const { orderRef, orderId } = await submitOrderToFirestore();
       const { rows } = buildOrderSummaryHTML('m-confirm-row');
-      document.getElementById('m-confirm-time').textContent  = `~${CONFIG.ordering.waitMins} mins`;
       document.getElementById('m-confirm-ref').textContent   = 'Order ref ' + orderRef;
       document.getElementById('m-confirm-details').innerHTML = rows;
       document.getElementById('m-confirm-msg').textContent   = CONFIG.ordering.confirmMsg;
       document.getElementById('m-order-confirm').classList.add('show');
       clearBasket();
+      // Start live status listener — injects and updates status block above order details
+      startOrderStatusListener(orderId);
     } catch (err) {
       console.error('Order error:', err);
       if (errEl) errEl.textContent = 'Could not place order. Please try again.';
@@ -593,6 +598,7 @@ function mPlaceOrder() {
 }
 
 function mDismissOrder() {
+  stopOrderStatusListener();
   document.getElementById('m-order-confirm').classList.remove('show');
   mShowPage('home');
 }
@@ -927,6 +933,8 @@ async function getNextOrderRef() {
 
 /* ============================================================================
    29. FIREBASE — SUBMIT ORDER TO FIRESTORE
+   Returns { orderRef, orderId } — orderId is the Firestore document ID,
+   used by the order status listener in Section 31.
    ============================================================================ */
 async function submitOrderToFirestore() {
   const user = auth.currentUser;
@@ -966,13 +974,13 @@ async function submitOrderToFirestore() {
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
 
-  await db.collection('orders').add(orderDoc);
-  return orderRef;
+  const docRef = await db.collection('orders').add(orderDoc);
+  return { orderRef, orderId: docRef.id };
 }
 
 
 /* ============================================================================
-   30. FIREBASE — KITCHEN STATUS LISTENER                    NEW Session 7b
+   30. FIREBASE — KITCHEN STATUS LISTENER
    Reads kitchenStatus from vendors/{vendorId} in real time.
    Updates shared state and blocks/unblocks ordering across mobile + desktop.
    ============================================================================ */
@@ -1073,4 +1081,165 @@ function initKitchenStatusListener() {
       // Fail open — do not block ordering if Firestore is unreachable
     }
   );
+}
+
+
+/* ============================================================================
+   31. FIREBASE — ORDER STATUS LISTENER               NEW Session 7b Task 2
+   After order placement, listens on the specific order document and shows
+   the customer a live status screen rather than a static confirmation.
+
+   Mobile: injects a status block above the order summary in m-order-confirm.
+   Desktop: injects a simpler status line below the order ref in d-order-overlay.
+
+   Unsubscribes automatically when status reaches 'ready', or when the
+   customer dismisses the screen (stopOrderStatusListener).
+   ============================================================================ */
+
+let orderStatusUnsubscribe = null;
+
+// Status display config — icon, label, colour per status value
+const ORDER_STATUS_CONFIG = {
+  pending: {
+    icon:   '⏳',
+    label:  'Waiting for the kitchen to accept your order…',
+    colour: 'rgba(212,160,67,0.95)'   // gold — neutral waiting state
+  },
+  accepted: {
+    icon:   '✅',
+    label:  'Order accepted!',
+    colour: '#7ec87e'                  // soft green
+  },
+  preparing: {
+    icon:   '👨‍🍳',
+    label:  'Your order is being prepared',
+    colour: 'rgba(212,160,67,0.95)'   // gold — active work state
+  },
+  ready: {
+    icon:   '🟢',
+    label:  'Ready to collect — head to the van!',
+    colour: '#7ec87e'                  // soft green
+  }
+};
+
+/**
+ * Injects the mobile status block into m-order-confirm if not already present.
+ * Inserted before m-confirm-details so it sits at the top of the confirm screen
+ * below the order ref.
+ */
+function injectMobileStatusBlock() {
+  if (document.getElementById('m-live-status')) return;
+  const el = document.createElement('div');
+  el.id = 'm-live-status';
+  el.style.cssText = [
+    'margin:12px 0 16px',
+    'padding:16px',
+    'background:rgba(255,255,255,0.06)',
+    'border-radius:12px',
+    'text-align:center',
+    'border:1px solid rgba(212,160,67,0.15)'
+  ].join(';');
+  const anchor = document.getElementById('m-confirm-details');
+  if (anchor) {
+    anchor.parentNode.insertBefore(el, anchor);
+  } else {
+    const overlay = document.getElementById('m-order-confirm');
+    if (overlay) overlay.appendChild(el);
+  }
+}
+
+/**
+ * Injects the desktop status block into d-order-overlay if not already present.
+ * Inserted after d-order-ref for a clean header → status → details flow.
+ */
+function injectDesktopStatusBlock() {
+  if (document.getElementById('d-live-status')) return;
+  const el = document.createElement('div');
+  el.id = 'd-live-status';
+  el.style.cssText = [
+    'margin:10px 0 14px',
+    'padding:12px 18px',
+    'background:rgba(255,255,255,0.06)',
+    'border-radius:10px',
+    'text-align:center',
+    'border:1px solid rgba(212,160,67,0.15)'
+  ].join(';');
+  const anchor = document.getElementById('d-order-ref');
+  if (anchor) {
+    anchor.insertAdjacentElement('afterend', el);
+  } else {
+    const overlay = document.getElementById('d-order-overlay');
+    if (overlay) overlay.appendChild(el);
+  }
+}
+
+/**
+ * Renders the current status into a given status block element.
+ * Shows wait time on the 'accepted' status only — once set by the kitchen.
+ */
+function renderStatusBlock(elId, status, waitMins) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const cfg = ORDER_STATUS_CONFIG[status] || ORDER_STATUS_CONFIG.pending;
+  const waitLine = (status === 'accepted' && waitMins)
+    ? `<div style="margin-top:6px;font-size:13px;color:rgba(255,255,255,0.65);">Estimated wait: ~${waitMins} mins</div>`
+    : '';
+  el.innerHTML = `
+    <div style="font-size:26px;margin-bottom:6px;">${cfg.icon}</div>
+    <div style="font-weight:700;font-size:14px;letter-spacing:0.02em;color:${cfg.colour};">${cfg.label}</div>
+    ${waitLine}`;
+}
+
+/**
+ * Starts a Firestore onSnapshot listener on the placed order document.
+ * Injects status blocks into both confirm screens and updates them live.
+ * Called immediately after successful order submission.
+ */
+function startOrderStatusListener(orderId) {
+  // Clean up any previous listener (safety guard)
+  if (orderStatusUnsubscribe) {
+    orderStatusUnsubscribe();
+    orderStatusUnsubscribe = null;
+  }
+
+  // Inject status blocks and show initial pending state
+  injectMobileStatusBlock();
+  injectDesktopStatusBlock();
+  renderStatusBlock('m-live-status', 'pending', null);
+  renderStatusBlock('d-live-status', 'pending', null);
+
+  // Listen on the specific order document
+  const docRef = db.collection('orders').doc(orderId);
+  orderStatusUnsubscribe = docRef.onSnapshot(
+    snapshot => {
+      if (!snapshot.exists) return;
+      const { status, waitMins } = snapshot.data();
+      renderStatusBlock('m-live-status', status, waitMins);
+      renderStatusBlock('d-live-status', status, waitMins);
+      // Unsubscribe once the order is ready — no further updates needed
+      if (status === 'ready') {
+        orderStatusUnsubscribe();
+        orderStatusUnsubscribe = null;
+      }
+    },
+    err => {
+      // Non-fatal — status block simply won't update if Firestore is unreachable
+      console.warn('Order status listener error:', err);
+    }
+  );
+}
+
+/**
+ * Stops the order status listener and removes the injected status blocks.
+ * Called on dismiss (mDismissOrder / dDismissOrder).
+ */
+function stopOrderStatusListener() {
+  if (orderStatusUnsubscribe) {
+    orderStatusUnsubscribe();
+    orderStatusUnsubscribe = null;
+  }
+  const mEl = document.getElementById('m-live-status');
+  if (mEl) mEl.remove();
+  const dEl = document.getElementById('d-live-status');
+  if (dEl) dEl.remove();
 }
