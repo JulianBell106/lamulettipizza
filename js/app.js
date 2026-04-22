@@ -1022,25 +1022,30 @@ function applyKitchenStatus(status) {
     mBtn.textContent = isOpen ? 'Place Order' : 'Kitchen Closed';
   }
 
-  // ── Desktop: closed banner above menu section ─────────────────────────────
+  // ── Desktop: closed banner — full width, top of page, above nav ──────────
   let dBanner = document.getElementById('d-kitchen-closed-banner');
   if (!isOpen) {
     if (!dBanner) {
       dBanner = document.createElement('div');
       dBanner.id = 'd-kitchen-closed-banner';
       dBanner.style.cssText = [
-        'background:#C8410B',
+        'position:sticky',
+        'top:0',
+        'left:0',
+        'right:0',
+        'width:100%',
+        'background:#1A0A00',
         'color:#FDF6EC',
-        'padding:14px 24px',
+        'border-bottom:3px solid #C8410B',
+        'padding:16px 24px',
         'text-align:center',
-        'font-size:15px',
-        'font-weight:600',
-        'letter-spacing:0.01em',
-        'border-radius:8px',
-        'margin-bottom:24px'
+        'font-size:17px',
+        'font-weight:700',
+        'letter-spacing:0.02em',
+        'z-index:9999',
+        'box-sizing:border-box'
       ].join(';');
-      const menuSection = document.getElementById('d-menu');
-      if (menuSection) menuSection.prepend(dBanner);
+      document.body.prepend(dBanner);
     }
     dBanner.textContent   = '🔴  ' + msg;
     dBanner.style.display = 'block';
