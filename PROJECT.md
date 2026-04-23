@@ -1,5 +1,5 @@
 # Stalliq — Project Bible
-> Last updated: April 2026 — Session 7b Complete (Real-time Order Status done)
+> Last updated: April 2026 — Session 7b Complete + GTM & Pricing Strategy Added
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -64,7 +64,9 @@ Julian has ~30 years IT experience and a development background but no longer co
 **Secondary market (year 2+):** Fixed kiosk vendors (e.g. Midsummer Place MK) — commission saving angle
 
 **Key channel — Sophie etc.:**
-Sophie (sophieetc.com) runs the definitive MK food blog and organises Sophie's Street Feast. She knows every vendor in MK personally. Plan is to pitch a referral partnership once La Muletti is live and working.
+Sophie (sophieetc.com) runs the definitive MK food blog and organises Sophie's Street Feast. Background in marketing (ex-Bletchley Park), currently runs her own social media consultancy. Commercially literate, understands SaaS economics, knows every vendor in MK personally. Plan is to pitch a referral partnership once La Muletti is live with real data. **Commercial structure for the partnership: see Section 22.**
+
+**La Muletti case study is the unlock — instrument analytics from day one to capture baseline vs Growth-features delta.** Without hard, quotable numbers from La Muletti's first 3-4 months, the Sophie conversation has nothing to sell with. Capture order volume, repeat customer rate, geofence impact on orders per service, loyalty card redemption rate from the moment data starts flowing — dashboard can come later but the raw data cannot be missed.
 
 **Strategy:** Low cost, high quality, volume play. Make it impossible to say no.
 
@@ -77,20 +79,34 @@ Sophie (sophieetc.com) runs the definitive MK food blog and organises Sophie's S
 **Key insight:** Indi Local helps customers FIND vendors. Our product helps vendors RUN their business.
 
 **Revenue target:** £10k/year years 1-3
-**Required customers:** ~17 at £49/month average
+**Required customers:** ~17 at blended £49/month average
 
 ---
 
 ## 5. Pricing Model
 
-| Tier | Price | Features |
-|------|-------|----------|
-| Founding Customer | Free year 1 | Everything — first 3 customers only |
-| Starter | £29/month | Core ordering, kitchen dashboard, real-time status, WhatsApp alerts |
-| Growth | £49/month | Starter + geofence, flash sales, loyalty stamp card, event menus |
-| Pro | £79/month | Growth + self-service portal, analytics, pre-order slots, priority support |
+| Tier | Monthly | Annual (2 months free) | Features |
+|------|---------|------------------------|----------|
+| Founding Customer | 50% off chosen tier, locked for life as long as subscription continuous | — | Everything in chosen tier — first 5 customers only |
+| Starter | £19 | £190 | Core ordering, kitchen dashboard, real-time status, WhatsApp alerts |
+| Growth | £59 | £590 | Starter + geofence, flash sales, loyalty stamp card, event menus |
+| Pro | £99 | £990 | Growth + self-service portal, analytics, pre-order slots, priority support |
 
-No setup fee on Starter. No commission ever.
+**Pricing principles:**
+- No setup fee on any tier
+- No commission, ever — flat monthly only
+- Monthly rolling, no contracts — cancel anytime
+- Annual plans: 2 months free (~17% discount) — paid upfront, strong lock-in
+- Founding customers: 50% lifetime discount locked in as long as subscription is continuous — cancel and re-signup loses the rate forever. Creates retention hook and peer evangelism.
+- La Muletti stays on original free year 1 terms — Founding discount applies to customer #2 onwards
+- Revisit prices at customer #10 — real conversion data will show which tier should be the centre of gravity
+
+**Why this structure:**
+- £19 Starter is under the £20 "no-brainer" SMB threshold — positions as proper tool, still cheap
+- £59 Growth is where the business actually earns — geofence + loyalty + flash sales tier
+- £99 Pro is the anchor — most pick Growth, which is the intent
+- Revenue target £10k/year requires ~17 customers at blended £49 average, or ~14 on Growth
+- Data export available on request (48hr turnaround) — not self-service — customer owns data but leaving has friction
 
 ---
 
@@ -200,6 +216,7 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 |---------|-------|------|
 | 7 | MVP Completion | ✅ Kitchen closed → app, real-time order status customer side |
 | 8 | Customer Account / Members Area | Account page, current orders, history, loyalty + offers placeholders |
+| 8b | Multi-tenancy Future-Proofing Audit | Replace any `"lamuletti"` literals with `CONFIG.vendorId`, add `CONFIG.domains` field, scan HTML for vendor literals — 15-minute insurance against future migration pain |
 | 9 | Google Sheets menu management | Vendor edits sheet, app updates live — no deploy |
 | 10 | News/Locations feed + Offers/Deal Codes | Customer app pages, Sheets driven |
 | 11 | Demo polish | End-to-end demo reset function, rough edges removed |
@@ -477,6 +494,12 @@ Customer taps AI chat bubble → types or dictates order in natural language →
 - Account page always visible in nav (logged out shows login prompt) — loyalty card is a reason to open app even without ordering
 - Loyalty + offers: static/placeholder for demo, "Coming soon" badge — shows roadmap without over-promising
 - `stopOrderStatusListener()` fully resets modal + overlay state so second order in same session renders cleanly
+- Pricing: £19 Starter / £59 Growth / £99 Pro — annual plans 2 months free — monthly rolling, no contracts
+- Founding customer offer: 50% lifetime discount locked as long as subscription continuous (first 5 customers) — replaces original "free year 1" model for customer #2 onwards. La Muletti stays on original free year 1 terms.
+- Sophie partnership: 20% recurring commission, 24-month cap per customer — structure locked in Section 22
+- La Muletti analytics: capture baseline order volume and customer behaviour from day one — Growth-features delta is the Sophie pitch
+- Session 8b added: multi-tenancy future-proofing audit post-Session 8 — replace vendor literals with `CONFIG.vendorId`, add `CONFIG.domains` field
+- Multi-tenancy architecture: Model A (one site per customer, 0-5) → Model B (hostname resolution, 5-10) → Model C (full SaaS, 10+). Defer each step until customer volume justifies it. Data model is already multi-tenant shaped — migration is cheap. `vendorId` must always be read from `CONFIG.vendorId`, never a string literal.
 
 ---
 
@@ -519,6 +542,19 @@ A 6th mobile page (`#page-account`, 👤 Account) always present in the nav. Thr
 
 ---
 
+**After Session 8 — Session 8b: Multi-tenancy Future-Proofing Audit**
+
+Scope:
+1. Grep `app.js` and `kitchen.js` for any literal `"lamuletti"` string — replace with `CONFIG.vendorId`
+2. Add `CONFIG.vendorId = "lamuletti"` explicitly at the top of `config.js` if not already there
+3. Add `CONFIG.domains = ["lamulettipizza.co.uk", "stalliq-demo.netlify.app"]` as forward-compatible field (unused for now, shape is right)
+4. Quick scan of `index.html` and `kitchen.html` for any other vendor-specific literals that shouldn't be there
+5. Update PROJECT.md with audit result and Model A → B → C migration principle
+
+Rationale: data model is the expensive thing to change later. Deployment topology, config location, and onboarding are all cheap to change when customers are running on good data. This audit is the insurance that keeps the data model clean.
+
+---
+
 ## 21. Working Rhythm
 
 **Start:** "New session — ignore the project file attachment, read the live PROJECT.md from GitHub instead: https://raw.githubusercontent.com/JulianBell106/lamulettipizza/refs/heads/main/PROJECT.md — today we're working on [task]"
@@ -528,3 +564,53 @@ A 6th mobile page (`#page-account`, 👤 Account) always present in the nav. Thr
 **Always work inside the La Muletti Claude Project.**
 **One session = one focused task.**
 **One chunk = one file output = one conversation.**
+
+---
+
+## 22. Sophie Partnership
+
+**Who:** Sophie (sophieetc.com) — runs MK's definitive food blog, organises Sophie's Street Feast, background in marketing (ex-Bletchley Park), currently runs her own social media consultancy. Commercially literate, understands SaaS economics, has the relationships we don't.
+
+**Why:** Independent food vendors trust other vendors and trusted local voices — not founders cold-calling. Sophie is the fast path to credibility across MK, Bedford, Northampton. Without her the plan still works but slower and with lower close rates.
+
+**Commercial structure:**
+
+| Term | Value |
+|------|-------|
+| Commission | 20% of gross monthly subscription |
+| Duration | 24 months per customer, from their first paid month |
+| Payment | Monthly via bank transfer, in arrears |
+| Applies to | Customers Sophie introduces only — not La Muletti, not organic inbound, not Julian's direct closes |
+| Churn | Commission stops when a customer churns — aligns incentives to retention |
+| After 24 months | Commission ends, customer becomes full-margin to Stalliq |
+
+**Example economics:**
+- Starter customer at £19/month: Sophie earns £3.80/month × 24 = £91.20 lifetime
+- Growth customer at £59/month: Sophie earns £11.80/month × 24 = £283.20 lifetime
+
+**Why 20% / 24 months:**
+- 20% is the SaaS partner/affiliate standard — meaningful to her, sustainable for us
+- Recurring (not one-off) keeps her invested in customer success, not just signup
+- 24-month cap protects long-term unit economics and creates a built-in margin expansion as customers roll off her commission in Y3+
+
+**Rejected alternatives:**
+- Flat referral fee (e.g. £100-£200 per signup) — wrong incentive, paid whether customer stays a week or two years
+- Lifetime revenue share — leaves a permanent 20% tax on half the customer base
+- Equity — this is a referral relationship, not a co-founder relationship
+
+**Timing of approach:** Month 4-5, once La Muletti has 2-3 months of real order data and at least one quotable success metric. Do not approach before that — only one shot at this conversation.
+
+**Qualifying as "her" customer:**
+- First introduction documented (email, WhatsApp, meeting note) — logged in a shared tracker
+- If Julian and Sophie both know a vendor, first documented introduction wins
+- No ambiguity allowed — capture it in writing at the time
+
+**Written agreement required before first customer signs:**
+One-page memo covering: commission rate, 24-month duration, qualifying customer definition, payment cadence, churn treatment, what happens if Endoo sells the business (commissions honoured or lump-sum settlement). Not heavy legal — just enough to prevent awkward conversations later.
+
+**Framing for the pitch conversation:**
+> "I want to build this across MK, Beds and Northampton. I can't do the relationship work — you can. 20% of everything you bring in, paid monthly for 24 months per customer. Bring in 10 customers in your first year averaging £40/month, and you're earning £80/month passive by year end with room to compound."
+
+Frame it as building her a recurring income stream tied to her existing network — not as a one-off referral gig. Matches how she'll think about it given her consultancy background.
+
+**Risk to manage:** If Sophie's own consulting work gets busy, she'll deprioritise. Mitigation: the commission structure itself is the mitigation — 20% recurring is meaningful enough to compete for attention. Also: build direct relationships with 2-3 of her vendors early so the pipeline doesn't live entirely in her head.
