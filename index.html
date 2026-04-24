@@ -1462,6 +1462,125 @@ html { scroll-behavior: smooth; }
   line-height: 1.4;
 }
 
+/* ─── ORDER DETAIL OVERLAY ─── */
+#order-detail-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(26,10,0,0.92);
+  z-index: 1200;
+  align-items: flex-end;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+#order-detail-overlay.show { display: flex; }
+@media (min-width: 768px) {
+  #order-detail-overlay { align-items: center; }
+}
+.order-detail-sheet {
+  background: var(--char);
+  border: 1px solid rgba(212,160,67,0.2);
+  border-radius: 24px 24px 0 0;
+  width: 100%;
+  max-width: 520px;
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 0 0 32px;
+  box-shadow: 0 -20px 60px rgba(0,0,0,0.5);
+}
+@media (min-width: 768px) {
+  .order-detail-sheet {
+    border-radius: 24px;
+    margin: 20px;
+    max-height: 80vh;
+  }
+}
+.order-detail-handle {
+  width: 40px; height: 4px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 2px;
+  margin: 12px auto 0;
+}
+.order-detail-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 24px 12px;
+  border-bottom: 1px solid rgba(212,160,67,0.12);
+}
+.order-detail-ref {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px; font-weight: 700; color: var(--gold);
+}
+.order-detail-close {
+  background: none; border: none;
+  color: rgba(255,255,255,0.4); font-size: 26px;
+  cursor: pointer; line-height: 1; padding: 4px 6px;
+  transition: color 0.2s;
+}
+.order-detail-close:hover { color: var(--cream); }
+.order-detail-meta {
+  padding: 14px 24px 0;
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+}
+.order-detail-date {
+  font-size: 13px; color: rgba(255,255,255,0.45);
+}
+.order-detail-status-badge {
+  font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 600;
+}
+.order-detail-items {
+  padding: 16px 24px 0;
+}
+.order-detail-items-label {
+  font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--gold); font-weight: 600; margin-bottom: 10px;
+}
+.order-detail-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(212,160,67,0.08);
+  font-size: 14px;
+}
+.order-detail-item:last-child { border-bottom: none; }
+.order-detail-item-name { color: var(--cream); font-weight: 500; }
+.order-detail-item-qty { color: rgba(255,255,255,0.45); font-size: 13px; margin-left: 6px; }
+.order-detail-item-price {
+  font-family: 'Playfair Display', serif;
+  font-size: 15px; color: var(--gold); font-weight: 700;
+}
+.order-detail-totals {
+  margin: 12px 24px 0;
+  background: rgba(212,160,67,0.06);
+  border: 1px solid rgba(212,160,67,0.15);
+  border-radius: 14px; padding: 14px 16px;
+}
+.order-detail-total-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 4px 0; font-size: 14px; color: rgba(255,255,255,0.65);
+}
+.order-detail-total-row.main {
+  border-top: 1px solid rgba(212,160,67,0.15);
+  margin-top: 8px; padding-top: 10px;
+  font-size: 16px; color: var(--cream); font-weight: 600;
+}
+.order-detail-total-row.main span:last-child {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px; color: var(--gold); font-weight: 700;
+}
+/* Make order cards/history items show they're tappable */
+.m-current-order-card,
+.m-history-item {
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.m-current-order-card:hover,
+.m-history-item:hover {
+  border-color: rgba(212,160,67,0.4);
+  background: rgba(255,255,255,0.06);
+}
+.m-history-chevron {
+  color: rgba(212,160,67,0.4); font-size: 16px; margin-left: auto;
+}
+
 /* ═══════════════════════════════════════
    RESPONSIVE SWITCH
 ═══════════════════════════════════════ */
@@ -1905,6 +2024,40 @@ html { scroll-behavior: smooth; }
   </nav>
 
 </div><!-- /mobile-app -->
+
+
+<!-- ═══════════════════════════════════════
+     ORDER DETAIL OVERLAY
+     Shared mobile + desktop. Slides up from bottom on mobile,
+     centred modal on desktop. Populated by openOrderDetail(orderId).
+═══════════════════════════════════════ -->
+<div id="order-detail-overlay">
+  <div class="order-detail-sheet">
+    <div class="order-detail-handle"></div>
+    <div class="order-detail-header">
+      <div class="order-detail-ref" id="od-ref">—</div>
+      <button class="order-detail-close" onclick="closeOrderDetail()">×</button>
+    </div>
+    <div class="order-detail-meta">
+      <div class="order-detail-date" id="od-date">—</div>
+      <div class="order-detail-status-badge" id="od-status-badge"></div>
+    </div>
+    <div class="order-detail-items">
+      <div class="order-detail-items-label">Items</div>
+      <div id="od-items-list"></div>
+    </div>
+    <div class="order-detail-totals">
+      <div class="order-detail-total-row">
+        <span>Payment</span>
+        <span id="od-payment">Cash on collection</span>
+      </div>
+      <div class="order-detail-total-row main">
+        <span>Total</span>
+        <span id="od-total">—</span>
+      </div>
+    </div>
+  </div>
+</div>
 
 
 <!-- ═══════════════════════════════════════

@@ -88,6 +88,7 @@ let orderCount      = 0;
 let customerName    = null;   // cached after phone auth
 let pendingOrderFn  = null;   // called after auth completes
 let kitchenStatus   = 'open'; // updated live by Firestore listener (Section 30)
+const orderCache    = {};     // orderId → order data, populated by loadUserOrders
 
 
 /* ============================================================================
@@ -645,7 +646,7 @@ function mPlaceOrder() {
 function mDismissOrder() {
   stopOrderStatusListener();
   document.getElementById('m-order-confirm').classList.remove('show');
-  mShowPage('home');
+  mShowPage('account'); // go to account so customer can see their live order
 }
 
 
@@ -1551,7 +1552,11 @@ function loadUserOrders(uid, ids) {
     .get()
     .then(snapshot => {
       const orders = [];
-      snapshot.forEach(doc => orders.push({ id: doc.id, ...doc.data() }));
+      snapshot.forEach(doc => {
+        const order = { id: doc.id, ...doc.data() };
+        orders.push(order);
+        orderCache[order.id] = order; // cache for detail drill-down
+      });
 
       const activeStatuses = ['pending', 'accepted', 'preparing', 'ready'];
       const currentOrders  = orders.filter(o => activeStatuses.includes(o.status));
@@ -1565,6 +1570,7 @@ function loadUserOrders(uid, ids) {
             const wrapper = document.createElement('div');
             wrapper.id        = `m-coc-${order.id}`;
             wrapper.className = 'm-current-order-card';
+            wrapper.setAttribute('onclick', `openOrderDetail('${order.id}')`);
             wrapper.innerHTML = buildCurrentOrderCardHTML(order);
             currentList.appendChild(wrapper);
             startAccountOrderListener(order.id);
@@ -1652,7 +1658,7 @@ function buildHistoryItemHTML(order) {
     : '';
 
   return `
-    <div class="m-history-item">
+    <div class="m-history-item" onclick="openOrderDetail('${order.id}')">
       <div class="m-history-header">
         <div class="m-history-ref">${order.orderRef || '—'}</div>
         <div class="m-history-date">${dateStr}</div>
@@ -1661,6 +1667,7 @@ function buildHistoryItemHTML(order) {
       <div class="m-history-footer">
         <div class="m-history-total">${total}</div>
         <div class="m-history-status status-${order.status}">${statusLabel}</div>
+        <div class="m-history-chevron">›</div>
       </div>
     </div>`;
 }
@@ -1763,5 +1770,115 @@ function accountSignOut(prefix = 'm') {
     .catch(err => {
       console.error('[Stalliq] Sign out error:', err);
     });
+}
+
+
+/* ============================================================================
+   33. ORDER DETAIL OVERLAY
+   Shared between mobile and desktop. Slide-up sheet on mobile,
+   centred modal on desktop (CSS handles the difference).
+
+   openOrderDetail(orderId) — looks up orderCache first, falls back to
+   Firestore fetch if the order isn't cached (e.g. direct deep link).
+   closeOrderDetail() — hides the overlay.
+   ============================================================================ */
+
+/**
+ * Opens the order detail overlay for a given order.
+ * @param {string} orderId — Firestore document ID
+ */
+function openOrderDetail(orderId) {
+  const cached = orderCache[orderId];
+  if (cached) {
+    renderOrderDetail(cached);
+  } else {
+    // Fallback: fetch from Firestore
+    db.collection('orders').doc(orderId).get()
+      .then(doc => {
+        if (doc.exists) {
+          const order = { id: doc.id, ...doc.data() };
+          orderCache[orderId] = order;
+          renderOrderDetail(order);
+        }
+      })
+      .catch(err => console.error('[Stalliq] Detail fetch error:', err));
+  }
+}
+
+/**
+ * Populates and shows the order detail overlay.
+ * @param {object} order — order data object
+ */
+function renderOrderDetail(order) {
+  // Ref
+  const refEl = document.getElementById('od-ref');
+  if (refEl) refEl.textContent = order.orderRef || '—';
+
+  // Date
+  const dateEl = document.getElementById('od-date');
+  if (dateEl) {
+    let dateStr = '—';
+    if (order.createdAt) {
+      try {
+        const d = order.createdAt.toDate ? order.createdAt.toDate() : new Date(order.createdAt);
+        dateStr = d.toLocaleDateString('en-GB', {
+          day: 'numeric', month: 'short', year: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        });
+      } catch (_) {}
+    }
+    dateEl.textContent = dateStr;
+  }
+
+  // Status badge
+  const badgeEl = document.getElementById('od-status-badge');
+  if (badgeEl) {
+    const statusLabel = order.status
+      ? order.status.charAt(0).toUpperCase() + order.status.slice(1)
+      : '';
+    badgeEl.textContent  = statusLabel;
+    badgeEl.className    = `order-detail-status-badge status-${order.status}`;
+  }
+
+  // Items
+  const itemsEl = document.getElementById('od-items-list');
+  if (itemsEl && order.items) {
+    itemsEl.innerHTML = order.items.map(item => {
+      const lineTotal = (item.price * item.quantity).toFixed(2);
+      return `
+        <div class="order-detail-item">
+          <div>
+            <span class="order-detail-item-name">${item.name}</span>
+            <span class="order-detail-item-qty">× ${item.quantity}</span>
+          </div>
+          <div class="order-detail-item-price">${CONFIG.business.currency}${lineTotal}</div>
+        </div>`;
+    }).join('');
+  }
+
+  // Payment method
+  const payEl = document.getElementById('od-payment');
+  if (payEl) {
+    const method = order.payment && order.payment.method === 'cash_on_collection'
+      ? 'Cash on collection'
+      : (order.payment && order.payment.method) || 'Cash on collection';
+    payEl.textContent = method;
+  }
+
+  // Total
+  const totalEl = document.getElementById('od-total');
+  if (totalEl && order.orderTotal != null) {
+    totalEl.textContent = CONFIG.business.currency + Number(order.orderTotal).toFixed(2);
+  }
+
+  // Show overlay
+  document.getElementById('order-detail-overlay').classList.add('show');
+}
+
+/**
+ * Closes the order detail overlay.
+ */
+function closeOrderDetail() {
+  document.getElementById('order-detail-overlay').classList.remove('show');
 }
 
