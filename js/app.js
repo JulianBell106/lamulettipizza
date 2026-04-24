@@ -26,7 +26,10 @@
  *   19. Mobile — About
  *   20. Mobile — Find Us
  *   21. Scroll reveal
- *   22. Google Sheets — Menu fetch
+ *   22. Google Sheets — Menu, Events & Offers
+ *       22a. Menu fetch
+ *       22b. Events fetch
+ *       22c. Offers fetch
  *   23. Init
  *   24. Auth — State helpers
  *   25. Auth — Gateway (intercepts Place Order)
@@ -95,11 +98,24 @@ let historyRemainder = [];     // orders beyond initial 3, revealed by "Show mor
 
 /**
  * menuData — the active menu used by all render and basket functions.
- * Initialised to CONFIG.menu in Section 23 (init), then replaced with
- * sheet data if fetchMenuFromSheet() succeeds (Section 22).
- * Always use menuData, never CONFIG.menu directly, in render/utility code.
+ * Seeded from CONFIG.menu in Section 23, replaced by sheet data if available.
+ * Always use menuData, never CONFIG.menu directly.
  */
 let menuData = null;
+
+/**
+ * eventsData — upcoming events/locations used by Find Us renders.
+ * Seeded from CONFIG.events in Section 23, replaced by sheet data if available.
+ * Always use eventsData, never CONFIG.events directly.
+ */
+let eventsData = null;
+
+/**
+ * offersData — offers shown on the Account page.
+ * Seeded from defaults in Section 23, replaced by sheet data if available.
+ * Always use offersData in renderAccountOffers().
+ */
+let offersData = null;
 
 
 /* ============================================================================
@@ -108,9 +124,8 @@ let menuData = null;
 
 /**
  * HTML-encodes a string before insertion into innerHTML.
- * Applied to all sheet-sourced fields (name, desc, diet) to prevent XSS
- * if the vendor's Google account is ever compromised.
- * Safe for emojis, special chars, and all normal menu content.
+ * Applied to all sheet-sourced fields to prevent XSS if the vendor's
+ * Google account is ever compromised.
  * @param {*} str — value to encode (coerced to string)
  * @returns {string} — HTML-safe string
  */
@@ -331,6 +346,7 @@ function renderDesktopValues() {
 
 /* ============================================================================
    10. DESKTOP — CONTACT + EVENTS
+   renderEventsList() reads from eventsData (Section 22b), not CONFIG.events.
    ============================================================================ */
 function renderDesktopContact() {
   const c = CONFIG.contact;
@@ -362,22 +378,27 @@ function renderDesktopContact() {
   renderEventsList('.d-popup-list', 'd-popup-card', 'd-popup-date', 'd-popup-day', 'd-popup-month', 'd-popup-event', 'd-popup-loc');
 }
 
+/**
+ * Renders the events/locations list.
+ * Reads from eventsData (module-level) — seeded from CONFIG.events or sheet.
+ * esc() applied to event name and location (sheet-sourced).
+ */
 function renderEventsList(containerSel, cardCls, dateCls, dayCls, monthCls, nameCls, locCls) {
   const el = document.querySelector(containerSel);
   if (!el) return;
-  if (!CONFIG.events || CONFIG.events.length === 0) {
+  if (!eventsData || eventsData.length === 0) {
     el.innerHTML = `<p style="color:rgba(253,246,236,0.45);font-size:14px;">No upcoming events — follow us on socials for updates!</p>`;
     return;
   }
-  el.innerHTML = CONFIG.events.map(ev => `
+  el.innerHTML = eventsData.map(ev => `
     <div class="${cardCls}">
       <div class="${dateCls}">
-        <div class="${dayCls}">${ev.day}</div>
-        <div class="${monthCls}">${ev.month}</div>
+        <div class="${dayCls}">${esc(String(ev.day))}</div>
+        <div class="${monthCls}">${esc(String(ev.month))}</div>
       </div>
       <div>
-        <div class="${nameCls}">${ev.name}</div>
-        <div class="${locCls}">${ev.location}</div>
+        <div class="${nameCls}">${esc(ev.name)}</div>
+        <div class="${locCls}">${esc(ev.location)}</div>
       </div>
     </div>`).join('');
 }
@@ -445,9 +466,6 @@ function dToggleAccount() {
 /* ============================================================================
    12. DESKTOP — ORDER CONFIRMATION
    Routes through authGateway → Firestore submission → live status listener.
-
-   The overlay starts in pending state (⏳ / "Waiting…") from HTML defaults.
-   startOrderStatusListener() takes over from there and updates elements live.
    ============================================================================ */
 function dPlaceOrder() {
   if (kitchenStatus !== 'open') return;
@@ -463,8 +481,6 @@ function dPlaceOrder() {
       document.getElementById('d-order-ref').textContent   = 'Order ref ' + orderRef;
       document.getElementById('d-order-details').innerHTML = rows;
 
-      // Reset overlay to pending state (HTML defaults already set, but reset
-      // here so it's correct if the customer places a second order this session)
       const timeEl  = document.getElementById('d-order-time');
       const labelEl = document.getElementById('d-order-timelabel');
       const iconEl  = document.querySelector('#d-order-overlay .d-order-icon');
@@ -629,9 +645,6 @@ function mRemoveItem(id) {
 /* ============================================================================
    18. MOBILE — ORDER CONFIRMATION
    Routes through authGateway → Firestore submission → live status listener.
-
-   The modal starts in pending state (⏳ / "Waiting…") from HTML defaults.
-   startOrderStatusListener() takes over from there and updates elements live.
    ============================================================================ */
 function mPlaceOrder() {
   if (kitchenStatus !== 'open') return;
@@ -650,8 +663,6 @@ function mPlaceOrder() {
       document.getElementById('m-confirm-details').innerHTML = rows;
       document.getElementById('m-confirm-msg').textContent   = CONFIG.ordering.confirmMsg;
 
-      // Reset modal to pending state (HTML defaults already set, but reset
-      // here so it's correct if the customer places a second order this session)
       const timeEl  = document.getElementById('m-confirm-time');
       const labelEl = document.getElementById('m-confirm-timelabel');
       const iconEl  = document.querySelector('#m-order-confirm .m-confirm-icon');
@@ -723,6 +734,7 @@ function renderMobileAbout() {
 
 /* ============================================================================
    20. MOBILE — FIND US
+   renderEventsList() reads from eventsData (Section 22b), not CONFIG.events.
    ============================================================================ */
 function renderMobileFindUs() {
   const c = CONFIG.contact;
@@ -758,34 +770,23 @@ function initScrollReveal() {
 
 
 /* ============================================================================
-   22. GOOGLE SHEETS — MENU FETCH
+   22. GOOGLE SHEETS — MENU, EVENTS & OFFERS
    ============================================================================
-   Fetches the vendor's menu from a published Google Sheet CSV at page load.
-   Falls back silently to CONFIG.menu if:
-     - CONFIG.menuSheetUrl is absent or empty
-     - The fetch fails (network error, sheet unpublished, etc.)
-     - The parsed CSV yields zero valid rows
+   All three content areas support live Google Sheets editing:
+     - Menu      → CONFIG.menuSheetUrl   → menuData
+     - Events    → CONFIG.eventsSheetUrl → eventsData
+     - Offers    → CONFIG.offersSheetUrl → offersData
 
-   Vendor workflow (zero technical steps after initial setup):
-     1. Julian creates the Sheet, publishes it (File → Share → Publish to web → CSV)
-     2. Julian pastes the published CSV URL into config.js as CONFIG.menuSheetUrl
-     3. Julian shares the Sheet with the vendor (edit access)
-     4. Vendor edits cells in Google Sheets — changes appear in app within minutes
+   Common pattern for all three:
+     1. Seed module-level var with config fallback (guaranteed data)
+     2. Attempt fetch from published CSV URL
+     3. Replace module-level var on success
+     4. Fail silently on any error — config fallback always wins
 
-   Column order (case-insensitive header row required):
-     id | name | price | description | diet | available
+   XSS defence: all sheet-sourced strings pass through esc() before
+   innerHTML insertion. Firestore writes always use raw values.
 
-   Notes:
-     - 'available' column: TRUE/FALSE or Y/N (case-insensitive). Absent = TRUE.
-     - 'diet' column: free text (VE, V, emoji etc.) or blank.
-     - Quoted CSV fields supported (commas in descriptions are safe).
-     - Prices must be numeric (no currency symbol in the sheet).
-
-   XSS defence:
-     All sheet-sourced strings (name, desc, diet) pass through esc() before
-     being inserted into innerHTML. Even if the vendor's Google account is
-     compromised and malicious HTML is written into the sheet, it renders as
-     visible text — it cannot execute as code.
+   Shared CSV utility: parseCSVLine() handles quoted fields with commas.
    ============================================================================ */
 
 /**
@@ -802,7 +803,6 @@ function parseCSVLine(line) {
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
     if (ch === '"') {
-      // Handle escaped quotes ("")
       if (inQuotes && line[i + 1] === '"') {
         current += '"';
         i++;
@@ -820,23 +820,33 @@ function parseCSVLine(line) {
   return result;
 }
 
+/** Normalises line endings and splits into lines. */
+function splitCSVLines(csvText) {
+  return csvText.trim().replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+}
+
+
+/* ----------------------------------------------------------------------------
+   22a. MENU FETCH
+   Fetches vendor menu from published Google Sheet CSV.
+   Falls back to CONFIG.menu silently on any failure.
+   ---------------------------------------------------------------------------- */
+
 /**
  * Parses a full CSV string into menu item objects.
  * Expects a header row followed by data rows.
- * Rows missing id, name, or a valid price are silently skipped.
- * @param {string} csvText — raw CSV text from the published Sheet
- * @returns {object[]} — array of menu item objects matching CONFIG.menu format
+ * Column order is flexible — matched by header name.
+ * Required headers: id, name, price
+ * Optional headers: description (or desc), diet, available (or avail)
  */
 function parseMenuCSV(csvText) {
-  // Normalise line endings (Google Sheets may use \r\n)
-  const lines = csvText.trim().replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const lines = splitCSVLines(csvText);
 
   if (lines.length < 2) {
     console.warn('[Stalliq] Menu sheet: CSV has no data rows.');
     return [];
   }
 
-  // Parse header row to find column positions (order-independent)
   const headers = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase());
   const col = {
     id:    headers.indexOf('id'),
@@ -856,21 +866,18 @@ function parseMenuCSV(csvText) {
 
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
-    if (!line) continue; // skip blank rows
+    if (!line) continue;
 
-    const cols = parseCSVLine(line);
-
+    const cols  = parseCSVLine(line);
     const id    = parseInt(cols[col.id], 10);
     const name  = col.name  >= 0 ? cols[col.name].trim()  : '';
     const price = col.price >= 0 ? parseFloat(cols[col.price]) : NaN;
 
-    // Skip rows with missing fundamentals
     if (!id || !name || isNaN(price) || price < 0) continue;
 
     const desc  = col.desc  >= 0 && cols[col.desc]  ? cols[col.desc].trim()  : '';
     const diet  = col.diet  >= 0 && cols[col.diet]  ? cols[col.diet].trim()  : null;
 
-    // available: default true unless explicitly FALSE or N
     let available = true;
     if (col.avail >= 0 && cols[col.avail]) {
       const v = cols[col.avail].trim().toUpperCase();
@@ -886,7 +893,6 @@ function parseMenuCSV(csvText) {
 /**
  * Attempts to load menu data from the published Google Sheet CSV.
  * Sets the module-level menuData variable on success.
- * Falls back to CONFIG.menu silently on any failure.
  * @returns {Promise<boolean>} — true if sheet loaded, false if using fallback
  */
 async function fetchMenuFromSheet() {
@@ -919,8 +925,7 @@ async function fetchMenuFromSheet() {
     // Re-run scroll reveal so newly rendered menu cards get the .visible class.
     // initScrollReveal() in Section 23 runs before the sheet fetch resolves,
     // so cards injected by the second renderDesktopMenu() call would otherwise
-    // miss the observer and render without the .visible class — causing the
-    // section background to show through at the wrong opacity.
+    // miss the observer.
     initScrollReveal();
 
     return true;
@@ -932,38 +937,275 @@ async function fetchMenuFromSheet() {
 }
 
 
+/* ----------------------------------------------------------------------------
+   22b. EVENTS FETCH
+   Fetches upcoming events/locations from a published Google Sheet CSV.
+   Falls back to CONFIG.events silently on any failure.
+
+   Sheet structure (header row required, column order flexible):
+     day | month | name | location | active
+
+   Column notes:
+     day      — number or string, e.g. 14
+     month    — string, e.g. MAY or May
+     name     — event name
+     location — venue or location string
+     active   — TRUE/FALSE (omit to default all rows to active)
+
+   Vendor workflow: edit sheet → Google autosaves → app picks up on next load.
+   ---------------------------------------------------------------------------- */
+
+/**
+ * Parses a CSV string into event objects.
+ * Active=FALSE rows are excluded.
+ * @param {string} csvText — raw CSV text
+ * @returns {object[]|null} — array of event objects, or null on parse error
+ */
+function parseEventsCSV(csvText) {
+  const lines = splitCSVLines(csvText);
+  if (lines.length < 1) return null;
+
+  const headers = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase());
+  const col = {
+    day:      headers.indexOf('day'),
+    month:    headers.indexOf('month'),
+    name:     headers.findIndex(h => h === 'name' || h === 'event'),
+    location: headers.findIndex(h => h === 'location' || h === 'loc'),
+    active:   headers.findIndex(h => h === 'active' || h === 'avail')
+  };
+
+  if (col.day === -1 || col.month === -1 || col.name === -1) {
+    console.warn('[Stalliq] Events sheet: Missing required columns (day, month, name). Check sheet headers.');
+    return null;
+  }
+
+  const items = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+
+    const cols     = parseCSVLine(line);
+    const day      = cols[col.day]      ? cols[col.day].trim()      : '';
+    const month    = cols[col.month]    ? cols[col.month].trim()    : '';
+    const name     = cols[col.name]     ? cols[col.name].trim()     : '';
+    const location = col.location >= 0 && cols[col.location]
+      ? cols[col.location].trim() : '';
+
+    if (!day || !month || !name) continue;
+
+    // active: default true unless explicitly FALSE
+    let active = true;
+    if (col.active >= 0 && cols[col.active]) {
+      const v = cols[col.active].trim().toUpperCase();
+      active = (v !== 'FALSE' && v !== 'N' && v !== 'NO' && v !== '0');
+    }
+    if (!active) continue;
+
+    items.push({ day, month, name, location });
+  }
+
+  return items;
+}
+
+/**
+ * Attempts to load events data from the published Google Sheet CSV.
+ * Sets the module-level eventsData variable on success.
+ * An empty sheet (no active rows) is valid — shows "no upcoming events".
+ * @returns {Promise<boolean>} — true if sheet loaded, false if using fallback
+ */
+async function fetchEventsFromSheet() {
+  const url = CONFIG.eventsSheetUrl;
+
+  if (!url) {
+    console.log('[Stalliq] No eventsSheetUrl in config — using config.js events.');
+    return false;
+  }
+
+  try {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      console.warn(`[Stalliq] Events sheet fetch failed (HTTP ${response.status}) — using config.js fallback.`);
+      return false;
+    }
+
+    const csvText = await response.text();
+    const parsed  = parseEventsCSV(csvText);
+
+    if (parsed === null) {
+      console.warn('[Stalliq] Events sheet: parse error — using config.js fallback.');
+      return false;
+    }
+
+    eventsData = parsed;
+    console.log(`[Stalliq] Events loaded from sheet: ${parsed.length} item(s).`);
+    return true;
+
+  } catch (err) {
+    console.warn('[Stalliq] Events sheet fetch error — using config.js fallback.', err.message);
+    return false;
+  }
+}
+
+
+/* ----------------------------------------------------------------------------
+   22c. OFFERS FETCH
+   Fetches offers from a published Google Sheet CSV.
+   Falls back to offersData defaults silently on any failure.
+
+   Sheet structure (header row required, column order flexible):
+     icon | title | description | badge | active
+
+   Column notes:
+     icon        — emoji, e.g. 🎉 (omit to default to 🎁)
+     title       — offer title (required)
+     description — offer detail text
+     badge       — badge label, e.g. "Coming soon" or "Live now" (omit to hide badge)
+     active      — TRUE/FALSE (omit to default all rows to active)
+
+   Active=FALSE rows are excluded from rendering.
+   Badge text is displayed as-is — no special styling based on content.
+   ---------------------------------------------------------------------------- */
+
+/**
+ * Parses a CSV string into offer objects.
+ * Active=FALSE rows are excluded.
+ * @param {string} csvText — raw CSV text
+ * @returns {object[]|null} — array of offer objects, or null on parse error
+ */
+function parseOffersCSV(csvText) {
+  const lines = splitCSVLines(csvText);
+  if (lines.length < 1) return null;
+
+  const headers = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase());
+  const col = {
+    icon:   headers.findIndex(h => h === 'icon' || h === 'emoji'),
+    title:  headers.indexOf('title'),
+    desc:   headers.findIndex(h => h === 'description' || h === 'desc'),
+    badge:  headers.indexOf('badge'),
+    active: headers.findIndex(h => h === 'active' || h === 'avail')
+  };
+
+  if (col.title === -1) {
+    console.warn('[Stalliq] Offers sheet: Missing required column (title). Check sheet headers.');
+    return null;
+  }
+
+  const items = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+
+    const cols  = parseCSVLine(line);
+    const title = cols[col.title] ? cols[col.title].trim() : '';
+    if (!title) continue;
+
+    const icon  = col.icon  >= 0 && cols[col.icon]  ? cols[col.icon].trim()  : '🎁';
+    const desc  = col.desc  >= 0 && cols[col.desc]  ? cols[col.desc].trim()  : '';
+    const badge = col.badge >= 0 && cols[col.badge] ? cols[col.badge].trim() : '';
+
+    // active: default true unless explicitly FALSE
+    let active = true;
+    if (col.active >= 0 && cols[col.active]) {
+      const v = cols[col.active].trim().toUpperCase();
+      active = (v !== 'FALSE' && v !== 'N' && v !== 'NO' && v !== '0');
+    }
+    if (!active) continue;
+
+    items.push({ icon, title, description: desc, badge });
+  }
+
+  return items;
+}
+
+/**
+ * Attempts to load offers data from the published Google Sheet CSV.
+ * Sets the module-level offersData variable on success.
+ * @returns {Promise<boolean>} — true if sheet loaded, false if using defaults
+ */
+async function fetchOffersFromSheet() {
+  const url = CONFIG.offersSheetUrl;
+
+  if (!url) {
+    console.log('[Stalliq] No offersSheetUrl in config — using default offers.');
+    return false;
+  }
+
+  try {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      console.warn(`[Stalliq] Offers sheet fetch failed (HTTP ${response.status}) — using default offers.`);
+      return false;
+    }
+
+    const csvText = await response.text();
+    const parsed  = parseOffersCSV(csvText);
+
+    if (parsed === null) {
+      console.warn('[Stalliq] Offers sheet: parse error — using default offers.');
+      return false;
+    }
+
+    offersData = parsed;
+    console.log(`[Stalliq] Offers loaded from sheet: ${parsed.length} item(s).`);
+    return true;
+
+  } catch (err) {
+    console.warn('[Stalliq] Offers sheet fetch error — using default offers.', err.message);
+    return false;
+  }
+}
+
+
 /* ============================================================================
    23. INIT
-   DOMContentLoaded is async so we can await fetchMenuFromSheet() before
-   any render call. menuData is guaranteed to be populated by the time
-   renderDesktopMenu() / renderMobileMenu() run.
+   DOMContentLoaded is async so we can await all sheet fetches before any
+   render call. All three module-level data vars (menuData, eventsData,
+   offersData) are guaranteed to be populated by the time render functions run.
+
+   Sheet fetches run concurrently via Promise.all for fastest load time.
    ============================================================================ */
 document.addEventListener('DOMContentLoaded', async function () {
   applyTheme();
   bootstrapPage();
 
-  // Seed menuData with config.js menu as the guaranteed fallback
-  menuData = CONFIG.menu;
+  // ── Seed all data vars with guaranteed fallbacks ─────────────────────────
+  menuData   = CONFIG.menu;
+  eventsData = CONFIG.events || [];
+  // offersData default: check CONFIG.offers first, then hardcoded demo cards
+  offersData = (CONFIG.offers && CONFIG.offers.length > 0)
+    ? CONFIG.offers
+    : [
+        { icon: '🎉', title: 'Welcome Offer',    description: '10% off your next order — launching soon',    badge: 'Coming soon' },
+        { icon: '🍕', title: 'Buy 9, Get 1 Free', description: 'Collect 9 stamps to unlock your free pizza', badge: 'Coming soon' }
+      ];
 
-  // Attempt to load live menu from Google Sheet — replaces menuData if successful
-  await fetchMenuFromSheet();
+  // ── Fetch all sheets concurrently ─────────────────────────────────────────
+  await Promise.all([
+    fetchMenuFromSheet(),
+    fetchEventsFromSheet(),
+    fetchOffersFromSheet()
+  ]);
 
-  // Desktop
+  // ── Desktop renders ───────────────────────────────────────────────────────
   renderDesktopNav();
   renderDesktopHero();
   renderDesktopStrip();
   renderDesktopMenu();
   renderDesktopStory();
   renderDesktopValues();
-  renderDesktopContact();
+  renderDesktopContact(); // uses eventsData
 
-  // Mobile
+  // ── Mobile renders ────────────────────────────────────────────────────────
   renderMobileHome();
   renderMobileMenu();
   renderMobileAbout();
-  renderMobileFindUs();
+  renderMobileFindUs(); // uses eventsData
 
-  // Footer
+  // ── Footer ────────────────────────────────────────────────────────────────
   const footerLogo = document.querySelector('.d-footer-logo');
   if (footerLogo) {
     const parts = CONFIG.business.nameShort.split(' ');
@@ -1204,8 +1446,7 @@ async function getNextOrderRef() {
    30. FIREBASE — SUBMIT ORDER TO FIRESTORE
    Returns { orderRef, orderId } — orderId is the Firestore document ID,
    used by the order status listener in Section 32.
-   Item data written to Firestore uses raw menuData values (no esc() needed —
-   esc() is for HTML output only, not database writes).
+   Item data written to Firestore uses raw menuData values (no esc() needed).
    ============================================================================ */
 async function submitOrderToFirestore() {
   const user = auth.currentUser;
@@ -1362,21 +1603,10 @@ function initKitchenStatusListener() {
 
    This is a SINGLE listener for the active confirmation modal.
    The Account page (Section 33) uses a separate map of listeners.
-
-   Mobile:  updates m-confirm-time, m-confirm-timelabel, icon, title, button.
-   Desktop: updates d-order-time, d-order-timelabel, icon, title, button.
-   Both:    a live status block is injected below the order ref.
-
-   Status flow:
-     pending   → ⏳ "Waiting for kitchen to accept…"
-     accepted  → ✅ "Order accepted!" + ~X mins shown in time display
-     preparing → 👨‍🍳 "Your order is being prepared"
-     ready     → 🟢 "Ready to collect!" + button text changes + listener stops
    ============================================================================ */
 
 let orderStatusUnsubscribe = null;
 
-// Status display config — icon, label, colour per status value
 const ORDER_STATUS_CONFIG = {
   pending: {
     icon:   '⏳',
@@ -1570,13 +1800,9 @@ function stopOrderStatusListener() {
    ============================================================================
    Supports both mobile (prefix 'm') and desktop (prefix 'd') panels.
    buildAccountIds(prefix) maps the prefix to the correct element IDs.
-   All render functions accept an ids object so both panels share the same logic.
 
-   Listener architecture:
-     accountOrderListeners — map keyed by orderId.
-     Separate from the single orderStatusUnsubscribe in Section 32.
-     Section 32 serves the confirmation modal only (ephemeral).
-     Section 33 serves the account page/panel (persistent).
+   renderAccountOffers() now reads from offersData (Section 22c).
+   offersData is seeded at init and replaced by sheet data if available.
    ============================================================================ */
 
 const accountOrderListeners = {};
@@ -1646,26 +1872,29 @@ function renderStampCard(filled, total, ids) {
   if (prog) prog.textContent = `${filled} of ${total} stamps collected`;
 }
 
+/**
+ * Renders offer cards from offersData.
+ * offersData is populated at init from sheet (22c) or defaults.
+ * esc() applied to all sheet-sourced fields: icon, title, description, badge.
+ */
 function renderAccountOffers(ids) {
   const list = document.getElementById(ids.offersList);
   if (!list) return;
-  list.innerHTML = `
+
+  if (!offersData || offersData.length === 0) {
+    list.innerHTML = '';
+    return;
+  }
+
+  list.innerHTML = offersData.map(offer => `
     <div class="m-offer-card">
-      <div class="m-offer-icon">🎉</div>
+      <div class="m-offer-icon">${esc(offer.icon)}</div>
       <div class="m-offer-body">
-        <div class="m-offer-title">Welcome Offer</div>
-        <div class="m-offer-desc">10% off your next order — launching soon</div>
+        <div class="m-offer-title">${esc(offer.title)}</div>
+        <div class="m-offer-desc">${esc(offer.description)}</div>
       </div>
-      <div class="m-offer-badge">Coming soon</div>
-    </div>
-    <div class="m-offer-card">
-      <div class="m-offer-icon">🍕</div>
-      <div class="m-offer-body">
-        <div class="m-offer-title">Buy 9, Get 1 Free</div>
-        <div class="m-offer-desc">Collect 9 stamps to unlock your free pizza</div>
-      </div>
-      <div class="m-offer-badge">Coming soon</div>
-    </div>`;
+      ${offer.badge ? `<div class="m-offer-badge">${esc(offer.badge)}</div>` : ''}
+    </div>`).join('');
 }
 
 function loadUserOrders(uid, ids) {
