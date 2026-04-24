@@ -42,6 +42,7 @@
  * ============================================================================
  */
 
+
 /* ============================================================================
    1. THEME INJECTION
    ============================================================================ */
@@ -914,6 +915,14 @@ async function fetchMenuFromSheet() {
 
     menuData = parsed;
     console.log(`[Stalliq] Menu loaded from sheet: ${parsed.length} item(s).`);
+
+    // Re-run scroll reveal so newly rendered menu cards get the .visible class.
+    // initScrollReveal() in Section 23 runs before the sheet fetch resolves,
+    // so cards injected by the second renderDesktopMenu() call would otherwise
+    // miss the observer and render without the .visible class — causing the
+    // section background to show through at the wrong opacity.
+    initScrollReveal();
+
     return true;
 
   } catch (err) {
