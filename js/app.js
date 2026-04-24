@@ -89,6 +89,7 @@ let customerName    = null;   // cached after phone auth
 let pendingOrderFn  = null;   // called after auth completes
 let kitchenStatus   = 'open'; // updated live by Firestore listener (Section 30)
 const orderCache    = {};     // orderId → order data, populated by loadUserOrders
+let historyRemainder = [];    // orders beyond initial 5, revealed by "Show more"
 
 
 /* ============================================================================
@@ -1527,15 +1528,18 @@ function renderAccountOffers(ids) {
 }
 
 /**
- * Loads all orders for the current user from Firestore.
- * Splits into current (active) and history.
- * Requires composite index on (customerId, createdAt) — Firestore will
- * surface a one-click creation link in the console on first run.
+ * Loads orders for the current user from Firestore.
+ * - 90-day window (display concern, not storage — Cloud Function handles actual deletion later)
+ * - Limit 50 per load
+ * - Splits into live (active statuses) and history (collected/cancelled only)
+ * - History shows 5 initially with "Show X more" button
+ * - Requires composite index on (customerId, createdAt) — one-click creation on first run
  * @param {string} uid  — Firebase UID
  * @param {object} ids  — element ID map from buildAccountIds()
  */
 function loadUserOrders(uid, ids) {
   stopAllAccountListeners();
+  historyRemainder = [];
 
   const currentSection = document.getElementById(ids.currentSection);
   const currentList    = document.getElementById(ids.currentList);
@@ -1546,27 +1550,35 @@ function loadUserOrders(uid, ids) {
     historyList.innerHTML = `<div class="m-account-loading">Loading your orders…</div>`;
   }
 
+  // 90-day cutoff — keeps display manageable; actual DB cleanup via Cloud Function later
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 90);
+
   db.collection('orders')
     .where('customerId', '==', uid)
+    .where('createdAt', '>=', cutoff)
     .orderBy('createdAt', 'desc')
+    .limit(50)
     .get()
     .then(snapshot => {
       const orders = [];
       snapshot.forEach(doc => {
         const order = { id: doc.id, ...doc.data() };
         orders.push(order);
-        orderCache[order.id] = order; // cache for detail drill-down
+        orderCache[order.id] = order;
       });
 
-      const activeStatuses = ['pending', 'accepted', 'preparing', 'ready'];
-      const currentOrders  = orders.filter(o => activeStatuses.includes(o.status));
+      const activeStatuses   = ['pending', 'accepted', 'preparing', 'ready'];
+      const terminalStatuses = ['collected', 'cancelled'];
+      const liveOrders       = orders.filter(o => activeStatuses.includes(o.status));
+      const historyOrders    = orders.filter(o => terminalStatuses.includes(o.status));
 
-      // ── Current orders ──────────────────────────────────────────────────
-      if (currentOrders.length > 0) {
+      // ── Live orders ──────────────────────────────────────────────────────
+      if (liveOrders.length > 0) {
         if (currentSection) currentSection.style.display = 'block';
         if (currentList) {
           currentList.innerHTML = '';
-          currentOrders.forEach(order => {
+          liveOrders.forEach(order => {
             const wrapper = document.createElement('div');
             wrapper.id        = `m-coc-${order.id}`;
             wrapper.className = 'm-current-order-card';
@@ -1580,22 +1592,41 @@ function loadUserOrders(uid, ids) {
         if (currentSection) currentSection.style.display = 'none';
       }
 
-      // ── Order history ────────────────────────────────────────────────────
-      if (orders.length === 0) {
+      // ── Order history — collected/cancelled only ─────────────────────────
+      if (historyOrders.length === 0) {
         if (historyList)  historyList.innerHTML = '';
         if (historyEmpty) historyEmpty.style.display = 'block';
       } else {
         if (historyEmpty) historyEmpty.style.display = 'none';
-        if (historyList) {
-          historyList.innerHTML = orders.map(order => buildHistoryItemHTML(order)).join('');
+
+        const INITIAL_SHOW   = 5;
+        const shownOrders    = historyOrders.slice(0, INITIAL_SHOW);
+        historyRemainder     = historyOrders.slice(INITIAL_SHOW);
+
+        let html = shownOrders.map(order => buildHistoryItemHTML(order)).join('');
+
+        if (historyRemainder.length > 0) {
+          const n = historyRemainder.length;
+          html += `
+            <div id="history-show-more-wrap" style="padding:4px 0 8px;">
+              <button class="m-signout-btn" style="margin:0;width:100%;"
+                onclick="showMoreHistory()">
+                Show ${n} more order${n === 1 ? '' : 's'}
+              </button>
+            </div>`;
         }
+
+        html += `<div class="m-account-loading" style="padding:8px 0 4px;font-size:11px;opacity:0.5;">
+                   Showing last 3 months
+                 </div>`;
+
+        if (historyList) historyList.innerHTML = html;
       }
     })
     .catch(err => {
       console.error('[Stalliq] Account orders load error:', err.code, err.message);
       if (err.code === 'failed-precondition') {
-        console.warn('[Stalliq] Composite index required for orders query.');
-        console.warn('[Stalliq] Check the Firestore console — it will show a direct link to create it.');
+        console.warn('[Stalliq] Composite index required. Check Firestore console for a direct creation link.');
       }
       if (historyList) {
         historyList.innerHTML = `<div class="m-account-loading">Could not load orders — please try again.</div>`;
@@ -1670,6 +1701,19 @@ function buildHistoryItemHTML(order) {
         <div class="m-history-chevron">›</div>
       </div>
     </div>`;
+}
+
+/**
+ * Reveals the remaining history orders hidden behind "Show more".
+ * Reads from historyRemainder (populated by loadUserOrders).
+ * Replaces the "Show more" button with the additional rows.
+ */
+function showMoreHistory() {
+  const wrap = document.getElementById('history-show-more-wrap');
+  if (!wrap || historyRemainder.length === 0) return;
+  const html = historyRemainder.map(order => buildHistoryItemHTML(order)).join('');
+  wrap.outerHTML = html;
+  historyRemainder = [];
 }
 
 /**
