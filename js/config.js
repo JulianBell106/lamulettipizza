@@ -11,8 +11,15 @@
  *   3. Done — the app reads everything automatically from CONFIG
  * ============================================================================
  */
-menuSheetUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTL19TeZ5Md3zJkz3qzGmc7e5dOnL29w3w8s6Rp9FBH6JC8Po2BRSaa-VXsMXqt3EbE76SiYUryme51/pub?output=csv'
+
 const CONFIG = {
+
+  /* --------------------------------------------------------------------------
+     MENU SHEET
+     Published Google Sheet CSV URL — vendor edits the sheet, app updates live.
+     Set to '' to disable and use the menu array below instead.
+  -------------------------------------------------------------------------- */
+  menuSheetUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTL19TeZ5Md3zJkz3qzGmc7e5dOnL29w3w8s6Rp9FBH6JC8Po2BRSaa-VXsMXqt3EbE76SiYUryme51/pub?output=csv',
 
   /* --------------------------------------------------------------------------
      VENDOR IDENTITY
@@ -113,6 +120,8 @@ const CONFIG = {
      id:        Unique — never change once orders are live
      diet:      'VE' | 'V' | '🌶️' | ''
      available: false to hide without deleting
+     Note: if menuSheetUrl is set and loads successfully, this array is
+     used only as a fallback (sheet not reachable / URL not set).
   -------------------------------------------------------------------------- */
   menu: [
     { id: 1, name: 'Marinara',            price: 8,  diet: 'VE', available: true,
@@ -197,19 +206,12 @@ const CONFIG = {
     refPrefix:      'LM',
     paymentNote:    '💵 Cash or card on collection',
     confirmMsg:     'Thanks for your order! Please collect and pay on pickup. Your fresh pizza will be ready soon 🍕',
-
-    // Kitchen dashboard — wait time options (mins).
-    // Customise per vendor: a sushi bar might use [15, 20, 30, 45].
     waitOptions:    [10, 15, 20, 25],
-
-    // Set to false to hide the custom wait time input entirely.
     allowCustomWait: true,
   },
 
   /* --------------------------------------------------------------------------
      KITCHEN DASHBOARD
-     pin:  4-digit PIN protecting the kitchen dashboard.
-           Change this before going live with a real vendor.
   -------------------------------------------------------------------------- */
   kitchen: {
     pin: '1234',
