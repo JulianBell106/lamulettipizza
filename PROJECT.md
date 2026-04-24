@@ -1,5 +1,5 @@
 # Stalliq — Project Bible
-> Last updated: April 2026 — Session 7b Complete + GTM & Pricing Strategy Added
+> Last updated: April 2026 — Session 8 Complete (Customer Account / Members Area — full)
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -97,22 +97,15 @@ Sophie (sophieetc.com) runs the definitive MK food blog and organises Sophie's S
 - No commission, ever — flat monthly only
 - Monthly rolling, no contracts — cancel anytime
 - Annual plans: 2 months free (~17% discount) — paid upfront, strong lock-in
-- Founding customers: 50% lifetime discount locked in as long as subscription is continuous — cancel and re-signup loses the rate forever. Creates retention hook and peer evangelism.
+- Founding customers: 50% lifetime discount locked in as long as subscription is continuous — cancel and re-signup loses the rate forever
 - La Muletti stays on original free year 1 terms — Founding discount applies to customer #2 onwards
 - Revisit prices at customer #10 — real conversion data will show which tier should be the centre of gravity
-
-**Why this structure:**
-- £19 Starter is under the £20 "no-brainer" SMB threshold — positions as proper tool, still cheap
-- £59 Growth is where the business actually earns — geofence + loyalty + flash sales tier
-- £99 Pro is the anchor — most pick Growth, which is the intent
-- Revenue target £10k/year requires ~17 customers at blended £49 average, or ~14 on Growth
-- Data export available on request (48hr turnaround) — not self-service — customer owns data but leaving has friction
 
 ---
 
 ## 6. Current Codebase — Architecture
 
-**Six files — all pushed to GitHub and live on Netlify ✅**
+**Seven files — all pushed to GitHub and live on Netlify ✅**
 
 | File | Purpose |
 |------|---------|
@@ -135,7 +128,7 @@ Firebase SDK (CDN compat v10.12.2) → js/config.js → js/firebase.js → js/ap
 **Output files location:** `/mnt/user-data/outputs/lamuletti/`
 
 **Responsive layout:**
-- Desktop (≥768px): Full scrolling landing page with basket sidebar
+- Desktop (≥768px): Full scrolling landing page with basket sidebar + account panel
 - Mobile (<768px): PWA app shell with **6 pages** and bottom navigation
 
 **Mobile nav (6 items):**
@@ -180,7 +173,7 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 03 | Firebase Backend | ✅ Done | Order submission, Phone Auth, Firestore |
 | 04 | Kitchen Dashboard | ✅ Done | PIN, kanban, accept/status/drill-down, kitchen close toggle |
 | 05 | Real-time Order Status | ✅ Done | Live status listener, time display, ready-state handling, diagnostics |
-| 06 | Customer Account / Members Area | 🔨 Session 8 | Account page, current orders (multi), order history, loyalty placeholder, offers placeholder |
+| 06 | Customer Account / Members Area | ✅ Done | Mobile page + desktop panel, live orders, history, drill-down, loyalty + offers placeholders |
 | 07 | Google Sheets Menu Management | 🔨 Session 9 | Vendor edits a Google Sheet, menu updates live in app — no deploy needed |
 | 08 | News & Locations Feed | 🔨 Session 10 | Upcoming events + where to find the van — Google Sheets driven |
 | 09 | Offers & Deal Codes | 🔨 Session 10 | Offers page on customer app, discount codes |
@@ -189,12 +182,11 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 12 | Geofence Notifications | ⏳ Planned | Van enters subscriber's area → phone buzzes |
 | 13 | Flash Sales & Broadcasts | ⏳ Planned | Vendor launches deal in seconds, broadcasts to subscribers |
 | 14 | Loyalty Stamp Card | ⏳ Planned | Digital stamp card — no paper needed |
-| 15 | Customer Login & Order History | ⏳ Planned | Full account, past orders, saved preferences |
-| 16 | Flash Offers by Geolocation | ⏳ Planned | Customer in area gets notified of live deal |
-| 17 | Pre-order Time Slots | ⏳ Planned | Order now, collect at chosen time |
-| 18 | Vendor Self-Service | ⏳ Planned | Vendor manages own menu, events, location — full self-service portal |
-| 19 | MI & Reporting | ⏳ Planned | Daily order count, revenue totals, product breakdown — CSV or Looker Studio |
-| 20 | AI Order Assist | 🌟 Vision | Customer orders in natural language — type or dictate. AI parses into basket, normal checkout flow. |
+| 15 | Flash Offers by Geolocation | ⏳ Planned | Customer in area gets notified of live deal |
+| 16 | Pre-order Time Slots | ⏳ Planned | Order now, collect at chosen time |
+| 17 | Vendor Self-Service | ⏳ Planned | Vendor manages own menu, events, location — full self-service portal |
+| 18 | MI & Reporting | ⏳ Planned | Daily order count, revenue totals, product breakdown — CSV or Looker Studio |
+| 19 | AI Order Assist | 🌟 Vision | Customer orders in natural language — type or dictate. AI parses into basket, normal checkout flow. |
 
 **Feature backlog (future):**
 - Item notes (per-item text input in basket — data model already supports `notes: null`)
@@ -215,8 +207,8 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | Session | Focus | Goal |
 |---------|-------|------|
 | 7 | MVP Completion | ✅ Kitchen closed → app, real-time order status customer side |
-| 8 | Customer Account / Members Area | Account page, current orders, history, loyalty + offers placeholders |
-| 8b | Multi-tenancy Future-Proofing Audit | Replace any `"lamuletti"` literals with `CONFIG.vendorId`, add `CONFIG.domains` field, scan HTML for vendor literals — 15-minute insurance against future migration pain |
+| 8 | Customer Account / Members Area | ✅ Account page + desktop panel, live orders, history, drill-down |
+| 8b | Multi-tenancy Future-Proofing Audit | Replace any `"lamuletti"` literals with `CONFIG.vendorId`, add `CONFIG.domains` field |
 | 9 | Google Sheets menu management | Vendor edits sheet, app updates live — no deploy |
 | 10 | News/Locations feed + Offers/Deal Codes | Customer app pages, Sheets driven |
 | 11 | Demo polish | End-to-end demo reset function, rough edges removed |
@@ -225,7 +217,9 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 **What gets demoed live at the meeting:**
 - Customer places order on phone → kitchen receives it instantly
 - Kitchen accepts, sets wait time → customer sees status update live
+- Customer dismisses modal → lands on Account page showing live order
 - Customer can place multiple orders (forgot something) → both visible in Account
+- Tap any order card → full detail view (items, prices, status, timestamp)
 - Account page shows loyalty stamps and offers — hints at the roadmap
 - Vendor edits menu in Google Sheet → customer app reflects it
 - News/locations and offers pages on the customer app
@@ -246,13 +240,23 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 **Firebase project:** `stalliq` (stalliq.firebaseapp.com)
 **Firebase account:** julian@endoo.co.uk (Google account linked to M365 email)
 **Firebase SDK version:** 10.12.2 (CDN compat — no bundler needed)
-**Firebase Phone Auth test number:** +44 7700 900001 / code: 123456
+**Firebase Phone Auth test numbers:**
+
+| Number | Code |
+|--------|------|
+| +44 7700 900001 | 123456 |
+| +44 7700 900002 | 123456 |
+| +44 7700 900003 | 123456 |
+| +44 7700 900004 | 123456 |
+| +44 7700 900005 | 123456 |
+
+⚠️ **Real numbers should never be used for testing** — Firebase throttles/blocks repeated SMS to the same number. Use test numbers only. Each test number is an independent Firebase user — `900002` onward will hit the full registration flow fresh.
 
 **Order flow:**
 1. Customer places order → status: `pending`
 2. Owner accepts → status: `accepted`, wait time set
 3. `accepted` → `preparing` → `ready`
-4. Customer sees live status in real time
+4. Customer sees live status in real time (confirmation modal + Account page)
 5. Customer collects and pays
 
 **Firestore structure:**
@@ -273,7 +277,7 @@ subscribers/{subscriberId}/
   vendorId, location, radius, notifyVia, lastNotified
 ```
 
-**Firestore security rules required (customer reads own orders):**
+**Firestore security rules required:**
 ```
 match /orders/{orderId} {
   allow read: if request.auth != null
@@ -282,7 +286,8 @@ match /orders/{orderId} {
 }
 ```
 
-**Order history query requires a composite index** (`customerId` + `createdAt` desc). Firestore will surface a direct link to create it on first query — one click, not a blocker.
+**Firestore composite index required:**
+The Account page queries orders by `(customerId + createdAt desc)`. This requires a composite index. Firestore will not create it automatically — on first run it surfaces a direct link in the browser console (`failed-precondition` error). Click the link, create the index, wait ~60–90 seconds to build. **This is a go-live task — see Section 23.**
 
 ---
 
@@ -295,6 +300,7 @@ match /orders/{orderId} {
 4. Enter first name → stored against uid for all future orders
 5. Confirm order → single tap "Place Order"
 6. Confirmation modal → shows order ref e.g. `#007`, live status updates
+7. Customer dismisses modal → routed to Account page to track live order
 
 **Repeat customer:** steps 2-4 skipped — one tap to confirm.
 
@@ -320,77 +326,88 @@ match /orders/{orderId} {
 - `app.js` Section 30: `initKitchenStatusListener()` — Firestore `onSnapshot` on `vendors/lamuletti`
 - `applyKitchenStatus(status)` — updates shared `kitchenStatus` var and reacts across both views
 - Mobile: sticky red banner at top of home page + Place Order button disabled/renamed "Kitchen Closed"
-- Desktop: dark (`#1A0A00`) full-width sticky banner injected as first child of `<body>`, above nav, with fire red bottom border — visually distinct from the orange strip bar
-- All three closed statuses show correct message: `closed_busy`, `closed_end`, `closed_today`
+- Desktop: dark (`#1A0A00`) full-width sticky banner injected as first child of `<body>`, above nav, with fire red bottom border
+- All three closed statuses show correct message
 - Fails open — if Firestore unreachable, ordering stays available
-- Kitchen close toggle in dashboard already wrote to Firestore (Session 6) — full loop now live
 
 **Built in Session 7b Task 2 (Real-time Order Status) ✅:**
 - `app.js` Section 31: `startOrderStatusListener(orderId)` — Firestore `onSnapshot` on specific order doc
 - Status block injected into confirm modal (mobile) and overlay (desktop)
-- Time display (`m-confirm-time` / `d-order-time`) updates live: ⏳ pending → ~X mins on accept
+- Time display updates live: ⏳ pending → ~X mins on accept
 - Ready state: icon, title, button text all flip on mobile + desktop
 - `stopOrderStatusListener()` fully resets modal + overlay for next use
-- `[Stalliq]` console diagnostics throughout — permission-denied error surfaces Firestore rules fix
-- Handles multiple orders in same session cleanly (reset on each new order)
+- `[Stalliq]` console diagnostics throughout
 
 **Built in Session 6:**
 - PIN screen on load — 4-digit, auto-submits, shakes on wrong entry
 - Kanban board — 4 columns: Pending | Accepted | Preparing | Ready
-- Horizontal drag/scroll between columns (Pointer Events API — works on Windows touch, mouse, iPad)
+- Horizontal drag/scroll between columns (Pointer Events API)
 - Order cards — ref, customer name, items, elapsed time, status badge, action button
-- Accept order + wait time modal — options from `CONFIG.ordering.waitOptions`, custom entry if `allowCustomWait: true`
-- Status tap-through: `accepted → preparing` (single tap), `preparing → ready` (confirm modal — two tap)
+- Accept order + wait time modal — options from `CONFIG.ordering.waitOptions`
+- Status tap-through: `accepted → preparing` (single tap), `preparing → ready` (confirm modal)
 - Collected (removes from queue)
 - Kitchen close toggle — 4-option modal in header, writes to Firestore immediately
-- Order detail drill-down — tap card body to open full detail modal (customer phone as tappable call link, all items, total, timestamps)
+- Order detail drill-down — tap card body to open full detail modal
 - Sound alert on new pending order (two beeps via Web Audio API)
 - Elapsed time counter per card — turns amber at 10 mins, red at 20 mins
 
-**Pending (locked spec — Session 7+):**
+**Pending (locked spec — post-pitch):**
 - Large order handling (distinct card colour + surfaces close kitchen option)
 - Backwards status movement (long press + confirm)
 - Named credentials / role-based access (owner vs staff)
 
 ---
 
-## 11. Customer Account / Members Area — Session 8 Spec
+## 11. Customer Account / Members Area — ✅ COMPLETE (Session 8)
 
-**The account page is always present in the nav** (👤 Account, 6th item). Visible whether logged in or not.
+**Mobile:** 6th page (`#page-account`) always present in nav (👤 Account)
+**Desktop:** 440px slide-in panel from nav link (👤 Account) — same content, z-index 1100 (above nav)
 
-**Three states:**
+**Three states (both mobile + desktop):**
 
 **Logged out:**
-Clean login prompt. "Sign in to track your orders and collect stamps." Taps into the existing phone auth flow. No new auth code needed.
+Clean login prompt. "Sign in to track your orders and collect stamps." Reuses existing phone auth overlay. Auth overlay title/subtitle switches context (order flow vs account sign-in) and resets correctly when triggered from the order flow.
 
 **Logged in, no activity:**
 - Welcome by first name
-- Loyalty stamp card: 0/10 stamps, "Buy 9 get your 10th free", "Coming soon" badge
-- Offers placeholder: one or two static offer cards, "Coming soon" badge
-- Empty order history with nudge to order
+- Loyalty stamp card: 3/10 filled stamps, "Buy 9 get your 10th free", "Coming soon" badge
+- Offers: two static placeholder cards, "Coming soon" badge
+- Empty order history nudge
 
 **Logged in with activity:**
-- Current Orders section — one card per active order (status ≠ collected/cancelled). Each card shows live status with its own Firestore listener. Handles multiple concurrent orders (e.g. customer placed two orders in a row).
-- Loyalty stamp card — static for demo, shows 3/10 filled stamps
-- Offers — static for demo, one welcome offer card
-- Order history — all past orders, most recent first. Ref, date, items summary, total, status badge.
+- Live Orders section — one card per active order (pending/accepted/preparing/ready) with real-time status listener. Live section and history are strictly separated — pending orders never appear in history.
+- Loyalty + offers as above
+- Order history — collected/cancelled orders only, most recent first
 
-**Post-order modal flow (unchanged):**
-The confirm modal stays exactly as built. It's the ephemeral "your order is placed" moment. The Account page is the persistent source of truth. Customer can dismiss the modal and find all active orders in Account.
+**Order history display:**
+- 90-day window — keeps display manageable; actual database cleanup via Cloud Function deferred to post-pitch
+- Limit 50 per query
+- Shows 3 items initially; "Show X more" button reveals the rest inline (no second Firestore call — uses `historyRemainder` client-side)
+- "Showing last 3 months" label at foot of list
+- `status-collected` badge: neutral white. `status-cancelled` badge: red tint. Both were added in session — were missing from original CSS causing black text on dark background.
 
-**Firestore queries for Account page:**
-- Current orders: `orders` where `customerId == uid` AND `status` not in `['collected', 'cancelled']`
-- Order history: `orders` where `customerId == uid`, ordered by `createdAt` desc
-- Both require the composite index on `customerId` + `createdAt` (Firestore provides one-click link on first run)
+**Order detail drill-down (shared mobile + desktop):**
+Slide-up sheet on mobile, centred modal on desktop. Shows: order ref, date/time, status badge, itemised list with per-line prices, payment method, total. Populated from `orderCache` — kept fresh by `startAccountOrderListener` so live orders always show current status.
 
-**Multiple listener management:**
-Current `orderStatusUnsubscribe` (single var) needs to become a map keyed by `orderId`. `stopAllOrderListeners()` cleans up all. Individual listener cleaned up when order reaches `ready` and customer dismisses from Account page.
+**Reorder:**
+Collected history cards have a 🔁 Reorder button (fire red pill). Tapping it does not open the detail overlay (stopPropagation). Detail overlay also shows a full-width 🔁 Reorder This button for collected orders. `reorderItems(orderId)` clears the basket, adds back all items still available on the menu, and routes to the basket (mobile: basket page, desktop: closes account panel, opens basket panel). Items removed from the menu are silently skipped. If no items are available, a gentle alert is shown instead of routing to an empty basket.
 
-**Session 8 files to produce:** `index.html` + `app.js` (Account page HTML + CSS + all JS logic)
+**Post-order flow:**
+Modal dismiss routes to Account page (not Home) so customer immediately sees their live order.
+
+**Firestore queries:**
+- Orders: `where customerId == uid, where createdAt >= 90 days ago, orderBy createdAt desc, limit 50`
+- Requires composite index on `(customerId, createdAt)` — see Section 23 (Go-Live Checklist). Already created for La Muletti ✅
+
+**Listener architecture:**
+- `accountOrderListeners` map — keyed by orderId, independent of Section 31 modal listener
+- `buildAccountIds(prefix)` — maps `'m'` or `'d'` to correct element IDs, enabling shared render logic
+- `orderCache` updated on every snapshot in `startAccountOrderListener` — detail overlay always shows current state
+- `stopAllAccountListeners()` — called on sign-out and before reloading orders
 
 ---
 
-## 12. Google Sheets Menu Management — Spec
+## 12. Google Sheets Menu Management — Spec (Session 9)
 
 **Problem:** Menu changes require editing `config.js`, pushing to GitHub, waiting for Netlify deploy. Not vendor-manageable.
 
@@ -440,7 +457,7 @@ Customer taps AI chat bubble → types or dictates order in natural language →
 
 **Guardrails needed:** Stay on-task (no off-menu items), handle allergy questions carefully, cost per conversation monitoring at scale.
 
-**Roadmap position:** Feature 20 — post loyalty and self-service.
+**Roadmap position:** Feature 19 — post loyalty and self-service.
 
 ---
 
@@ -462,7 +479,7 @@ Customer taps AI chat bubble → types or dictates order in natural language →
 
 - Multi-tenancy: one deployment per customer for 0-5, then scale
 - `config.js` is single file that changes per customer
-- Desktop = landing page, Mobile = PWA app shell, 768px breakpoint
+- Desktop = landing page + slide-in panels, Mobile = PWA app shell, 768px breakpoint
 - Endoo stays as IT services holding company
 - Platform trades as Stalliq (stalliq.co.uk)
 - La Muletti free year 1 — agreed with Daniele
@@ -490,16 +507,29 @@ Customer taps AI chat bubble → types or dictates order in natural language →
 - Kitchen status listener fails open — Firestore unreachable does not block ordering
 - Session chunking: large file outputs cause conversation timeouts — break each session into single-file chunks with fresh conversation per chunk
 - Order status listener: inject-into-modal approach (not separate page) — modal is ephemeral, Account page is persistent
-- Multiple concurrent orders supported — customer can dismiss modal and place second order; both visible in Account page with individual listeners
+- Multiple concurrent orders supported — customer can dismiss modal → routed to Account page; both orders visible with individual listeners
 - Account page always visible in nav (logged out shows login prompt) — loyalty card is a reason to open app even without ordering
 - Loyalty + offers: static/placeholder for demo, "Coming soon" badge — shows roadmap without over-promising
 - `stopOrderStatusListener()` fully resets modal + overlay state so second order in same session renders cleanly
 - Pricing: £19 Starter / £59 Growth / £99 Pro — annual plans 2 months free — monthly rolling, no contracts
-- Founding customer offer: 50% lifetime discount locked as long as subscription continuous (first 5 customers) — replaces original "free year 1" model for customer #2 onwards. La Muletti stays on original free year 1 terms.
+- Founding customer offer: 50% lifetime discount locked as long as subscription continuous (first 5 customers)
 - Sophie partnership: 20% recurring commission, 24-month cap per customer — structure locked in Section 22
-- La Muletti analytics: capture baseline order volume and customer behaviour from day one — Growth-features delta is the Sophie pitch
-- Session 8b added: multi-tenancy future-proofing audit post-Session 8 — replace vendor literals with `CONFIG.vendorId`, add `CONFIG.domains` field
-- Multi-tenancy architecture: Model A (one site per customer, 0-5) → Model B (hostname resolution, 5-10) → Model C (full SaaS, 10+). Defer each step until customer volume justifies it. Data model is already multi-tenant shaped — migration is cheap. `vendorId` must always be read from `CONFIG.vendorId`, never a string literal.
+- Desktop account panel: 440px slide-in, z-index 1100 (above nav at 1000) — same pattern as basket panel
+- `buildAccountIds(prefix)` maps 'm'/'d' to correct element IDs — single render logic serves both panels
+- `orderCache` — client-side map populated on account load, enables instant detail drill-down without Firestore re-fetch
+- Order detail overlay: shared mobile/desktop — slide-up sheet on mobile, centred modal on desktop (CSS handles difference)
+- Post-order dismiss routes to Account page, not Home — customer immediately sees their live order
+- Firestore composite index on `(customerId, createdAt)` required for order history query — one-click creation on first run, permanent once built
+- Real phone numbers must never be used for testing — Firebase throttles repeated SMS; always use Firebase test numbers
+- Auth overlay title/subtitle updates by context: "Confirm your order" for order flow, "Sign in to your account" for account sign-in — `authGateway()` always resets to order context
+- History shows collected/cancelled only — pending/active orders live in Live Orders section exclusively, never bleed into history
+- 90-day history window with limit 50 — display concern not storage; Cloud Function for actual deletion is a future task (Session 11 or later)
+- Show 3 history items initially with "Show X more" button — prevents ever-expanding list; `historyRemainder` stores hidden orders, `showMoreHistory()` reveals inline without a second Firestore call
+- `orderCache` kept fresh by `startAccountOrderListener` on every snapshot — detail overlay always shows current status, not stale load-time data
+- Status badge colours: all statuses defined — collected = neutral white, cancelled = red tint. Never use `opacity` stacking on already-low-opacity rgba colours — produces brown-on-brown on warm dark backgrounds; use direct rgba values instead
+- Reorder button on collected history cards (stopPropagation so card tap still opens detail) and in detail overlay for collected orders — `reorderItems()` clears basket, adds available items, routes to basket page (mobile) or basket panel (desktop)
+- Items removed from menu silently skipped on reorder; if all unavailable a gentle alert is shown — `alert()` acceptable for MVP, replace with toast in demo polish session
+- Firestore composite index on `(customerId, createdAt)` already created for La Muletti ✅ — still a go-live task for each new customer deployment
 
 ---
 
@@ -523,35 +553,20 @@ The app promotes good decisions at exactly the moments when a vendor is most lik
 
 ---
 
-## 20. Next Session — Session 8: Customer Account / Members Area
+## 20. Next Session — Session 8b: Multi-tenancy Future-Proofing Audit
 
-Paste the current `index.html` and `app.js` at the start of the session.
+Quick audit — not a build session. ~15 minutes of work, important insurance.
 
-**What to build:**
-A 6th mobile page (`#page-account`, 👤 Account) always present in the nav. Three states: logged out (login prompt), logged in with no orders (welcome + placeholders), logged in with activity (current orders + history + placeholders).
+**Scope:**
+1. Grep `app.js` and `kitchen.js` for any literal `"lamuletti"` string — replace with `CONFIG.vendor.id`
+2. Confirm `CONFIG.vendor.id = "lamuletti"` is explicitly set at the top of `config.js`
+3. Add `CONFIG.domains = ["lamulettipizza.co.uk", "stalliq-demo.netlify.app"]` as a forward-compatible field (unused for now)
+4. Quick scan of `index.html` and `kitchen.html` for any other vendor-specific literals
+5. Update PROJECT.md with audit result
 
-**Detailed spec:** See Section 11 above.
+**Rationale:** Data model is the expensive thing to change later. Deployment topology, config location, and onboarding are all cheap to change when customers are running on good data. This audit ensures vendorId is always read from config, never hardcoded.
 
-**Key things to get right:**
-- Multiple concurrent order listeners — map keyed by orderId, not single var
-- Current orders query excludes collected/cancelled status
-- Order history composite index — Firestore will prompt on first run, one-click fix
-- Loyalty stamp card: 3/10 filled, "Coming soon" badge, visually complete
-- Offers: 1-2 static cards, "Coming soon" badge
-- Post-order modal stays exactly as is — account page is the persistent layer
-
----
-
-**After Session 8 — Session 8b: Multi-tenancy Future-Proofing Audit**
-
-Scope:
-1. Grep `app.js` and `kitchen.js` for any literal `"lamuletti"` string — replace with `CONFIG.vendorId`
-2. Add `CONFIG.vendorId = "lamuletti"` explicitly at the top of `config.js` if not already there
-3. Add `CONFIG.domains = ["lamulettipizza.co.uk", "stalliq-demo.netlify.app"]` as forward-compatible field (unused for now, shape is right)
-4. Quick scan of `index.html` and `kitchen.html` for any other vendor-specific literals that shouldn't be there
-5. Update PROJECT.md with audit result and Model A → B → C migration principle
-
-Rationale: data model is the expensive thing to change later. Deployment topology, config location, and onboarding are all cheap to change when customers are running on good data. This audit is the insurance that keeps the data model clean.
+**After 8b → Session 9: Google Sheets Menu Management**
 
 ---
 
@@ -584,33 +599,23 @@ Rationale: data model is the expensive thing to change later. Deployment topolog
 | Churn | Commission stops when a customer churns — aligns incentives to retention |
 | After 24 months | Commission ends, customer becomes full-margin to Stalliq |
 
-**Example economics:**
-- Starter customer at £19/month: Sophie earns £3.80/month × 24 = £91.20 lifetime
-- Growth customer at £59/month: Sophie earns £11.80/month × 24 = £283.20 lifetime
+**Timing of approach:** Month 4-5, once La Muletti has 2-3 months of real order data and at least one quotable success metric.
 
-**Why 20% / 24 months:**
-- 20% is the SaaS partner/affiliate standard — meaningful to her, sustainable for us
-- Recurring (not one-off) keeps her invested in customer success, not just signup
-- 24-month cap protects long-term unit economics and creates a built-in margin expansion as customers roll off her commission in Y3+
+**Written agreement required before first customer signs.**
 
-**Rejected alternatives:**
-- Flat referral fee (e.g. £100-£200 per signup) — wrong incentive, paid whether customer stays a week or two years
-- Lifetime revenue share — leaves a permanent 20% tax on half the customer base
-- Equity — this is a referral relationship, not a co-founder relationship
+---
 
-**Timing of approach:** Month 4-5, once La Muletti has 2-3 months of real order data and at least one quotable success metric. Do not approach before that — only one shot at this conversation.
+## 23. Go-Live Checklist ⚠️
 
-**Qualifying as "her" customer:**
-- First introduction documented (email, WhatsApp, meeting note) — logged in a shared tracker
-- If Julian and Sophie both know a vendor, first documented introduction wins
-- No ambiguity allowed — capture it in writing at the time
+Tasks that must be completed before going live with any real customer. Not blockers for demo/testing — blockers for production.
 
-**Written agreement required before first customer signs:**
-One-page memo covering: commission rate, 24-month duration, qualifying customer definition, payment cadence, churn treatment, what happens if Endoo sells the business (commissions honoured or lump-sum settlement). Not heavy legal — just enough to prevent awkward conversations later.
-
-**Framing for the pitch conversation:**
-> "I want to build this across MK, Beds and Northampton. I can't do the relationship work — you can. 20% of everything you bring in, paid monthly for 24 months per customer. Bring in 10 customers in your first year averaging £40/month, and you're earning £80/month passive by year end with room to compound."
-
-Frame it as building her a recurring income stream tied to her existing network — not as a one-off referral gig. Matches how she'll think about it given her consultancy background.
-
-**Risk to manage:** If Sophie's own consulting work gets busy, she'll deprioritise. Mitigation: the commission structure itself is the mitigation — 20% recurring is meaningful enough to compete for attention. Also: build direct relationships with 2-3 of her vendors early so the pipeline doesn't live entirely in her head.
+| # | Task | Notes |
+|---|------|-------|
+| 1 | **Firestore composite index** | Required for Account page order history query. Already created for La Muletti ✅. For each new customer deployment: on first login to Account, open browser console — Firestore will log a `failed-precondition` error with a direct link to create the index. Click it, wait ~60–90 seconds to build. One-time task per Firebase project. |
+| 2 | **Firestore security rules** | Ensure the orders read rule is deployed: `allow read: if request.auth != null && resource.data.customerId == request.auth.uid;` Check in Firebase Console → Firestore → Rules. |
+| 3 | **Remove `noindex, nofollow`** | The demo site has a robots meta tag preventing search indexing. Remove from `index.html` before going live on the customer's real domain. |
+| 4 | **Firebase Phone Auth — real domain** | Add the production domain to Firebase Auth → Settings → Authorised Domains. Without this, Phone Auth will silently fail on the live URL. |
+| 5 | **Remove Firebase test numbers** | Before or shortly after go-live, remove test numbers from Firebase Console → Authentication → Sign-in method → Phone → Test numbers. Not a security risk but keeps things clean. |
+| 6 | **CONFIG.vendor.id** | Confirm `config.js` has `vendor: { id: 'lamuletti' }` (or correct vendor ID for new customer). Never hardcode this as a string literal anywhere in app.js or kitchen.js. |
+| 7 | **Kitchen PIN** | Change `CONFIG.kitchen.pin` from `1234` to something the vendor chooses. |
+| 8 | **`noindex` on kitchen.html** | Add `<meta name="robots" content="noindex, nofollow">` to `kitchen.html` — the kitchen dashboard should never appear in search results. |
