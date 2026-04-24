@@ -1,5 +1,5 @@
 # Stalliq — Project Bible
-> Last updated: April 2026 — Session 8 Complete (Customer Account / Members Area — full)
+> Last updated: April 2026 — Session 8b Complete (Multi-tenancy Audit)
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -208,7 +208,7 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 |---------|-------|------|
 | 7 | MVP Completion | ✅ Kitchen closed → app, real-time order status customer side |
 | 8 | Customer Account / Members Area | ✅ Account page + desktop panel, live orders, history, drill-down |
-| 8b | Multi-tenancy Future-Proofing Audit | Replace any `"lamuletti"` literals with `CONFIG.vendorId`, add `CONFIG.domains` field |
+| 8b | Multi-tenancy Future-Proofing Audit | ✅ No literals found; CONFIG.domains added; minor kitchen.js tidy logged |
 | 9 | Google Sheets menu management | Vendor edits sheet, app updates live — no deploy |
 | 10 | News/Locations feed + Offers/Deal Codes | Customer app pages, Sheets driven |
 | 11 | Demo polish | End-to-end demo reset function, rough edges removed |
@@ -355,6 +355,7 @@ The Account page queries orders by `(customerId + createdAt desc)`. This require
 - Large order handling (distinct card colour + surfaces close kitchen option)
 - Backwards status movement (long press + confirm)
 - Named credentials / role-based access (owner vs staff)
+- ⚠️ Minor tidy (Session 11): `orderCardHTML` in `kitchen.js` hardcodes `£` and `'cash on collection'` — should use `CONFIG.business.currency` and `CONFIG.ordering.paymentNote`
 
 ---
 
@@ -530,6 +531,10 @@ Customer taps AI chat bubble → types or dictates order in natural language →
 - Reorder button on collected history cards (stopPropagation so card tap still opens detail) and in detail overlay for collected orders — `reorderItems()` clears basket, adds available items, routes to basket page (mobile) or basket panel (desktop)
 - Items removed from menu silently skipped on reorder; if all unavailable a gentle alert is shown — `alert()` acceptable for MVP, replace with toast in demo polish session
 - Firestore composite index on `(customerId, createdAt)` already created for La Muletti ✅ — still a go-live task for each new customer deployment
+- Session 8b audit: no `"lamuletti"` literals found in `app.js` or `kitchen.js` — `CONFIG.vendor.id` used consistently throughout both files
+- `CONFIG.domains` added to `config.js` as a forward-compatible field (unused at runtime) — lists valid domains per deployment for future use in routing, CORS, domain validation
+- `index.html` and `kitchen.html` not grepped in Session 8b — worth a quick scan for hardcoded vendor strings when next editing either file
+- Minor tidy deferred to Session 11: `kitchen.js` `orderCardHTML` hardcodes `£` symbol and `'cash on collection'` string — should use `CONFIG.business.currency` and `CONFIG.ordering.paymentNote`
 
 ---
 
@@ -553,20 +558,20 @@ The app promotes good decisions at exactly the moments when a vendor is most lik
 
 ---
 
-## 20. Next Session — Session 8b: Multi-tenancy Future-Proofing Audit
+## 20. Next Session — Session 9: Google Sheets Menu Management
 
-Quick audit — not a build session. ~15 minutes of work, important insurance.
+Paste the current `app.js` at the start of the session.
 
-**Scope:**
-1. Grep `app.js` and `kitchen.js` for any literal `"lamuletti"` string — replace with `CONFIG.vendor.id`
-2. Confirm `CONFIG.vendor.id = "lamuletti"` is explicitly set at the top of `config.js`
-3. Add `CONFIG.domains = ["lamulettipizza.co.uk", "stalliq-demo.netlify.app"]` as a forward-compatible field (unused for now)
-4. Quick scan of `index.html` and `kitchen.html` for any other vendor-specific literals
-5. Update PROJECT.md with audit result
+**What to build:**
+On load, `app.js` fetches menu data from a published Google Sheet. Falls back to `config.js` menu if the Sheet is unavailable. Vendor edits their own Sheet and the customer app reflects changes within minutes — no deploy needed.
 
-**Rationale:** Data model is the expensive thing to change later. Deployment topology, config location, and onboarding are all cheap to change when customers are running on good data. This audit ensures vendorId is always read from config, never hardcoded.
+**Detailed spec:** See Section 12 above.
 
-**After 8b → Session 9: Google Sheets Menu Management**
+**Key things to get right:**
+- Graceful fallback — if the Sheet fetch fails for any reason, `config.js` menu loads silently
+- Sheet structure should mirror existing menu format exactly (id, name, price, diet, available, desc)
+- Julian creates and shares the Sheet; vendor gets edit access to their own Sheet only
+- `config.js` gains a `menuSheetUrl` field pointing to the published Sheet JSON endpoint
 
 ---
 
@@ -616,6 +621,7 @@ Tasks that must be completed before going live with any real customer. Not block
 | 3 | **Remove `noindex, nofollow`** | The demo site has a robots meta tag preventing search indexing. Remove from `index.html` before going live on the customer's real domain. |
 | 4 | **Firebase Phone Auth — real domain** | Add the production domain to Firebase Auth → Settings → Authorised Domains. Without this, Phone Auth will silently fail on the live URL. |
 | 5 | **Remove Firebase test numbers** | Before or shortly after go-live, remove test numbers from Firebase Console → Authentication → Sign-in method → Phone → Test numbers. Not a security risk but keeps things clean. |
-| 6 | **CONFIG.vendor.id** | Confirm `config.js` has `vendor: { id: 'lamuletti' }` (or correct vendor ID for new customer). Never hardcode this as a string literal anywhere in app.js or kitchen.js. |
-| 7 | **Kitchen PIN** | Change `CONFIG.kitchen.pin` from `1234` to something the vendor chooses. |
-| 8 | **`noindex` on kitchen.html** | Add `<meta name="robots" content="noindex, nofollow">` to `kitchen.html` — the kitchen dashboard should never appear in search results. |
+| 6 | **CONFIG.vendor.id** | Confirm `config.js` has `vendor: { id: 'lamuletti' }` (or correct vendor ID for new customer). Never hardcode this as a string literal anywhere in `app.js` or `kitchen.js`. |
+| 7 | **CONFIG.domains** | Update `config.js` `domains` array to include the customer's live domain once known. Unused at runtime for now — forward-compatible. |
+| 8 | **Kitchen PIN** | Change `CONFIG.kitchen.pin` from `1234` to something the vendor chooses. |
+| 9 | **`noindex` on kitchen.html** | Add `<meta name="robots" content="noindex, nofollow">` to `kitchen.html` — the kitchen dashboard should never appear in search results. |
