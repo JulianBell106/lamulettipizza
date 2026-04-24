@@ -19,7 +19,7 @@ const CONFIG = {
      Published Google Sheet CSV URL — vendor edits the sheet, app updates live.
      Set to '' to disable and use the menu array below instead.
   -------------------------------------------------------------------------- */
- // menuSheetUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTL19TeZ5Md3zJkz3qzGmc7e5dOnL29w3w8s6Rp9FBH6JC8Po2BRSaa-VXsMXqt3EbE76SiYUryme51/pub?output=csv',
+   menuSheetUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTL19TeZ5Md3zJkz3qzGmc7e5dOnL29w3w8s6Rp9FBH6JC8Po2BRSaa-VXsMXqt3EbE76SiYUryme51/pub?output=csv',
 
   /* --------------------------------------------------------------------------
      VENDOR IDENTITY
