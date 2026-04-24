@@ -26,17 +26,19 @@
  *   19. Mobile — About
  *   20. Mobile — Find Us
  *   21. Scroll reveal
- *   22. Init
- *   23. Auth — State helpers
- *   24. Auth — Gateway (intercepts Place Order)
- *   25. Auth — Send SMS code
- *   26. Auth — Verify code
- *   27. Auth — Save name (first order only)
- *   28. Firebase — Get next order ref (daily counter)
- *   29. Firebase — Submit order to Firestore
- *   30. Firebase — Kitchen status listener
- *   31. Firebase — Order status listener (confirmation modal)
- *   32. Account page — Members area
+ *   22. Google Sheets — Menu fetch
+ *   23. Init
+ *   24. Auth — State helpers
+ *   25. Auth — Gateway (intercepts Place Order)
+ *   26. Auth — Send SMS code
+ *   27. Auth — Verify code
+ *   28. Auth — Save name (first order only)
+ *   29. Firebase — Get next order ref (daily counter)
+ *   30. Firebase — Submit order to Firestore
+ *   31. Firebase — Kitchen status listener
+ *   32. Firebase — Order status listener (confirmation modal)
+ *   33. Account page — Members area
+ *   34. Order detail overlay
  * ============================================================================
  */
 
@@ -84,17 +86,42 @@ function bootstrapPage() {
    3. SHARED STATE
    ============================================================================ */
 const basket = {};
-let orderCount      = 0;
-let customerName    = null;   // cached after phone auth
-let pendingOrderFn  = null;   // called after auth completes
-let kitchenStatus   = 'open'; // updated live by Firestore listener (Section 30)
-const orderCache    = {};     // orderId → order data, populated by loadUserOrders
-let historyRemainder = [];    // orders beyond initial 5, revealed by "Show more"
+let orderCount       = 0;
+let customerName     = null;   // cached after phone auth
+let pendingOrderFn   = null;   // called after auth completes
+let kitchenStatus    = 'open'; // updated live by Firestore listener (Section 31)
+const orderCache     = {};     // orderId → order data, populated by loadUserOrders
+let historyRemainder = [];     // orders beyond initial 3, revealed by "Show more"
+
+/**
+ * menuData — the active menu used by all render and basket functions.
+ * Initialised to CONFIG.menu in Section 23 (init), then replaced with
+ * sheet data if fetchMenuFromSheet() succeeds (Section 22).
+ * Always use menuData, never CONFIG.menu directly, in render/utility code.
+ */
+let menuData = null;
 
 
 /* ============================================================================
    4. UTILITY FUNCTIONS
    ============================================================================ */
+
+/**
+ * HTML-encodes a string before insertion into innerHTML.
+ * Applied to all sheet-sourced fields (name, desc, diet) to prevent XSS
+ * if the vendor's Google account is ever compromised.
+ * Safe for emojis, special chars, and all normal menu content.
+ * @param {*} str — value to encode (coerced to string)
+ * @returns {string} — HTML-safe string
+ */
+function esc(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
 
 function basketTotalQty() {
   return Object.values(basket).reduce((sum, qty) => sum + qty, 0);
@@ -102,7 +129,7 @@ function basketTotalQty() {
 
 function basketTotalPrice() {
   return Object.keys(basket).reduce((sum, id) => {
-    const item = CONFIG.menu.find(m => m.id === Number(id));
+    const item = menuData.find(m => m.id === Number(id));
     return sum + (item ? item.price * basket[id] : 0);
   }, 0);
 }
@@ -126,12 +153,12 @@ function buildOrderSummaryHTML(rowClass) {
   let total = 0;
   let rows  = '';
   Object.keys(basket).map(Number).forEach(id => {
-    const item = CONFIG.menu.find(m => m.id === id);
+    const item = menuData.find(m => m.id === id);
     const qty  = basket[id];
     const sub  = item.price * qty;
     total += sub;
     rows += `<div class="${rowClass}">
-               <span>${item.name} × ${qty}</span>
+               <span>${esc(item.name)} × ${qty}</span>
                <strong>${CONFIG.business.currency}${sub.toFixed(2)}</strong>
              </div>`;
   });
@@ -196,12 +223,13 @@ function renderDesktopStrip() {
 
 /* ============================================================================
    7. DESKTOP — MENU
+   esc() applied to all sheet-sourced fields: name, desc, diet.
    ============================================================================ */
 function renderDesktopMenu() {
   const grid = document.getElementById('d-menu-grid');
   if (!grid) return;
 
-  const items = CONFIG.menu.filter(m => m.available !== false);
+  const items = menuData.filter(m => m.available !== false);
 
   grid.innerHTML = items.map((item, i) => {
     const qty = basket[item.id] || 0;
@@ -214,12 +242,12 @@ function renderDesktopMenu() {
     return `
       <div class="d-pizza-card" id="d-card-${item.id}">
         <div class="d-pizza-num">0${i + 1}</div>
-        <div class="d-pizza-name">${item.name}</div>
-        <div class="d-pizza-desc">${item.desc}</div>
+        <div class="d-pizza-name">${esc(item.name)}</div>
+        <div class="d-pizza-desc">${esc(item.desc)}</div>
         <div class="d-pizza-footer">
           <div class="d-pizza-price">${CONFIG.business.currency}${item.price.toFixed(2)}</div>
           <div style="display:flex;align-items:center;gap:8px;">
-            ${item.diet ? `<div class="d-pizza-diet">${item.diet}</div>` : ''}
+            ${item.diet ? `<div class="d-pizza-diet">${esc(item.diet)}</div>` : ''}
             ${controls}
           </div>
         </div>
@@ -357,6 +385,7 @@ function renderEventsList(containerSel, cardCls, dateCls, dayCls, monthCls, name
 
 /* ============================================================================
    11. DESKTOP — BASKET
+   esc() applied to item.name (sheet-sourced).
    ============================================================================ */
 function refreshDesktopBasket() {
   const count = basketTotalQty();
@@ -380,11 +409,11 @@ function refreshDesktopBasket() {
   }
 
   body.innerHTML = ids.map(id => {
-    const item = CONFIG.menu.find(m => m.id === id);
+    const item = menuData.find(m => m.id === id);
     const qty  = basket[id];
     return `
       <div class="d-bitem">
-        <div class="d-bitem-name">${item.name}</div>
+        <div class="d-bitem-name">${esc(item.name)}</div>
         <div class="d-bitem-controls">
           <button class="d-qty-btn"     data-id="${id}" data-delta="-1">−</button>
           <span   class="d-qty-num">${qty}</span>
@@ -516,12 +545,13 @@ function renderMobileHome() {
 
 /* ============================================================================
    16. MOBILE — MENU
+   esc() applied to all sheet-sourced fields: name, desc, diet.
    ============================================================================ */
 function renderMobileMenu() {
   const list = document.getElementById('m-menu-list');
   if (!list) return;
 
-  const items = CONFIG.menu.filter(m => m.available !== false);
+  const items = menuData.filter(m => m.available !== false);
 
   list.innerHTML = items.map(item => {
     const qty = basket[item.id] || 0;
@@ -530,12 +560,12 @@ function renderMobileMenu() {
          <span   class="qty-display">${qty}</span>
          <button class="qty-btn add" onclick="mQty(${item.id}, 1)">+</button>`
       : `<button class="qty-btn add" onclick="mQty(${item.id}, 1)">+</button>`;
-    const dietTag = item.diet ? ` <span class="m-card-diet">${item.diet}</span>` : '';
+    const dietTag = item.diet ? ` <span class="m-card-diet">${esc(item.diet)}</span>` : '';
     return `
       <div class="m-menu-card">
         <div class="m-card-info">
-          <div class="m-card-name">${item.name}${dietTag}</div>
-          <div class="m-card-desc">${item.desc}</div>
+          <div class="m-card-name">${esc(item.name)}${dietTag}</div>
+          <div class="m-card-desc">${esc(item.desc)}</div>
           <div class="m-card-price">${CONFIG.business.currency}${item.price.toFixed(2)}</div>
         </div>
         <div class="m-card-controls">${controls}</div>
@@ -548,6 +578,7 @@ function mQty(id, delta) { updateBasket(id, delta); }
 
 /* ============================================================================
    17. MOBILE — BASKET
+   esc() applied to item.name (sheet-sourced).
    ============================================================================ */
 function refreshMobileBadge() {
   const count = basketTotalQty();
@@ -570,13 +601,13 @@ function renderMobileBasket() {
   let total = 0;
   const listEl = document.getElementById('m-basket-list');
   listEl.innerHTML = ids.map(id => {
-    const item = CONFIG.menu.find(m => m.id === id);
+    const item = menuData.find(m => m.id === id);
     const qty  = basket[id];
     const sub  = item.price * qty;
     total += sub;
     return `
       <div class="m-basket-item">
-        <div class="m-bi-name">${item.name}</div>
+        <div class="m-bi-name">${esc(item.name)}</div>
         <div class="m-bi-qty">× ${qty}</div>
         <div class="m-bi-price">${CONFIG.business.currency}${sub.toFixed(2)}</div>
         <button class="m-bi-remove" onclick="mRemoveItem(${id})">×</button>
@@ -727,11 +758,187 @@ function initScrollReveal() {
 
 
 /* ============================================================================
-   22. INIT
+   22. GOOGLE SHEETS — MENU FETCH
+   ============================================================================
+   Fetches the vendor's menu from a published Google Sheet CSV at page load.
+   Falls back silently to CONFIG.menu if:
+     - CONFIG.menuSheetUrl is absent or empty
+     - The fetch fails (network error, sheet unpublished, etc.)
+     - The parsed CSV yields zero valid rows
+
+   Vendor workflow (zero technical steps after initial setup):
+     1. Julian creates the Sheet, publishes it (File → Share → Publish to web → CSV)
+     2. Julian pastes the published CSV URL into config.js as CONFIG.menuSheetUrl
+     3. Julian shares the Sheet with the vendor (edit access)
+     4. Vendor edits cells in Google Sheets — changes appear in app within minutes
+
+   Column order (case-insensitive header row required):
+     id | name | price | description | diet | available
+
+   Notes:
+     - 'available' column: TRUE/FALSE or Y/N (case-insensitive). Absent = TRUE.
+     - 'diet' column: free text (VE, V, emoji etc.) or blank.
+     - Quoted CSV fields supported (commas in descriptions are safe).
+     - Prices must be numeric (no currency symbol in the sheet).
+
+   XSS defence:
+     All sheet-sourced strings (name, desc, diet) pass through esc() before
+     being inserted into innerHTML. Even if the vendor's Google account is
+     compromised and malicious HTML is written into the sheet, it renders as
+     visible text — it cannot execute as code.
    ============================================================================ */
-document.addEventListener('DOMContentLoaded', function () {
+
+/**
+ * Parses a single CSV line, handling quoted fields correctly.
+ * Supports commas inside quoted fields (e.g. "Tomato, basil, mozzarella").
+ * @param {string} line — a single CSV line
+ * @returns {string[]} — array of field values (unquoted, untrimmed)
+ */
+function parseCSVLine(line) {
+  const result = [];
+  let current  = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      // Handle escaped quotes ("")
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (ch === ',' && !inQuotes) {
+      result.push(current);
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  result.push(current);
+  return result;
+}
+
+/**
+ * Parses a full CSV string into menu item objects.
+ * Expects a header row followed by data rows.
+ * Rows missing id, name, or a valid price are silently skipped.
+ * @param {string} csvText — raw CSV text from the published Sheet
+ * @returns {object[]} — array of menu item objects matching CONFIG.menu format
+ */
+function parseMenuCSV(csvText) {
+  // Normalise line endings (Google Sheets may use \r\n)
+  const lines = csvText.trim().replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+
+  if (lines.length < 2) {
+    console.warn('[Stalliq] Menu sheet: CSV has no data rows.');
+    return [];
+  }
+
+  // Parse header row to find column positions (order-independent)
+  const headers = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase());
+  const col = {
+    id:    headers.indexOf('id'),
+    name:  headers.indexOf('name'),
+    price: headers.indexOf('price'),
+    desc:  headers.findIndex(h => h === 'description' || h === 'desc'),
+    diet:  headers.indexOf('diet'),
+    avail: headers.findIndex(h => h === 'available' || h === 'avail')
+  };
+
+  if (col.id === -1 || col.name === -1 || col.price === -1) {
+    console.warn('[Stalliq] Menu sheet: Missing required columns (id, name, price). Check sheet headers.');
+    return [];
+  }
+
+  const items = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue; // skip blank rows
+
+    const cols = parseCSVLine(line);
+
+    const id    = parseInt(cols[col.id], 10);
+    const name  = col.name  >= 0 ? cols[col.name].trim()  : '';
+    const price = col.price >= 0 ? parseFloat(cols[col.price]) : NaN;
+
+    // Skip rows with missing fundamentals
+    if (!id || !name || isNaN(price) || price < 0) continue;
+
+    const desc  = col.desc  >= 0 && cols[col.desc]  ? cols[col.desc].trim()  : '';
+    const diet  = col.diet  >= 0 && cols[col.diet]  ? cols[col.diet].trim()  : null;
+
+    // available: default true unless explicitly FALSE or N
+    let available = true;
+    if (col.avail >= 0 && cols[col.avail]) {
+      const v = cols[col.avail].trim().toUpperCase();
+      available = (v !== 'FALSE' && v !== 'N' && v !== 'NO' && v !== '0');
+    }
+
+    items.push({ id, name, price, desc, diet: diet || null, available });
+  }
+
+  return items;
+}
+
+/**
+ * Attempts to load menu data from the published Google Sheet CSV.
+ * Sets the module-level menuData variable on success.
+ * Falls back to CONFIG.menu silently on any failure.
+ * @returns {Promise<boolean>} — true if sheet loaded, false if using fallback
+ */
+async function fetchMenuFromSheet() {
+  const url = CONFIG.menuSheetUrl;
+
+  if (!url) {
+    console.log('[Stalliq] No menuSheetUrl in config — using config.js menu.');
+    return false;
+  }
+
+  try {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      console.warn(`[Stalliq] Menu sheet fetch failed (HTTP ${response.status}) — using config.js fallback.`);
+      return false;
+    }
+
+    const csvText = await response.text();
+    const parsed  = parseMenuCSV(csvText);
+
+    if (parsed.length === 0) {
+      console.warn('[Stalliq] Menu sheet parsed 0 items — using config.js fallback.');
+      return false;
+    }
+
+    menuData = parsed;
+    console.log(`[Stalliq] Menu loaded from sheet: ${parsed.length} item(s).`);
+    return true;
+
+  } catch (err) {
+    console.warn('[Stalliq] Menu sheet fetch error — using config.js fallback.', err.message);
+    return false;
+  }
+}
+
+
+/* ============================================================================
+   23. INIT
+   DOMContentLoaded is async so we can await fetchMenuFromSheet() before
+   any render call. menuData is guaranteed to be populated by the time
+   renderDesktopMenu() / renderMobileMenu() run.
+   ============================================================================ */
+document.addEventListener('DOMContentLoaded', async function () {
   applyTheme();
   bootstrapPage();
+
+  // Seed menuData with config.js menu as the guaranteed fallback
+  menuData = CONFIG.menu;
+
+  // Attempt to load live menu from Google Sheet — replaces menuData if successful
+  await fetchMenuFromSheet();
 
   // Desktop
   renderDesktopNav();
@@ -762,13 +969,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
   initScrollReveal();
 
-  // Kitchen status — live Firestore listener (Section 30)
+  // Kitchen status — live Firestore listener (Section 31)
   initKitchenStatusListener();
 });
 
 
 /* ============================================================================
-   23. AUTH — STATE HELPERS
+   24. AUTH — STATE HELPERS
    ============================================================================ */
 
 function authShowScreen(name) {
@@ -802,7 +1009,7 @@ function authClearErrors() {
 
 
 /* ============================================================================
-   24. AUTH — GATEWAY
+   25. AUTH — GATEWAY
    Called by mPlaceOrder() and dPlaceOrder() before submitting.
    Checks auth state and routes to the right screen.
    ============================================================================ */
@@ -841,7 +1048,7 @@ function authGateway(orderFn) {
 
 
 /* ============================================================================
-   25. AUTH — SEND SMS CODE
+   26. AUTH — SEND SMS CODE
    ============================================================================ */
 async function authSendCode() {
   authSetError('phone', '');
@@ -885,7 +1092,7 @@ async function authSendCode() {
 
 
 /* ============================================================================
-   26. AUTH — VERIFY SMS CODE
+   27. AUTH — VERIFY SMS CODE
    ============================================================================ */
 async function authVerifyCode() {
   authSetError('code', '');
@@ -924,7 +1131,7 @@ async function authVerifyCode() {
 
 
 /* ============================================================================
-   27. AUTH — SAVE NAME (first order only)
+   28. AUTH — SAVE NAME (first order only)
    ============================================================================ */
 async function authSaveName() {
   authSetError('name', '');
@@ -960,7 +1167,7 @@ async function authSaveName() {
 
 
 /* ============================================================================
-   28. FIREBASE — GET NEXT ORDER REF
+   29. FIREBASE — GET NEXT ORDER REF
    Daily sequential counter via Firestore transaction.
    Resets to #001 each day. Concurrency-safe.
    ============================================================================ */
@@ -986,9 +1193,11 @@ async function getNextOrderRef() {
 
 
 /* ============================================================================
-   29. FIREBASE — SUBMIT ORDER TO FIRESTORE
+   30. FIREBASE — SUBMIT ORDER TO FIRESTORE
    Returns { orderRef, orderId } — orderId is the Firestore document ID,
-   used by the order status listener in Section 31.
+   used by the order status listener in Section 32.
+   Item data written to Firestore uses raw menuData values (no esc() needed —
+   esc() is for HTML output only, not database writes).
    ============================================================================ */
 async function submitOrderToFirestore() {
   const user = auth.currentUser;
@@ -999,7 +1208,7 @@ async function submitOrderToFirestore() {
   const expiresAt    = new Date(Date.now() + timeoutMins * 60 * 1000);
 
   const items = Object.keys(basket).map(Number).map(id => {
-    const item = CONFIG.menu.find(m => m.id === id);
+    const item = menuData.find(m => m.id === id);
     return {
       id:       item.id,
       name:     item.name,
@@ -1034,7 +1243,7 @@ async function submitOrderToFirestore() {
 
 
 /* ============================================================================
-   30. FIREBASE — KITCHEN STATUS LISTENER
+   31. FIREBASE — KITCHEN STATUS LISTENER
    Reads kitchenStatus from vendors/{vendorId} in real time.
    Updates shared state and blocks/unblocks ordering across mobile + desktop.
    ============================================================================ */
@@ -1139,12 +1348,12 @@ function initKitchenStatusListener() {
 
 
 /* ============================================================================
-   31. FIREBASE — ORDER STATUS LISTENER (confirmation modal)
+   32. FIREBASE — ORDER STATUS LISTENER (confirmation modal)
    After order placement, listens on the specific order document and updates
    the customer's confirmation modal/overlay with live status.
 
    This is a SINGLE listener for the active confirmation modal.
-   The Account page (Section 32) uses a separate map of listeners.
+   The Account page (Section 33) uses a separate map of listeners.
 
    Mobile:  updates m-confirm-time, m-confirm-timelabel, icon, title, button.
    Desktop: updates d-order-time, d-order-timelabel, icon, title, button.
@@ -1155,16 +1364,6 @@ function initKitchenStatusListener() {
      accepted  → ✅ "Order accepted!" + ~X mins shown in time display
      preparing → 👨‍🍳 "Your order is being prepared"
      ready     → 🟢 "Ready to collect!" + button text changes + listener stops
-
-   Firestore rules required (customer must be able to read their own order):
-     match /orders/{orderId} {
-       allow read: if request.auth != null
-                   && resource.data.customerId == request.auth.uid;
-       allow create: if request.auth != null;
-     }
-
-   If the listener fires a permission-denied error, check the rules above.
-   Console will show: [Stalliq] Listener error: permission-denied
    ============================================================================ */
 
 let orderStatusUnsubscribe = null;
@@ -1193,10 +1392,6 @@ const ORDER_STATUS_CONFIG = {
   }
 };
 
-/**
- * Injects the mobile status block into m-order-confirm if not already present.
- * Inserted before m-confirm-details so it sits between the ref and order summary.
- */
 function injectMobileStatusBlock() {
   if (document.getElementById('m-live-status')) return;
   const el = document.createElement('div');
@@ -1218,10 +1413,6 @@ function injectMobileStatusBlock() {
   }
 }
 
-/**
- * Injects the desktop status block into d-order-overlay if not already present.
- * Inserted after d-order-ref.
- */
 function injectDesktopStatusBlock() {
   if (document.getElementById('d-live-status')) return;
   const el = document.createElement('div');
@@ -1243,10 +1434,6 @@ function injectDesktopStatusBlock() {
   }
 }
 
-/**
- * Renders the current status into a given status block element.
- * Shows wait time on 'accepted' only.
- */
 function renderStatusBlock(elId, status, waitMins) {
   const el = document.getElementById(elId);
   if (!el) return;
@@ -1260,19 +1447,12 @@ function renderStatusBlock(elId, status, waitMins) {
     ${waitLine}`;
 }
 
-/**
- * Starts a Firestore onSnapshot listener on the placed order document.
- * Updates status blocks and key UI elements live.
- * Called immediately after successful order submission.
- */
 function startOrderStatusListener(orderId) {
-  // Clean up any previous listener
   if (orderStatusUnsubscribe) {
     orderStatusUnsubscribe();
     orderStatusUnsubscribe = null;
   }
 
-  // Inject status blocks and render initial pending state immediately
   injectMobileStatusBlock();
   injectDesktopStatusBlock();
   renderStatusBlock('m-live-status', 'pending', null);
@@ -1287,11 +1467,9 @@ function startOrderStatusListener(orderId) {
       const { status, waitMins } = snapshot.data();
       console.log(`[Stalliq] Status update received: ${status} | waitMins: ${waitMins ?? 'null'}`);
 
-      // Update the injected status blocks
       renderStatusBlock('m-live-status', status, waitMins);
       renderStatusBlock('d-live-status', status, waitMins);
 
-      // ── Accepted: update the big time display with actual kitchen wait time ──
       if (status === 'accepted' && waitMins) {
         const mTime  = document.getElementById('m-confirm-time');
         const mLabel = document.getElementById('m-confirm-timelabel');
@@ -1304,9 +1482,7 @@ function startOrderStatusListener(orderId) {
         if (dLabel) dLabel.textContent = 'Estimated pickup time from now';
       }
 
-      // ── Ready: celebrate, update modal, stop listening ────────────────────
       if (status === 'ready') {
-        // Mobile
         const mIcon  = document.querySelector('#m-order-confirm .m-confirm-icon');
         const mTitle = document.querySelector('#m-order-confirm .m-confirm-title');
         const mTime  = document.getElementById('m-confirm-time');
@@ -1318,7 +1494,6 @@ function startOrderStatusListener(orderId) {
         if (mLabel) mLabel.textContent = 'Head to the van — your pizza is ready! 🍕';
         if (mBtn)   mBtn.textContent   = '✓ Thanks — on my way!';
 
-        // Desktop
         const dIcon  = document.querySelector('#d-order-overlay .d-order-icon');
         const dTitle = document.querySelector('#d-order-overlay .d-order-title');
         const dTime  = document.getElementById('d-order-time');
@@ -1330,7 +1505,6 @@ function startOrderStatusListener(orderId) {
         if (dLabel) dLabel.textContent = 'Head to the van — your pizza is ready! 🍕';
         if (dBtn)   dBtn.textContent   = '✓ Thanks — on my way!';
 
-        // Stop listener — no further updates needed
         orderStatusUnsubscribe();
         orderStatusUnsubscribe = null;
         console.log('[Stalliq] Order ready — listener unsubscribed.');
@@ -1346,25 +1520,17 @@ function startOrderStatusListener(orderId) {
   );
 }
 
-/**
- * Stops the order status listener and removes the injected status blocks.
- * Also resets the mobile modal and desktop overlay to their initial state
- * so they're clean for the next order in the same session.
- * Called on dismiss (mDismissOrder / dDismissOrder).
- */
 function stopOrderStatusListener() {
   if (orderStatusUnsubscribe) {
     orderStatusUnsubscribe();
     orderStatusUnsubscribe = null;
   }
 
-  // Remove injected status blocks
   const mEl = document.getElementById('m-live-status');
   if (mEl) mEl.remove();
   const dEl = document.getElementById('d-live-status');
   if (dEl) dEl.remove();
 
-  // Reset mobile modal to initial state for next use
   const mIcon  = document.querySelector('#m-order-confirm .m-confirm-icon');
   const mTitle = document.querySelector('#m-order-confirm .m-confirm-title');
   const mTime  = document.getElementById('m-confirm-time');
@@ -1376,7 +1542,6 @@ function stopOrderStatusListener() {
   if (mLabel) mLabel.textContent = 'Waiting for kitchen to accept…';
   if (mBtn)   mBtn.textContent   = 'Done — See you soon!';
 
-  // Reset desktop overlay to initial state for next use
   const dIcon  = document.querySelector('#d-order-overlay .d-order-icon');
   const dTitle = document.querySelector('#d-order-overlay .d-order-title');
   const dTime  = document.getElementById('d-order-time');
@@ -1393,7 +1558,7 @@ function stopOrderStatusListener() {
 
 
 /* ============================================================================
-   32. ACCOUNT PAGE — MEMBERS AREA
+   33. ACCOUNT PAGE — MEMBERS AREA
    ============================================================================
    Supports both mobile (prefix 'm') and desktop (prefix 'd') panels.
    buildAccountIds(prefix) maps the prefix to the correct element IDs.
@@ -1401,22 +1566,13 @@ function stopOrderStatusListener() {
 
    Listener architecture:
      accountOrderListeners — map keyed by orderId.
-     Separate from the single orderStatusUnsubscribe in Section 31.
-     Section 31 serves the confirmation modal only (ephemeral).
-     Section 32 serves the account page/panel (persistent).
-
-   Firestore query for orders:
-     orders where customerId == uid, orderBy createdAt desc
-     Requires composite index on (customerId, createdAt).
-     Firestore surfaces a one-click creation link on first run — not a blocker.
+     Separate from the single orderStatusUnsubscribe in Section 32.
+     Section 32 serves the confirmation modal only (ephemeral).
+     Section 33 serves the account page/panel (persistent).
    ============================================================================ */
 
-// Map of active account-page order listeners: { orderId: unsubscribeFn }
 const accountOrderListeners = {};
 
-/**
- * Builds the element ID map for a given panel prefix ('m' or 'd').
- */
 function buildAccountIds(prefix) {
   return {
     out:            `${prefix}-account-out`,
@@ -1432,10 +1588,6 @@ function buildAccountIds(prefix) {
   };
 }
 
-/**
- * Stops all account-page order listeners.
- * Called before reloading the page and on sign-out.
- */
 function stopAllAccountListeners() {
   Object.keys(accountOrderListeners).forEach(id => {
     if (typeof accountOrderListeners[id] === 'function') {
@@ -1446,11 +1598,6 @@ function stopAllAccountListeners() {
   console.log('[Stalliq] All account order listeners stopped.');
 }
 
-/**
- * Main entry point for the Account page/panel.
- * @param {string} prefix — 'm' for mobile page, 'd' for desktop panel
- * Called by mShowPage('account') and dToggleAccount().
- */
 function loadAccountPage(prefix = 'm') {
   const ids  = buildAccountIds(prefix);
   const user = auth.currentUser;
@@ -1468,26 +1615,16 @@ function loadAccountPage(prefix = 'm') {
   outEl.style.display = 'none';
   inEl.style.display  = 'block';
 
-  // Welcome name
   const nameEl = document.getElementById(ids.name);
   if (nameEl) {
     nameEl.textContent = customerName ? `Hi, ${customerName}!` : 'Welcome back!';
   }
 
-  // Static sections
   renderStampCard(3, 10, ids);
   renderAccountOffers(ids);
-
-  // Orders — fresh load every visit
   loadUserOrders(user.uid, ids);
 }
 
-/**
- * Renders the loyalty stamp card.
- * @param {number} filled — stamps filled (3 for demo)
- * @param {number} total  — total stamps needed (10)
- * @param {object} ids    — element ID map from buildAccountIds()
- */
 function renderStampCard(filled, total, ids) {
   const grid = document.getElementById(ids.stampsGrid);
   const prog = document.getElementById(ids.stampProgress);
@@ -1501,10 +1638,6 @@ function renderStampCard(filled, total, ids) {
   if (prog) prog.textContent = `${filled} of ${total} stamps collected`;
 }
 
-/**
- * Renders static offer placeholder cards.
- * @param {object} ids — element ID map from buildAccountIds()
- */
 function renderAccountOffers(ids) {
   const list = document.getElementById(ids.offersList);
   if (!list) return;
@@ -1527,16 +1660,6 @@ function renderAccountOffers(ids) {
     </div>`;
 }
 
-/**
- * Loads orders for the current user from Firestore.
- * - 90-day window (display concern, not storage — Cloud Function handles actual deletion later)
- * - Limit 50 per load
- * - Splits into live (active statuses) and history (collected/cancelled only)
- * - History shows 5 initially with "Show X more" button
- * - Requires composite index on (customerId, createdAt) — one-click creation on first run
- * @param {string} uid  — Firebase UID
- * @param {object} ids  — element ID map from buildAccountIds()
- */
 function loadUserOrders(uid, ids) {
   stopAllAccountListeners();
   historyRemainder = [];
@@ -1550,7 +1673,6 @@ function loadUserOrders(uid, ids) {
     historyList.innerHTML = `<div class="m-account-loading">Loading your orders…</div>`;
   }
 
-  // 90-day cutoff — keeps display manageable; actual DB cleanup via Cloud Function later
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 90);
 
@@ -1599,9 +1721,9 @@ function loadUserOrders(uid, ids) {
       } else {
         if (historyEmpty) historyEmpty.style.display = 'none';
 
-        const INITIAL_SHOW   = 3;
-        const shownOrders    = historyOrders.slice(0, INITIAL_SHOW);
-        historyRemainder     = historyOrders.slice(INITIAL_SHOW);
+        const INITIAL_SHOW = 3;
+        const shownOrders  = historyOrders.slice(0, INITIAL_SHOW);
+        historyRemainder   = historyOrders.slice(INITIAL_SHOW);
 
         let html = shownOrders.map(order => buildHistoryItemHTML(order)).join('');
 
@@ -1634,15 +1756,10 @@ function loadUserOrders(uid, ids) {
     });
 }
 
-/**
- * Builds the inner HTML for a current-order card.
- * The status row has a predictable ID (m-coc-status-{orderId}) so the
- * live listener can update it in place.
- */
 function buildCurrentOrderCardHTML(order) {
   const cfg          = ORDER_STATUS_CONFIG[order.status] || ORDER_STATUS_CONFIG.pending;
   const itemsSummary = order.items
-    ? order.items.map(i => `${i.name} × ${i.quantity}`).join(', ')
+    ? order.items.map(i => `${esc(i.name)} × ${i.quantity}`).join(', ')
     : '';
   const total   = order.orderTotal != null
     ? CONFIG.business.currency + Number(order.orderTotal).toFixed(2)
@@ -1653,7 +1770,7 @@ function buildCurrentOrderCardHTML(order) {
 
   return `
     <div class="m-coc-header">
-      <div class="m-coc-ref">${order.orderRef || '—'}</div>
+      <div class="m-coc-ref">${esc(order.orderRef) || '—'}</div>
       <div class="m-coc-total">${total}</div>
     </div>
     <div class="m-coc-items">${itemsSummary}</div>
@@ -1666,20 +1783,17 @@ function buildCurrentOrderCardHTML(order) {
     </div>`;
 }
 
-/**
- * Builds the HTML for a single order history row.
- */
 function buildHistoryItemHTML(order) {
   let dateStr = '—';
   if (order.createdAt) {
     try {
       const d = order.createdAt.toDate ? order.createdAt.toDate() : new Date(order.createdAt);
       dateStr = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-    } catch (_) { /* leave as '—' */ }
+    } catch (_) {}
   }
 
   const itemsSummary = order.items
-    ? order.items.map(i => `${i.name} × ${i.quantity}`).join(', ')
+    ? order.items.map(i => `${esc(i.name)} × ${i.quantity}`).join(', ')
     : '';
   const total = order.orderTotal != null
     ? CONFIG.business.currency + Number(order.orderTotal).toFixed(2)
@@ -1695,7 +1809,7 @@ function buildHistoryItemHTML(order) {
   return `
     <div class="m-history-item" onclick="openOrderDetail('${order.id}')">
       <div class="m-history-header">
-        <div class="m-history-ref">${order.orderRef || '—'}</div>
+        <div class="m-history-ref">${esc(order.orderRef) || '—'}</div>
         <div class="m-history-date">${dateStr}</div>
       </div>
       <div class="m-history-items">${itemsSummary}</div>
@@ -1708,11 +1822,6 @@ function buildHistoryItemHTML(order) {
     </div>`;
 }
 
-/**
- * Reveals the remaining history orders hidden behind "Show more".
- * Reads from historyRemainder (populated by loadUserOrders).
- * Replaces the "Show more" button with the additional rows.
- */
 function showMoreHistory() {
   const wrap = document.getElementById('history-show-more-wrap');
   if (!wrap || historyRemainder.length === 0) return;
@@ -1721,10 +1830,6 @@ function showMoreHistory() {
   historyRemainder = [];
 }
 
-/**
- * Starts a Firestore onSnapshot listener on a single order for the account panel.
- * Updates the status row in place. Stops on terminal state.
- */
 function startAccountOrderListener(orderId) {
   if (accountOrderListeners[orderId]) return;
 
@@ -1736,7 +1841,6 @@ function startAccountOrderListener(orderId) {
       const data             = snapshot.data();
       const { status, waitMins } = data;
 
-      // Keep cache fresh so detail overlay reflects current status
       if (orderCache[orderId]) {
         orderCache[orderId] = { ...orderCache[orderId], ...data };
       }
@@ -1766,7 +1870,6 @@ function startAccountOrderListener(orderId) {
           cardEl.style.opacity    = '0';
           setTimeout(() => {
             cardEl.remove();
-            // Hide section if no cards remain in either panel
             ['m', 'd'].forEach(prefix => {
               const section = document.getElementById(`${prefix}-current-orders-section`);
               const list    = document.getElementById(`${prefix}-current-orders-list`);
@@ -1787,10 +1890,6 @@ function startAccountOrderListener(orderId) {
   console.log(`[Stalliq] Account order listener started for ${orderId}.`);
 }
 
-/**
- * Sign In from mobile account page.
- * Sets pendingOrderFn to reload mobile account page after auth.
- */
 function accountSignIn() {
   pendingOrderFn = () => loadAccountPage('m');
   document.getElementById('auth-title').textContent = 'Sign in to your account';
@@ -1799,10 +1898,6 @@ function accountSignIn() {
   authShowOverlay('phone');
 }
 
-/**
- * Sign In from desktop account panel.
- * Sets pendingOrderFn to reload desktop account panel after auth.
- */
 function dAccountSignIn() {
   pendingOrderFn = () => loadAccountPage('d');
   document.getElementById('auth-title').textContent = 'Sign in to your account';
@@ -1811,10 +1906,6 @@ function dAccountSignIn() {
   authShowOverlay('phone');
 }
 
-/**
- * Signs the current user out.
- * @param {string} prefix — 'm' or 'd' — which panel triggered the sign-out
- */
 function accountSignOut(prefix = 'm') {
   stopAllAccountListeners();
   auth.signOut()
@@ -1829,25 +1920,16 @@ function accountSignOut(prefix = 'm') {
 
 
 /* ============================================================================
-   33. ORDER DETAIL OVERLAY
+   34. ORDER DETAIL OVERLAY
    Shared between mobile and desktop. Slide-up sheet on mobile,
    centred modal on desktop (CSS handles the difference).
-
-   openOrderDetail(orderId) — looks up orderCache first, falls back to
-   Firestore fetch if the order isn't cached (e.g. direct deep link).
-   closeOrderDetail() — hides the overlay.
    ============================================================================ */
 
-/**
- * Opens the order detail overlay for a given order.
- * @param {string} orderId — Firestore document ID
- */
 function openOrderDetail(orderId) {
   const cached = orderCache[orderId];
   if (cached) {
     renderOrderDetail(cached);
   } else {
-    // Fallback: fetch from Firestore
     db.collection('orders').doc(orderId).get()
       .then(doc => {
         if (doc.exists) {
@@ -1860,16 +1942,10 @@ function openOrderDetail(orderId) {
   }
 }
 
-/**
- * Populates and shows the order detail overlay.
- * @param {object} order — order data object
- */
 function renderOrderDetail(order) {
-  // Ref
   const refEl = document.getElementById('od-ref');
   if (refEl) refEl.textContent = order.orderRef || '—';
 
-  // Date
   const dateEl = document.getElementById('od-date');
   if (dateEl) {
     let dateStr = '—';
@@ -1885,7 +1961,6 @@ function renderOrderDetail(order) {
     dateEl.textContent = dateStr;
   }
 
-  // Status badge
   const badgeEl = document.getElementById('od-status-badge');
   if (badgeEl) {
     const statusLabel = order.status
@@ -1895,7 +1970,6 @@ function renderOrderDetail(order) {
     badgeEl.className    = `order-detail-status-badge status-${order.status}`;
   }
 
-  // Items
   const itemsEl = document.getElementById('od-items-list');
   if (itemsEl && order.items) {
     itemsEl.innerHTML = order.items.map(item => {
@@ -1903,7 +1977,7 @@ function renderOrderDetail(order) {
       return `
         <div class="order-detail-item">
           <div>
-            <span class="order-detail-item-name">${item.name}</span>
+            <span class="order-detail-item-name">${esc(item.name)}</span>
             <span class="order-detail-item-qty">× ${item.quantity}</span>
           </div>
           <div class="order-detail-item-price">${CONFIG.business.currency}${lineTotal}</div>
@@ -1911,7 +1985,6 @@ function renderOrderDetail(order) {
     }).join('');
   }
 
-  // Payment method
   const payEl = document.getElementById('od-payment');
   if (payEl) {
     const method = order.payment && order.payment.method === 'cash_on_collection'
@@ -1920,13 +1993,11 @@ function renderOrderDetail(order) {
     payEl.textContent = method;
   }
 
-  // Total
   const totalEl = document.getElementById('od-total');
   if (totalEl && order.orderTotal != null) {
     totalEl.textContent = CONFIG.business.currency + Number(order.orderTotal).toFixed(2);
   }
 
-  // Reorder button — collected orders only
   const reorderWrap = document.getElementById('od-reorder-wrap');
   if (reorderWrap) {
     if (order.status === 'collected') {
@@ -1938,35 +2009,22 @@ function renderOrderDetail(order) {
     }
   }
 
-  // Show overlay
   document.getElementById('order-detail-overlay').classList.add('show');
 }
 
-/**
- * Closes the order detail overlay.
- */
 function closeOrderDetail() {
   document.getElementById('order-detail-overlay').classList.remove('show');
 }
 
-/**
- * Populates the basket from a previous collected order and routes to checkout.
- * Items no longer on the menu are silently skipped.
- * On mobile: closes overlay, navigates to basket page.
- * On desktop: closes overlay + account panel, opens basket panel.
- * @param {string} orderId — Firestore document ID
- */
 function reorderItems(orderId) {
   const order = orderCache[orderId];
   if (!order || !order.items) return;
 
-  // Clear current basket
   Object.keys(basket).forEach(k => delete basket[k]);
 
-  // Add items still available on the menu
   let added = 0;
   order.items.forEach(item => {
-    const menuItem = CONFIG.menu.find(m => m.id === item.id && m.available !== false);
+    const menuItem = menuData.find(m => m.id === item.id && m.available !== false);
     if (menuItem) {
       basket[menuItem.id] = item.quantity;
       added++;
@@ -1981,17 +2039,13 @@ function reorderItems(orderId) {
   closeOrderDetail();
 
   if (added === 0) {
-    // All items have been removed from the menu — nothing to add
-    // Show a gentle message rather than routing to an empty basket
     setTimeout(() => alert("Sorry — none of those items are currently available."), 200);
     return;
   }
 
   if (window.innerWidth < 768) {
-    // Mobile: close account page, go to basket
     mShowPage('basket');
   } else {
-    // Desktop: close account panel, open basket panel
     const acctPanel = document.getElementById('d-account-panel');
     if (acctPanel) acctPanel.classList.remove('open');
     const basketPanel = document.getElementById('d-basket-panel');
@@ -2000,4 +2054,3 @@ function reorderItems(orderId) {
 
   console.log(`[Stalliq] Reorder: ${added} item type(s) added to basket from order ${orderId}.`);
 }
-
