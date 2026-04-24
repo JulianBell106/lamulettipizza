@@ -20,6 +20,8 @@ const CONFIG = {
      Set to '' to disable and use the menu array below instead.
   -------------------------------------------------------------------------- */
    menuSheetUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTL19TeZ5Md3zJkz3qzGmc7e5dOnL29w3w8s6Rp9FBH6JC8Po2BRSaa-VXsMXqt3EbE76SiYUryme51/pub?output=csv',
+   eventsSheetUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTedQCoKEWfdPwuhUYqQoYeGrb5dGTB9pay0ecFv2BBTDrLxeHfjJ-DTssRTpnWagNUh07jCmWTjBei/pub?output=csv',
+   offersSheetUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vReFvkHBO0a-QRn9dCJQCjjgFd0N0s_0cqOWNYb3-4qiwbAOkfs1p47w8HOeclwzKQW93ovnruJafRp/pub?output=csv',
 
   /* --------------------------------------------------------------------------
      VENDOR IDENTITY
