@@ -1,5 +1,5 @@
 # Stalliq — Project Bible
-> Last updated: April 2026 — Session 8b Complete (Multi-tenancy Audit)
+> Last updated: April 2026 — Session 9 Complete (Google Sheets Menu Management done)
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -174,7 +174,7 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 04 | Kitchen Dashboard | ✅ Done | PIN, kanban, accept/status/drill-down, kitchen close toggle |
 | 05 | Real-time Order Status | ✅ Done | Live status listener, time display, ready-state handling, diagnostics |
 | 06 | Customer Account / Members Area | ✅ Done | Mobile page + desktop panel, live orders, history, drill-down, loyalty + offers placeholders |
-| 07 | Google Sheets Menu Management | 🔨 Session 9 | Vendor edits a Google Sheet, menu updates live in app — no deploy needed |
+| 07 | Google Sheets Menu Management | ✅ Done | menuSheetUrl in config.js, CSV fetch on load, graceful fallback, XSS defence via esc() |
 | 08 | News & Locations Feed | 🔨 Session 10 | Upcoming events + where to find the van — Google Sheets driven |
 | 09 | Offers & Deal Codes | 🔨 Session 10 | Offers page on customer app, discount codes |
 | 10 | SMS & WhatsApp Status Notifications | ⏳ Planned | Customer notified on order status changes — Twilio |
@@ -209,7 +209,7 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 7 | MVP Completion | ✅ Kitchen closed → app, real-time order status customer side |
 | 8 | Customer Account / Members Area | ✅ Account page + desktop panel, live orders, history, drill-down |
 | 8b | Multi-tenancy Future-Proofing Audit | ✅ No literals found; CONFIG.domains added; minor kitchen.js tidy logged |
-| 9 | Google Sheets menu management | Vendor edits sheet, app updates live — no deploy |
+| 9 | Google Sheets Menu Management | ✅ menuSheetUrl in config.js, CSV fetch, fallback, XSS defence, scroll reveal fix |
 | 10 | News/Locations feed + Offers/Deal Codes | Customer app pages, Sheets driven |
 | 11 | Demo polish | End-to-end demo reset function, rough edges removed |
 | 12 | Pitch deck update | Stalliq rebrand, kitchen co-pilot angle, roadmap slide with vision features |
@@ -221,7 +221,7 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 - Customer can place multiple orders (forgot something) → both visible in Account
 - Tap any order card → full detail view (items, prices, status, timestamp)
 - Account page shows loyalty stamps and offers — hints at the roadmap
-- Vendor edits menu in Google Sheet → customer app reflects it
+- Vendor edits menu in Google Sheet → customer app reflects it within minutes
 - News/locations and offers pages on the customer app
 
 **What goes on the roadmap slide (promised, not yet built):**
@@ -287,7 +287,7 @@ match /orders/{orderId} {
 ```
 
 **Firestore composite index required:**
-The Account page queries orders by `(customerId + createdAt desc)`. This requires a composite index. Firestore will not create it automatically — on first run it surfaces a direct link in the browser console (`failed-precondition` error). Click the link, create the index, wait ~60–90 seconds to build. **This is a go-live task — see Section 23.**
+The Account page queries orders by `(customerId + createdAt desc)`. Firestore will not create it automatically — on first run it surfaces a direct link in the browser console (`failed-precondition` error). Click the link, create the index, wait ~60–90 seconds to build. **Already created for La Muletti ✅**
 
 ---
 
@@ -385,42 +385,75 @@ Clean login prompt. "Sign in to track your orders and collect stamps." Reuses ex
 - Limit 50 per query
 - Shows 3 items initially; "Show X more" button reveals the rest inline (no second Firestore call — uses `historyRemainder` client-side)
 - "Showing last 3 months" label at foot of list
-- `status-collected` badge: neutral white. `status-cancelled` badge: red tint. Both were added in session — were missing from original CSS causing black text on dark background.
+- `status-collected` badge: neutral white. `status-cancelled` badge: red tint.
 
 **Order detail drill-down (shared mobile + desktop):**
-Slide-up sheet on mobile, centred modal on desktop. Shows: order ref, date/time, status badge, itemised list with per-line prices, payment method, total. Populated from `orderCache` — kept fresh by `startAccountOrderListener` so live orders always show current status.
+Slide-up sheet on mobile, centred modal on desktop. Shows: order ref, date/time, status badge, itemised list with per-line prices, payment method, total. Populated from `orderCache`.
 
 **Reorder:**
-Collected history cards have a 🔁 Reorder button (fire red pill). Tapping it does not open the detail overlay (stopPropagation). Detail overlay also shows a full-width 🔁 Reorder This button for collected orders. `reorderItems(orderId)` clears the basket, adds back all items still available on the menu, and routes to the basket (mobile: basket page, desktop: closes account panel, opens basket panel). Items removed from the menu are silently skipped. If no items are available, a gentle alert is shown instead of routing to an empty basket.
+Collected history cards have a 🔁 Reorder button. `reorderItems(orderId)` clears basket, adds back available items, routes to basket. Items removed from menu silently skipped.
 
 **Post-order flow:**
 Modal dismiss routes to Account page (not Home) so customer immediately sees their live order.
 
 **Firestore queries:**
 - Orders: `where customerId == uid, where createdAt >= 90 days ago, orderBy createdAt desc, limit 50`
-- Requires composite index on `(customerId, createdAt)` — see Section 23 (Go-Live Checklist). Already created for La Muletti ✅
-
-**Listener architecture:**
-- `accountOrderListeners` map — keyed by orderId, independent of Section 31 modal listener
-- `buildAccountIds(prefix)` — maps `'m'` or `'d'` to correct element IDs, enabling shared render logic
-- `orderCache` updated on every snapshot in `startAccountOrderListener` — detail overlay always shows current state
-- `stopAllAccountListeners()` — called on sign-out and before reloading orders
+- Requires composite index on `(customerId, createdAt)` — already created for La Muletti ✅
 
 ---
 
-## 12. Google Sheets Menu Management — Spec (Session 9)
+## 12. Google Sheets Menu Management — ✅ COMPLETE (Session 9)
 
-**Problem:** Menu changes require editing `config.js`, pushing to GitHub, waiting for Netlify deploy. Not vendor-manageable.
+**Problem solved:** Menu changes previously required editing `config.js`, pushing to GitHub, waiting for Netlify deploy. Vendors cannot manage this themselves.
 
-**Solution:** Menu data pulled from a published Google Sheet at runtime. Vendor edits their sheet, app reflects changes within minutes. No code changes, no deploy required.
+**Solution:** Menu data fetched from a published Google Sheet CSV at page load. Vendor edits the sheet, app reflects changes within minutes. No code changes, no deploy required.
 
-**Approach:**
-- Google Sheet published as JSON via Sheets API public endpoint
-- `app.js` fetches menu data on load, falls back to `config.js` menu if Sheet unavailable
-- Sheet structure mirrors current menu format: name, price, diet flags, available toggle, description
-- Vendor given edit access to their own sheet only
+**Implementation:**
+- `CONFIG.menuSheetUrl` — published CSV URL in `config.js`, first field inside the CONFIG object
+- `app.js` Section 22 — `fetchMenuFromSheet()`, `parseMenuCSV()`, `parseCSVLine()`
+- `DOMContentLoaded` is `async` — seeds `menuData = CONFIG.menu` first, then `await fetchMenuFromSheet()`
+- All render functions use `menuData` — never `CONFIG.menu` directly
+- Graceful fallback: sheet unavailable, empty, or URL missing → `config.js` menu loads silently with `[Stalliq]` console warning
+- `initScrollReveal()` called again after sheet load to fix double-render orange background issue (scroll reveal observer ran before sheet cards were injected)
 
-**Operator workflow:** Julian creates and shares the Sheet per customer. Vendor manages their own content.
+**XSS defence:**
+- `esc()` utility in Section 4 — HTML-encodes `<`, `>`, `&`, `"` before innerHTML insertion
+- Applied to all sheet-sourced fields: `name`, `desc`, `diet` in menu render functions; `name` in basket, summary, order history display
+- Firestore writes use raw values — `esc()` is for HTML output only
+- Worst-case if vendor Google account is compromised: UI text vandalism only — no code execution possible
+
+**Sheet structure (header row required, column order flexible):**
+```
+id | name | price | description | diet | available
+```
+- `price`: number only, no currency symbol
+- `diet`: free text (VE, V, 🌶️) or blank
+- `available`: TRUE/FALSE — omit to default all items to TRUE
+- Descriptions with commas must be wrapped in "double quotes"
+
+**La Muletti sheet:**
+- URL stored in `CONFIG.menuSheetUrl` in `config.js`
+- Published: File → Share → Publish to web → CSV
+- Sheet is intentionally public — menu data is already displayed to all customers, nothing sensitive
+
+**Vendor workflow (after initial setup):**
+1. Open Google Sheet (bookmark on phone or desktop)
+2. Edit any cell — price, name, toggle available to FALSE
+3. Google autosaves
+4. App picks it up on next customer page load
+
+**Operator setup per new customer:**
+1. Create Google Sheet, add header row, populate menu
+2. Protect header row (right-click → protect range) so vendor can't break structure
+3. File → Share → Publish to web → CSV → copy URL
+4. Add URL to `config.js` as `CONFIG.menuSheetUrl`
+5. Share Sheet with vendor (edit access via their Google account)
+6. Advise vendor: sheet is public, only put customer-facing content in it; enable 2FA on Google account
+
+**Security notes:**
+- Sheet URL is public by design — same category as hero images and config.js served by Netlify
+- Allergen risk: if vendor writes false allergen info (accidental or via compromised account), that's a real-world liability not a code issue — covered by vendor onboarding advice and 2FA recommendation
+- Both allergen warning and 2FA requirement to be added to go-live checklist and vendor onboarding doc (Session 11 or later)
 
 ---
 
@@ -501,7 +534,6 @@ Customer taps AI chat bubble → types or dictates order in natural language →
 - Secondary text colour must use `rgba(255,255,255,0.X)` not cream-based opacity (brown-on-brown problem)
 - `kitchen.html` CSS is embedded (not separate file) — branding is data-driven via CONFIG at runtime
 - Item notes field (`notes: null`) already in order data model — UI deferred to post-pitch backlog
-- Menu management: Google Sheets approach for vendor self-service — no deploy needed
 - SMS/WhatsApp and live location: roadmap promises for pitch — not built before meeting
 - AI Order Assist: vision feature — natural language + dictation ordering, no comparable product at this price point
 - Kitchen closed banner on desktop: dark background (`#1A0A00`) injected at top of `<body>` — fire red banner blended invisibly into the orange strip bar
@@ -520,21 +552,28 @@ Customer taps AI chat bubble → types or dictates order in natural language →
 - `orderCache` — client-side map populated on account load, enables instant detail drill-down without Firestore re-fetch
 - Order detail overlay: shared mobile/desktop — slide-up sheet on mobile, centred modal on desktop (CSS handles difference)
 - Post-order dismiss routes to Account page, not Home — customer immediately sees their live order
-- Firestore composite index on `(customerId, createdAt)` required for order history query — one-click creation on first run, permanent once built
+- Firestore composite index on `(customerId, createdAt)` required for order history query — already created for La Muletti ✅
 - Real phone numbers must never be used for testing — Firebase throttles repeated SMS; always use Firebase test numbers
-- Auth overlay title/subtitle updates by context: "Confirm your order" for order flow, "Sign in to your account" for account sign-in — `authGateway()` always resets to order context
-- History shows collected/cancelled only — pending/active orders live in Live Orders section exclusively, never bleed into history
-- 90-day history window with limit 50 — display concern not storage; Cloud Function for actual deletion is a future task (Session 11 or later)
-- Show 3 history items initially with "Show X more" button — prevents ever-expanding list; `historyRemainder` stores hidden orders, `showMoreHistory()` reveals inline without a second Firestore call
-- `orderCache` kept fresh by `startAccountOrderListener` on every snapshot — detail overlay always shows current status, not stale load-time data
-- Status badge colours: all statuses defined — collected = neutral white, cancelled = red tint. Never use `opacity` stacking on already-low-opacity rgba colours — produces brown-on-brown on warm dark backgrounds; use direct rgba values instead
-- Reorder button on collected history cards (stopPropagation so card tap still opens detail) and in detail overlay for collected orders — `reorderItems()` clears basket, adds available items, routes to basket page (mobile) or basket panel (desktop)
-- Items removed from menu silently skipped on reorder; if all unavailable a gentle alert is shown — `alert()` acceptable for MVP, replace with toast in demo polish session
-- Firestore composite index on `(customerId, createdAt)` already created for La Muletti ✅ — still a go-live task for each new customer deployment
-- Session 8b audit: no `"lamuletti"` literals found in `app.js` or `kitchen.js` — `CONFIG.vendor.id` used consistently throughout both files
-- `CONFIG.domains` added to `config.js` as a forward-compatible field (unused at runtime) — lists valid domains per deployment for future use in routing, CORS, domain validation
-- `index.html` and `kitchen.html` not grepped in Session 8b — worth a quick scan for hardcoded vendor strings when next editing either file
-- Minor tidy deferred to Session 11: `kitchen.js` `orderCardHTML` hardcodes `£` symbol and `'cash on collection'` string — should use `CONFIG.business.currency` and `CONFIG.ordering.paymentNote`
+- History shows collected/cancelled only — pending/active orders live in Live Orders section exclusively
+- 90-day history window with limit 50 — display concern not storage; Cloud Function for actual deletion is a future task
+- Show 3 history items initially with "Show X more" button — `historyRemainder` stores hidden orders, revealed inline without a second Firestore call
+- Status badge colours: collected = neutral white, cancelled = red tint — never use opacity stacking on already-low-opacity rgba colours
+- Reorder button on collected history cards — `reorderItems()` clears basket, adds available items, routes to basket
+- Items removed from menu silently skipped on reorder; if all unavailable a gentle alert is shown
+- Session 8b audit: no `"lamuletti"` literals found in `app.js` or `kitchen.js` — `CONFIG.vendor.id` used consistently
+- `CONFIG.domains` added to `config.js` as a forward-compatible field — lists valid domains per deployment
+- Minor tidy deferred to Session 11: `kitchen.js` `orderCardHTML` hardcodes `£` and `'cash on collection'`
+- Menu management: Google Sheets CSV approach — vendor edits sheet, app updates within minutes, no deploy
+- `CONFIG.menuSheetUrl` must be inside the CONFIG object — placing it outside breaks the entire file (lesson from Session 9)
+- `menuData` module-level variable — seeded from `CONFIG.menu`, replaced by sheet data if fetch succeeds; all render functions use `menuData` never `CONFIG.menu` directly
+- `DOMContentLoaded` made async to await `fetchMenuFromSheet()` before any render call
+- `esc()` utility — HTML-encodes sheet-sourced strings before innerHTML; Firestore writes use raw values
+- Sheet is intentionally public — menu data already visible to all customers, no sensitive data
+- `initScrollReveal()` called again after sheet load — fixes double-render issue where second `renderDesktopMenu()` call injected cards that the initial observer never saw, causing menu section background to render more orange
+- Allergen false-info risk and 2FA recommendation to be added to go-live checklist + vendor onboarding doc (Session 11)
+- CSV column order is flexible — `parseMenuCSV()` matches columns by header name, not position
+- Quoted CSV fields handled correctly — commas inside "double quoted" descriptions are safe
+- Google Sheet protect header row on setup — vendor can edit values but not break column structure
 
 ---
 
@@ -558,20 +597,20 @@ The app promotes good decisions at exactly the moments when a vendor is most lik
 
 ---
 
-## 20. Next Session — Session 9: Google Sheets Menu Management
+## 20. Next Session — Session 10: News/Locations Feed + Offers/Deal Codes
 
-Paste the current `app.js` at the start of the session.
+Paste the current `app.js` and `index.html` at the start of the session.
 
 **What to build:**
-On load, `app.js` fetches menu data from a published Google Sheet. Falls back to `config.js` menu if the Sheet is unavailable. Vendor edits their own Sheet and the customer app reflects changes within minutes — no deploy needed.
-
-**Detailed spec:** See Section 12 above.
+Two new content areas driven by Google Sheets — same pattern as the menu sheet:
+1. **News & Locations feed** — upcoming events and where to find the van. Vendor updates their sheet, app reflects it. Replaces the hardcoded `CONFIG.events` array.
+2. **Offers & Deal Codes** — offers visible on the customer app. Static display for now; discount code redemption deferred to post-pitch.
 
 **Key things to get right:**
-- Graceful fallback — if the Sheet fetch fails for any reason, `config.js` menu loads silently
-- Sheet structure should mirror existing menu format exactly (id, name, price, diet, available, desc)
-- Julian creates and shares the Sheet; vendor gets edit access to their own Sheet only
-- `config.js` gains a `menuSheetUrl` field pointing to the published Sheet JSON endpoint
+- Same sheet fetch pattern as menu — graceful fallback to `config.js` data if unavailable
+- Two separate sheets (events/locations and offers) or one combined sheet — decide at session start
+- Offers page is a new mobile nav section or integrated into the Account page — decide at session start
+- Keep it demo-ready: even with placeholder data it should look complete and real
 
 ---
 
@@ -621,7 +660,10 @@ Tasks that must be completed before going live with any real customer. Not block
 | 3 | **Remove `noindex, nofollow`** | The demo site has a robots meta tag preventing search indexing. Remove from `index.html` before going live on the customer's real domain. |
 | 4 | **Firebase Phone Auth — real domain** | Add the production domain to Firebase Auth → Settings → Authorised Domains. Without this, Phone Auth will silently fail on the live URL. |
 | 5 | **Remove Firebase test numbers** | Before or shortly after go-live, remove test numbers from Firebase Console → Authentication → Sign-in method → Phone → Test numbers. Not a security risk but keeps things clean. |
-| 6 | **CONFIG.vendor.id** | Confirm `config.js` has `vendor: { id: 'lamuletti' }` (or correct vendor ID for new customer). Never hardcode this as a string literal anywhere in `app.js` or `kitchen.js`. |
-| 7 | **CONFIG.domains** | Update `config.js` `domains` array to include the customer's live domain once known. Unused at runtime for now — forward-compatible. |
+| 6 | **CONFIG.vendor.id** | Confirm `config.js` has correct vendor ID. Never hardcode as a string literal anywhere in `app.js` or `kitchen.js`. |
+| 7 | **CONFIG.domains** | Update `config.js` `domains` array to include the customer's live domain once known. |
 | 8 | **Kitchen PIN** | Change `CONFIG.kitchen.pin` from `1234` to something the vendor chooses. |
 | 9 | **`noindex` on kitchen.html** | Add `<meta name="robots" content="noindex, nofollow">` to `kitchen.html` — the kitchen dashboard should never appear in search results. |
+| 10 | **Google Sheet — protect header row** | Right-click row 1 → Protect range — vendor can edit cell values but cannot delete or reorder columns. |
+| 11 | **Google Sheet — vendor 2FA** | Advise vendor to enable 2FA on their Google account. A compromised account could write false allergen information to the sheet — this is a real-world liability risk, not just a technical one. Include in vendor onboarding doc. |
+| 12 | **Allergen disclaimer** | Add to vendor onboarding doc: the sheet is public and customer-facing. Only put accurate, customer-safe content in it. False allergen info (accidental or via compromised account) is a liability. |
