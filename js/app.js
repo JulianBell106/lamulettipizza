@@ -35,7 +35,8 @@
  *   28. Firebase — Get next order ref (daily counter)
  *   29. Firebase — Submit order to Firestore
  *   30. Firebase — Kitchen status listener
- *   31. Firebase — Order status listener
+ *   31. Firebase — Order status listener (confirmation modal)
+ *   32. Account page — Members area
  * ============================================================================
  */
 
@@ -469,7 +470,9 @@ window.addEventListener('scroll', () => {
    14. MOBILE — PAGE NAVIGATION
    ============================================================================ */
 function mShowPage(page) {
-  if (page === 'basket') renderMobileBasket();
+  if (page === 'basket')  renderMobileBasket();
+  if (page === 'account') loadAccountPage();
+
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.m-nav-item').forEach(n => n.classList.remove('active'));
   const pageEl = document.getElementById('page-' + page);
@@ -1119,9 +1122,12 @@ function initKitchenStatusListener() {
 
 
 /* ============================================================================
-   31. FIREBASE — ORDER STATUS LISTENER
+   31. FIREBASE — ORDER STATUS LISTENER (confirmation modal)
    After order placement, listens on the specific order document and updates
    the customer's confirmation modal/overlay with live status.
+
+   This is a SINGLE listener for the active confirmation modal.
+   The Account page (Section 32) uses a separate map of listeners.
 
    Mobile:  updates m-confirm-time, m-confirm-timelabel, icon, title, button.
    Desktop: updates d-order-time, d-order-timelabel, icon, title, button.
@@ -1366,4 +1372,354 @@ function stopOrderStatusListener() {
   if (dBtn)   dBtn.textContent   = 'Done — See you soon!';
 
   console.log('[Stalliq] Order status listener stopped.');
+}
+
+
+/* ============================================================================
+   32. ACCOUNT PAGE — MEMBERS AREA
+   ============================================================================
+   Three states:
+     • Logged out  — clean login prompt
+     • Logged in, no orders — welcome + loyalty + offers + empty history nudge
+     • Logged in with activity — current orders (live) + loyalty + offers + history
+
+   Listener architecture:
+     accountOrderListeners — map keyed by orderId.
+     Separate from the single orderStatusUnsubscribe in Section 31.
+     Section 31 serves the confirmation modal only (ephemeral).
+     Section 32 serves the account page (persistent).
+
+   Firestore query for orders:
+     orders where customerId == uid, orderBy createdAt desc
+     Requires composite index on (customerId, createdAt).
+     Firestore surfaces a one-click creation link on first run — not a blocker.
+
+   Loyalty stamp card:
+     Static for demo — 3/10 filled. "Coming soon" badge.
+
+   Offers:
+     Static for demo — two placeholder cards. "Coming soon" badge.
+   ============================================================================ */
+
+// Map of active account-page order listeners: { orderId: unsubscribeFn }
+const accountOrderListeners = {};
+
+/**
+ * Stops all account-page order listeners.
+ * Called before reloading the page and on sign-out.
+ */
+function stopAllAccountListeners() {
+  Object.keys(accountOrderListeners).forEach(id => {
+    if (typeof accountOrderListeners[id] === 'function') {
+      accountOrderListeners[id]();
+    }
+    delete accountOrderListeners[id];
+  });
+  console.log('[Stalliq] All account order listeners stopped.');
+}
+
+/**
+ * Main entry point for the Account page.
+ * Called by mShowPage('account').
+ * Determines auth state and renders the appropriate view.
+ */
+function loadAccountPage() {
+  const user  = auth.currentUser;
+  const outEl = document.getElementById('m-account-out');
+  const inEl  = document.getElementById('m-account-in');
+  if (!outEl || !inEl) return;
+
+  if (!user) {
+    outEl.style.display = 'block';
+    inEl.style.display  = 'none';
+    return;
+  }
+
+  outEl.style.display = 'none';
+  inEl.style.display  = 'block';
+
+  // Welcome name
+  const nameEl = document.getElementById('m-account-name');
+  if (nameEl) {
+    nameEl.textContent = customerName ? `Hi, ${customerName}!` : 'Welcome back!';
+  }
+
+  // Static sections — render once per visit
+  renderStampCard(3, 10);
+  renderAccountOffers();
+
+  // Orders — fresh load every visit
+  loadUserOrders(user.uid);
+}
+
+/**
+ * Renders the loyalty stamp card.
+ * @param {number} filled  — number of filled stamps (3 for demo)
+ * @param {number} total   — total stamps needed (10)
+ */
+function renderStampCard(filled, total) {
+  const grid = document.getElementById('m-stamps-grid');
+  const prog = document.getElementById('m-stamp-progress');
+  if (!grid) return;
+
+  grid.innerHTML = Array.from({ length: total }, (_, i) => {
+    const isFilled = i < filled;
+    return `<div class="m-stamp-dot${isFilled ? ' filled' : ''}">${isFilled ? '🍕' : ''}</div>`;
+  }).join('');
+
+  if (prog) prog.textContent = `${filled} of ${total} stamps collected`;
+}
+
+/**
+ * Renders static offer placeholder cards.
+ */
+function renderAccountOffers() {
+  const list = document.getElementById('m-offers-list');
+  if (!list) return;
+  list.innerHTML = `
+    <div class="m-offer-card">
+      <div class="m-offer-icon">🎉</div>
+      <div class="m-offer-body">
+        <div class="m-offer-title">Welcome Offer</div>
+        <div class="m-offer-desc">10% off your next order — launching soon</div>
+      </div>
+      <div class="m-offer-badge">Locked</div>
+    </div>
+    <div class="m-offer-card">
+      <div class="m-offer-icon">🍕</div>
+      <div class="m-offer-body">
+        <div class="m-offer-title">Buy 9, Get 1 Free</div>
+        <div class="m-offer-desc">Collect 9 stamps to unlock your free pizza</div>
+      </div>
+      <div class="m-offer-badge">Locked</div>
+    </div>`;
+}
+
+/**
+ * Loads all orders for the current user from Firestore.
+ * Splits into current (active) and history on the client side.
+ * Requires composite index on (customerId, createdAt) — Firestore
+ * will surface a one-click creation link in the console on first run.
+ */
+function loadUserOrders(uid) {
+  // Clean up previous listeners before reloading
+  stopAllAccountListeners();
+
+  const currentSection = document.getElementById('m-current-orders-section');
+  const currentList    = document.getElementById('m-current-orders-list');
+  const historyList    = document.getElementById('m-order-history-list');
+  const historyEmpty   = document.getElementById('m-order-history-empty');
+
+  // Show loading state
+  if (historyList) {
+    historyList.innerHTML = `<div class="m-account-loading">Loading your orders…</div>`;
+  }
+
+  db.collection('orders')
+    .where('customerId', '==', uid)
+    .orderBy('createdAt', 'desc')
+    .get()
+    .then(snapshot => {
+      const orders = [];
+      snapshot.forEach(doc => orders.push({ id: doc.id, ...doc.data() }));
+
+      const activeStatuses = ['pending', 'accepted', 'preparing', 'ready'];
+      const currentOrders  = orders.filter(o => activeStatuses.includes(o.status));
+
+      // ── Current orders ──────────────────────────────────────────────────
+      if (currentOrders.length > 0) {
+        if (currentSection) currentSection.style.display = 'block';
+        if (currentList) {
+          currentList.innerHTML = '';
+          currentOrders.forEach(order => {
+            const wrapper = document.createElement('div');
+            wrapper.id        = `m-coc-${order.id}`;
+            wrapper.className = 'm-current-order-card';
+            wrapper.innerHTML = buildCurrentOrderCardHTML(order);
+            currentList.appendChild(wrapper);
+            // Start live listener for this card
+            startAccountOrderListener(order.id);
+          });
+        }
+      } else {
+        if (currentSection) currentSection.style.display = 'none';
+      }
+
+      // ── Order history ────────────────────────────────────────────────────
+      if (orders.length === 0) {
+        if (historyList)  historyList.innerHTML = '';
+        if (historyEmpty) historyEmpty.style.display = 'block';
+      } else {
+        if (historyEmpty) historyEmpty.style.display = 'none';
+        if (historyList) {
+          historyList.innerHTML = orders.map(order => buildHistoryItemHTML(order)).join('');
+        }
+      }
+    })
+    .catch(err => {
+      console.error('[Stalliq] Account orders load error:', err.code, err.message);
+      if (err.code === 'failed-precondition') {
+        console.warn('[Stalliq] Composite index required for orders query.');
+        console.warn('[Stalliq] Check the Firestore console — it will show a direct link to create it.');
+      }
+      if (historyList) {
+        historyList.innerHTML = `<div class="m-account-empty"><p>Could not load orders — please try again.</p></div>`;
+      }
+    });
+}
+
+/**
+ * Builds the inner HTML for a current-order card.
+ * The status row has a predictable ID (m-coc-status-{orderId}) so the
+ * live listener can update it in place without re-rendering the whole card.
+ */
+function buildCurrentOrderCardHTML(order) {
+  const cfg          = ORDER_STATUS_CONFIG[order.status] || ORDER_STATUS_CONFIG.pending;
+  const itemsSummary = order.items
+    ? order.items.map(i => `${i.name} × ${i.quantity}`).join(', ')
+    : '';
+  const total   = order.orderTotal != null
+    ? CONFIG.business.currency + Number(order.orderTotal).toFixed(2)
+    : '';
+  const waitLine = (order.status === 'accepted' && order.waitMins)
+    ? `<div class="m-coc-wait">~${order.waitMins} mins estimated</div>`
+    : '';
+
+  return `
+    <div class="m-coc-header">
+      <div class="m-coc-ref">${order.orderRef || '—'}</div>
+      <div class="m-coc-total">${total}</div>
+    </div>
+    <div class="m-coc-items">${itemsSummary}</div>
+    <div class="m-coc-status" id="m-coc-status-${order.id}">
+      <div class="m-coc-status-icon">${cfg.icon}</div>
+      <div class="m-coc-status-body">
+        <div class="m-coc-status-text">${cfg.label}</div>
+        ${waitLine}
+      </div>
+    </div>`;
+}
+
+/**
+ * Builds the HTML for a single order history row.
+ */
+function buildHistoryItemHTML(order) {
+  let dateStr = '—';
+  if (order.createdAt) {
+    try {
+      const d = order.createdAt.toDate ? order.createdAt.toDate() : new Date(order.createdAt);
+      dateStr = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch (_) { /* leave as '—' */ }
+  }
+
+  const itemsSummary = order.items
+    ? order.items.map(i => `${i.name} × ${i.quantity}`).join(', ')
+    : '';
+  const total = order.orderTotal != null
+    ? CONFIG.business.currency + Number(order.orderTotal).toFixed(2)
+    : '';
+  const statusLabel = order.status
+    ? order.status.charAt(0).toUpperCase() + order.status.slice(1)
+    : '';
+
+  return `
+    <div class="m-history-item">
+      <div class="m-history-header">
+        <div class="m-history-ref">${order.orderRef || '—'}</div>
+        <div class="m-history-date">${dateStr}</div>
+      </div>
+      <div class="m-history-items">${itemsSummary}</div>
+      <div class="m-history-footer">
+        <div class="m-history-total">${total}</div>
+        <div class="m-history-status status-${order.status}">${statusLabel}</div>
+      </div>
+    </div>`;
+}
+
+/**
+ * Starts a Firestore onSnapshot listener on a single order document for the
+ * account page. Updates the status row in place on the current-order card.
+ * Stops and removes itself when the order reaches a terminal state.
+ */
+function startAccountOrderListener(orderId) {
+  if (accountOrderListeners[orderId]) return; // already listening
+
+  const docRef = db.collection('orders').doc(orderId);
+
+  accountOrderListeners[orderId] = docRef.onSnapshot(
+    snapshot => {
+      if (!snapshot.exists) return;
+      const { status, waitMins } = snapshot.data();
+
+      // Update the status row in the current-order card
+      const statusEl = document.getElementById(`m-coc-status-${orderId}`);
+      if (statusEl) {
+        const cfg      = ORDER_STATUS_CONFIG[status] || ORDER_STATUS_CONFIG.pending;
+        const waitLine = (status === 'accepted' && waitMins)
+          ? `<div class="m-coc-wait">~${waitMins} mins estimated</div>`
+          : '';
+        statusEl.innerHTML = `
+          <div class="m-coc-status-icon">${cfg.icon}</div>
+          <div class="m-coc-status-body">
+            <div class="m-coc-status-text">${cfg.label}</div>
+            ${waitLine}
+          </div>`;
+      }
+
+      // Terminal states — stop listener, hide card after brief delay
+      if (status === 'collected' || status === 'cancelled') {
+        if (accountOrderListeners[orderId]) {
+          accountOrderListeners[orderId]();
+          delete accountOrderListeners[orderId];
+        }
+        // Fade out the card
+        const cardEl = document.getElementById(`m-coc-${orderId}`);
+        if (cardEl) {
+          cardEl.style.transition = 'opacity 0.4s';
+          cardEl.style.opacity    = '0';
+          setTimeout(() => {
+            cardEl.remove();
+            // Hide section header if no cards remain
+            const section = document.getElementById('m-current-orders-section');
+            const list    = document.getElementById('m-current-orders-list');
+            if (section && list && list.children.length === 0) {
+              section.style.display = 'none';
+            }
+          }, 400);
+        }
+        console.log(`[Stalliq] Account listener stopped for ${orderId} (${status}).`);
+      }
+    },
+    err => {
+      console.error(`[Stalliq] Account order listener error for ${orderId}:`, err.code);
+    }
+  );
+
+  console.log(`[Stalliq] Account order listener started for ${orderId}.`);
+}
+
+/**
+ * Tapping "Sign In" on the logged-out account screen.
+ * Reuses the existing phone auth overlay — after successful auth, the
+ * account page loads the logged-in view via pendingOrderFn.
+ */
+function accountSignIn() {
+  pendingOrderFn = () => loadAccountPage();
+  authClearErrors();
+  authShowOverlay('phone');
+}
+
+/**
+ * Signs the current user out and returns account page to logged-out state.
+ */
+function accountSignOut() {
+  stopAllAccountListeners();
+  auth.signOut()
+    .then(() => {
+      customerName = null;
+      loadAccountPage();
+    })
+    .catch(err => {
+      console.error('[Stalliq] Sign out error:', err);
+    });
 }

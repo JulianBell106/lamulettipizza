@@ -1043,6 +1043,190 @@ html { scroll-behavior: smooth; }
 .m-confirm-row strong { color: var(--cream); }
 .m-confirm-msg { font-size: 13px; color: rgba(253,246,236,0.55); line-height: 1.6; margin-bottom: 24px; max-width: 280px; }
 
+/* ─── ACCOUNT PAGE ─── */
+
+/* Logged-out state */
+.m-acct-logout-wrap {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 60px 28px; text-align: center;
+  min-height: 60vh;
+}
+.m-acct-logout-icon { font-size: 56px; margin-bottom: 20px; }
+.m-acct-logout-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 24px; font-weight: 700;
+  color: var(--cream); margin-bottom: 10px;
+}
+.m-acct-logout-sub {
+  font-size: 14px; color: rgba(255,255,255,0.55);
+  line-height: 1.7; margin-bottom: 28px; max-width: 260px;
+}
+
+/* Logged-in header */
+.m-acct-welcome {
+  padding: 20px 16px 4px;
+  font-family: 'Playfair Display', serif;
+  font-size: 24px; font-weight: 700; color: var(--cream);
+}
+.m-acct-welcome span { color: var(--gold); font-style: italic; }
+
+/* Section labels */
+.m-acct-section-label {
+  padding: 16px 16px 8px;
+  font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--gold); font-weight: 600;
+}
+
+/* Current order cards */
+.m-current-order-card {
+  margin: 0 16px 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(212,160,67,0.25);
+  border-radius: 16px; padding: 16px;
+}
+.m-co-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 10px;
+}
+.m-co-ref {
+  font-size: 14px; font-weight: 700; color: var(--gold);
+  font-family: 'Playfair Display', serif;
+}
+.m-co-status-badge {
+  font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 600;
+}
+.status-pending  { background: rgba(255,200,50,0.15); color: #FFD040; border: 1px solid rgba(255,200,50,0.3); }
+.status-accepted { background: rgba(80,160,255,0.15); color: #70B8FF; border: 1px solid rgba(80,160,255,0.3); }
+.status-preparing{ background: rgba(255,130,50,0.15); color: var(--ember); border: 1px solid rgba(255,130,50,0.3); }
+.status-ready    { background: rgba(80,200,80,0.15);  color: #60D060;  border: 1px solid rgba(80,200,80,0.3); }
+.m-co-time {
+  font-size: 32px; font-weight: 700;
+  font-family: 'Playfair Display', serif;
+  color: var(--gold); line-height: 1; margin-bottom: 2px;
+}
+.m-co-timelabel {
+  font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 10px;
+}
+.m-co-items {
+  font-size: 13px; color: rgba(255,255,255,0.65); line-height: 1.5;
+  border-top: 1px solid rgba(212,160,67,0.1); padding-top: 10px;
+}
+
+/* Loyalty stamp card */
+.m-stamp-card {
+  margin: 0 16px 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(212,160,67,0.2);
+  border-radius: 16px; padding: 18px 16px;
+  position: relative; overflow: hidden;
+}
+.m-stamp-card::before {
+  content: '🍕';
+  position: absolute; right: 14px; top: 10px;
+  font-size: 52px; opacity: 0.07; pointer-events: none;
+}
+.m-stamp-card-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 4px;
+}
+.m-stamp-card-title {
+  font-size: 15px; font-weight: 700; color: var(--cream);
+}
+.m-coming-badge {
+  font-size: 10px; padding: 3px 8px; border-radius: 20px;
+  background: rgba(212,160,67,0.15); border: 1px solid rgba(212,160,67,0.3);
+  color: var(--gold); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+}
+.m-stamp-sub {
+  font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 14px;
+}
+.m-stamps-grid {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
+}
+.m-stamp {
+  aspect-ratio: 1; border-radius: 50%;
+  border: 1.5px solid rgba(212,160,67,0.25);
+  background: transparent;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; transition: all 0.2s; opacity: 0.4;
+}
+.m-stamp.filled {
+  background: linear-gradient(135deg, var(--fire), #A83200);
+  border-color: var(--fire);
+  box-shadow: 0 2px 10px rgba(200,65,11,0.45);
+  opacity: 1;
+}
+
+/* Offer cards */
+.m-offer-card {
+  margin: 0 16px 10px;
+  background: linear-gradient(135deg, rgba(200,65,11,0.14), rgba(44,26,10,0.5));
+  border: 1px solid rgba(200,65,11,0.28);
+  border-radius: 16px; padding: 16px;
+  display: flex; gap: 14px; align-items: center;
+}
+.m-offer-icon { font-size: 32px; flex-shrink: 0; }
+.m-offer-title { font-size: 15px; font-weight: 700; color: var(--cream); margin-bottom: 3px; }
+.m-offer-desc { font-size: 12px; color: rgba(255,255,255,0.6); line-height: 1.4; }
+.m-offer-coming {
+  display: inline-block; margin-top: 6px;
+  font-size: 10px; padding: 3px 8px; border-radius: 20px;
+  background: rgba(200,65,11,0.2); border: 1px solid rgba(200,65,11,0.35);
+  color: var(--ember); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+}
+
+/* Order history */
+.m-history-item {
+  margin: 0 16px 8px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(212,160,67,0.1);
+  border-radius: 14px; padding: 14px 16px;
+}
+.m-history-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 6px;
+}
+.m-history-ref {
+  font-size: 14px; font-weight: 700; color: var(--cream);
+  font-family: 'Playfair Display', serif;
+}
+.m-history-date { font-size: 11px; color: rgba(255,255,255,0.4); }
+.m-history-items {
+  font-size: 12px; color: rgba(255,255,255,0.55); margin-bottom: 8px; line-height: 1.4;
+}
+.m-history-footer {
+  display: flex; justify-content: space-between; align-items: center;
+}
+.m-history-total {
+  font-family: 'Playfair Display', serif;
+  font-size: 16px; color: var(--gold); font-weight: 700;
+}
+.m-history-badge {
+  font-size: 11px; padding: 3px 8px; border-radius: 20px;
+  background: rgba(80,200,80,0.15); color: #60D060; border: 1px solid rgba(80,200,80,0.25);
+}
+.m-acct-empty-history {
+  padding: 20px 16px 8px; text-align: center;
+  font-size: 13px; color: rgba(255,255,255,0.35); line-height: 1.6;
+}
+
+/* Sign out */
+.m-signout-btn {
+  display: block; margin: 8px 16px 24px;
+  background: transparent;
+  color: rgba(255,255,255,0.35);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px; padding: 14px 16px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 500;
+  cursor: pointer; text-align: center;
+  transition: all 0.2s; width: calc(100% - 32px);
+}
+.m-signout-btn:hover {
+  color: rgba(255,255,255,0.6);
+  border-color: rgba(255,255,255,0.22);
+}
+
 /* Bottom nav */
 .m-bottom-nav {
   position: fixed; bottom: 0; left: 0; right: 0; height: 72px;
@@ -1058,8 +1242,8 @@ html { scroll-behavior: smooth; }
   cursor: pointer; -webkit-tap-highlight-color: transparent;
   position: relative;
 }
-.m-nav-icon { font-size: 22px; line-height: 1; }
-.m-nav-label { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(253,246,236,0.45); font-weight: 500; }
+.m-nav-icon { font-size: 20px; line-height: 1; }
+.m-nav-label { font-size: 9px; letter-spacing: 0.05em; text-transform: uppercase; color: rgba(253,246,236,0.45); font-weight: 500; }
 .m-nav-item.active .m-nav-label { color: var(--gold); }
 .m-nav-item.active .m-nav-icon { filter: drop-shadow(0 0 6px rgba(212,160,67,0.6)); }
 .m-basket-badge {
@@ -1339,10 +1523,7 @@ html { scroll-behavior: smooth; }
   </div>
 </div>
 
-<!-- DESKTOP ORDER CONFIRM
-     d-order-time and d-order-timelabel now have IDs — JS updates them live.
-     Initial state: ⏳ / pending text. On kitchen accept: ~X mins / normal label.
-     On ready: cleared / "Head to the van" text. -->
+<!-- DESKTOP ORDER CONFIRM -->
 <div class="d-order-overlay" id="d-order-overlay">
   <div class="d-order-modal">
     <div class="d-order-icon">🙌</div>
@@ -1434,10 +1615,95 @@ html { scroll-behavior: smooth; }
     </div>
   </div>
 
+  <!-- ACCOUNT
+       Three states — all present in DOM, JS shows/hides.
+       acct-logged-out   → shown when no Firebase user
+       acct-logged-in    → shown when authenticated
+         acct-current-orders → shown only when active orders exist
+         acct-stamps-grid    → stamp circles, JS fills based on count
+         acct-history-list   → JS populates history items
+         acct-history-empty  → shown when no history
+  -->
+  <div id="page-account" class="page">
+
+    <!-- ── LOGGED OUT ── -->
+    <div id="acct-logged-out">
+      <div class="m-acct-logout-wrap">
+        <div class="m-acct-logout-icon">👤</div>
+        <div class="m-acct-logout-title">Your Account</div>
+        <p class="m-acct-logout-sub">Sign in to track your orders, collect loyalty stamps, and access exclusive offers.</p>
+        <button class="m-btn" style="margin:0;width:100%;max-width:280px;" onclick="acctSignIn()">📱 Sign In</button>
+      </div>
+    </div>
+
+    <!-- ── LOGGED IN ── -->
+    <div id="acct-logged-in" style="display:none;">
+
+      <!-- Welcome -->
+      <div class="m-acct-welcome">Hi, <span id="acct-first-name">there</span> 👋</div>
+
+      <!-- Live Orders (shown only when active orders exist) -->
+      <div id="acct-current-orders" style="display:none;">
+        <div class="m-acct-section-label">🔴 Live Orders</div>
+        <div id="acct-orders-list">
+          <!-- JS injects one .m-current-order-card per active order -->
+        </div>
+      </div>
+
+      <!-- Loyalty Stamp Card -->
+      <div class="m-acct-section-label">🎫 Loyalty Card</div>
+      <div class="m-stamp-card">
+        <div class="m-stamp-card-header">
+          <div class="m-stamp-card-title">La Muletti Loyalty</div>
+          <div class="m-coming-badge">Coming soon</div>
+        </div>
+        <div class="m-stamp-sub">Buy 9 pizzas, get your 10th free 🍕</div>
+        <div class="m-stamps-grid" id="acct-stamps-grid">
+          <!-- 10 stamps — JS adds/removes .filled class based on stamp count -->
+          <div class="m-stamp">🍕</div>
+          <div class="m-stamp">🍕</div>
+          <div class="m-stamp">🍕</div>
+          <div class="m-stamp">🍕</div>
+          <div class="m-stamp">🍕</div>
+          <div class="m-stamp">🍕</div>
+          <div class="m-stamp">🍕</div>
+          <div class="m-stamp">🍕</div>
+          <div class="m-stamp">🍕</div>
+          <div class="m-stamp">🍕</div>
+        </div>
+      </div>
+
+      <!-- Offers -->
+      <div class="m-acct-section-label">🎁 Offers</div>
+      <div class="m-offer-card">
+        <div class="m-offer-icon">🎉</div>
+        <div>
+          <div class="m-offer-title">Welcome Offer</div>
+          <div class="m-offer-desc">10% off your second order — a little thank you from Daniele &amp; Danielle.</div>
+          <div class="m-offer-coming">Coming soon</div>
+        </div>
+      </div>
+
+      <!-- Order History -->
+      <div class="m-acct-section-label">📋 Order History</div>
+      <div id="acct-history-list">
+        <!-- JS injects .m-history-item elements -->
+      </div>
+      <div id="acct-history-empty" class="m-acct-empty-history" style="display:none;">
+        No orders yet — your first pizza is waiting 🍕
+      </div>
+
+      <!-- Sign Out -->
+      <button class="m-signout-btn" onclick="acctSignOut()">Sign Out</button>
+
+    </div><!-- /acct-logged-in -->
+
+  </div><!-- /page-account -->
+
+
   <!-- ORDER CONFIRM
-       m-confirm-time and m-confirm-timelabel now have IDs — JS updates them live.
-       Initial state: ⏳ / pending text. On kitchen accept: ~X mins / normal label.
-       On ready: cleared / "Head to the van" text, button text also flips. -->
+       m-confirm-time and m-confirm-timelabel have IDs — JS updates live.
+       Initial: ⏳ / "Waiting for kitchen…". On accept: ~X mins. On ready: flips. -->
   <div id="m-order-confirm">
     <div class="m-confirm-icon">🙌</div>
     <div class="m-confirm-title">Order Placed!</div>
@@ -1446,16 +1712,17 @@ html { scroll-behavior: smooth; }
     <div class="m-confirm-ref" id="m-confirm-ref">Order ref #001</div>
     <div class="m-confirm-details" id="m-confirm-details"></div>
     <p class="m-confirm-msg" id="m-confirm-msg">Thanks for your order!</p>
-    <button class="m-btn" style="width:100%;max-width:320px;" onclick="mDismissOrder()">Done — See you soon!</button>
+    <button class="m-btn" style="width:100%;max-width:320px;" id="m-confirm-dismiss-btn" onclick="mDismissOrder()">Done — See you soon!</button>
   </div>
 
-  <!-- BOTTOM NAV -->
+  <!-- BOTTOM NAV — 6 items -->
   <nav class="m-bottom-nav">
-    <div class="m-nav-item active" onclick="mShowPage('home')" id="m-nav-home"><div class="m-nav-icon">🏠</div><div class="m-nav-label">Home</div></div>
-    <div class="m-nav-item" onclick="mShowPage('menu')" id="m-nav-menu"><div class="m-nav-icon">🍕</div><div class="m-nav-label">Menu</div></div>
-    <div class="m-nav-item" onclick="mShowPage('basket')" id="m-nav-basket"><div class="m-nav-icon">🛒</div><div class="m-nav-label">Basket</div><div class="m-basket-badge" id="m-basket-badge">0</div></div>
-    <div class="m-nav-item" onclick="mShowPage('about')" id="m-nav-about"><div class="m-nav-icon">👫</div><div class="m-nav-label">About</div></div>
-    <div class="m-nav-item" onclick="mShowPage('findus')" id="m-nav-findus"><div class="m-nav-icon">📍</div><div class="m-nav-label">Find Us</div></div>
+    <div class="m-nav-item active" onclick="mShowPage('home')"    id="m-nav-home">   <div class="m-nav-icon">🏠</div><div class="m-nav-label">Home</div></div>
+    <div class="m-nav-item"        onclick="mShowPage('menu')"    id="m-nav-menu">   <div class="m-nav-icon">🍕</div><div class="m-nav-label">Menu</div></div>
+    <div class="m-nav-item"        onclick="mShowPage('basket')"  id="m-nav-basket"> <div class="m-nav-icon">🛒</div><div class="m-nav-label">Basket</div><div class="m-basket-badge" id="m-basket-badge">0</div></div>
+    <div class="m-nav-item"        onclick="mShowPage('about')"   id="m-nav-about">  <div class="m-nav-icon">👫</div><div class="m-nav-label">About</div></div>
+    <div class="m-nav-item"        onclick="mShowPage('findus')"  id="m-nav-findus"> <div class="m-nav-icon">📍</div><div class="m-nav-label">Find Us</div></div>
+    <div class="m-nav-item"        onclick="mShowPage('account')" id="m-nav-account"><div class="m-nav-icon">👤</div><div class="m-nav-label">Account</div></div>
   </nav>
 
 </div><!-- /mobile-app -->
