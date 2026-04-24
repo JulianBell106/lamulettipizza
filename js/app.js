@@ -41,7 +41,6 @@
  *   34. Order detail overlay
  * ============================================================================
  */
-menuSheetUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTL19TeZ5Md3zJkz3qzGmc7e5dOnL29w3w8s6Rp9FBH6JC8Po2BRSaa-VXsMXqt3EbE76SiYUryme51/pub?output=csv',
 
 /* ============================================================================
    1. THEME INJECTION
