@@ -11,7 +11,7 @@
  *   3. Done — the app reads everything automatically from CONFIG
  * ============================================================================
  */
-
+menuSheetUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTL19TeZ5Md3zJkz3qzGmc7e5dOnL29w3w8s6Rp9FBH6JC8Po2BRSaa-VXsMXqt3EbE76SiYUryme51/pub?output=csv',
 const CONFIG = {
 
   /* --------------------------------------------------------------------------
