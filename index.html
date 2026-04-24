@@ -1239,6 +1239,15 @@ html { scroll-behavior: smooth; }
   font-size: 11px; padding: 3px 8px; border-radius: 20px;
   background: rgba(80,200,80,0.15); color: #60D060; border: 1px solid rgba(80,200,80,0.25);
 }
+.m-reorder-btn {
+  font-size: 12px; padding: 5px 12px; border-radius: 20px;
+  background: rgba(200,65,11,0.18); border: 1px solid rgba(200,65,11,0.4);
+  color: var(--ember); font-weight: 600; cursor: pointer;
+  font-family: 'DM Sans', sans-serif; white-space: nowrap;
+  transition: background 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+}
+.m-reorder-btn:hover { background: rgba(200,65,11,0.32); border-color: rgba(200,65,11,0.6); }
 .m-acct-empty-history {
   padding: 20px 16px 8px; text-align: center;
   font-size: 13px; color: rgba(255,255,255,0.35); line-height: 1.6;
@@ -2059,6 +2068,7 @@ html { scroll-behavior: smooth; }
         <span id="od-total">—</span>
       </div>
     </div>
+    <div id="od-reorder-wrap"></div>
   </div>
 </div>
 

@@ -1688,6 +1688,10 @@ function buildHistoryItemHTML(order) {
     ? order.status.charAt(0).toUpperCase() + order.status.slice(1)
     : '';
 
+  const reorderBtn = order.status === 'collected'
+    ? `<button class="m-reorder-btn" onclick="event.stopPropagation();reorderItems('${order.id}')">🔁 Reorder</button>`
+    : '';
+
   return `
     <div class="m-history-item" onclick="openOrderDetail('${order.id}')">
       <div class="m-history-header">
@@ -1698,6 +1702,7 @@ function buildHistoryItemHTML(order) {
       <div class="m-history-footer">
         <div class="m-history-total">${total}</div>
         <div class="m-history-status status-${order.status}">${statusLabel}</div>
+        ${reorderBtn}
         <div class="m-history-chevron">›</div>
       </div>
     </div>`;
@@ -1921,6 +1926,18 @@ function renderOrderDetail(order) {
     totalEl.textContent = CONFIG.business.currency + Number(order.orderTotal).toFixed(2);
   }
 
+  // Reorder button — collected orders only
+  const reorderWrap = document.getElementById('od-reorder-wrap');
+  if (reorderWrap) {
+    if (order.status === 'collected') {
+      reorderWrap.innerHTML = `
+        <button class="m-btn" style="margin:16px 24px 0;width:calc(100% - 48px);"
+          onclick="reorderItems('${order.id}')">🔁 Reorder This</button>`;
+    } else {
+      reorderWrap.innerHTML = '';
+    }
+  }
+
   // Show overlay
   document.getElementById('order-detail-overlay').classList.add('show');
 }
@@ -1930,5 +1947,57 @@ function renderOrderDetail(order) {
  */
 function closeOrderDetail() {
   document.getElementById('order-detail-overlay').classList.remove('show');
+}
+
+/**
+ * Populates the basket from a previous collected order and routes to checkout.
+ * Items no longer on the menu are silently skipped.
+ * On mobile: closes overlay, navigates to basket page.
+ * On desktop: closes overlay + account panel, opens basket panel.
+ * @param {string} orderId — Firestore document ID
+ */
+function reorderItems(orderId) {
+  const order = orderCache[orderId];
+  if (!order || !order.items) return;
+
+  // Clear current basket
+  Object.keys(basket).forEach(k => delete basket[k]);
+
+  // Add items still available on the menu
+  let added = 0;
+  order.items.forEach(item => {
+    const menuItem = CONFIG.menu.find(m => m.id === item.id && m.available !== false);
+    if (menuItem) {
+      basket[menuItem.id] = item.quantity;
+      added++;
+    }
+  });
+
+  refreshDesktopBasket();
+  refreshMobileBadge();
+  renderDesktopMenu();
+  renderMobileMenu();
+
+  closeOrderDetail();
+
+  if (added === 0) {
+    // All items have been removed from the menu — nothing to add
+    // Show a gentle message rather than routing to an empty basket
+    setTimeout(() => alert("Sorry — none of those items are currently available."), 200);
+    return;
+  }
+
+  if (window.innerWidth < 768) {
+    // Mobile: close account page, go to basket
+    mShowPage('basket');
+  } else {
+    // Desktop: close account panel, open basket panel
+    const acctPanel = document.getElementById('d-account-panel');
+    if (acctPanel) acctPanel.classList.remove('open');
+    const basketPanel = document.getElementById('d-basket-panel');
+    if (basketPanel) basketPanel.classList.add('open');
+  }
+
+  console.log(`[Stalliq] Reorder: ${added} item type(s) added to basket from order ${orderId}.`);
 }
 
