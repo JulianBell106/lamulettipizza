@@ -1258,6 +1258,83 @@ html { scroll-behavior: smooth; }
   border-color: rgba(255,255,255,0.22);
 }
 
+/* ─── DESKTOP ACCOUNT PANEL ─── */
+.d-account-panel {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 440px;
+  background: var(--char);
+  border-left: 1px solid rgba(212,160,67,0.2);
+  z-index: 600;
+  transform: translateX(100%);
+  transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+  display: flex; flex-direction: column;
+  box-shadow: -20px 0 60px rgba(0,0,0,0.5);
+  overflow: hidden;
+}
+.d-account-panel.open { transform: translateX(0); }
+.d-account-panel-header {
+  padding: 24px 28px 20px;
+  border-bottom: 1px solid rgba(212,160,67,0.12);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.d-account-panel-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px; font-weight: 700; color: var(--cream);
+}
+.d-account-panel-body {
+  flex: 1; overflow-y: auto;
+}
+
+/* Logged-out state inside desktop panel */
+.d-acct-logout-wrap {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 60px 32px; text-align: center;
+  min-height: 50vh;
+}
+.d-acct-logout-icon { font-size: 56px; margin-bottom: 20px; }
+.d-acct-logout-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px; font-weight: 700; color: var(--cream); margin-bottom: 10px;
+}
+.d-acct-logout-sub {
+  font-size: 14px; color: rgba(255,255,255,0.55);
+  line-height: 1.7; margin-bottom: 28px; max-width: 260px;
+}
+/* Welcome heading in desktop panel */
+.d-acct-welcome {
+  padding: 20px 28px 4px;
+  font-family: 'Playfair Display', serif;
+  font-size: 22px; font-weight: 700; color: var(--cream);
+}
+/* Section labels in desktop panel — wider padding than mobile */
+.d-acct-section-label {
+  padding: 16px 28px 8px;
+  font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--gold); font-weight: 600;
+}
+/* Push m-* card margins to fit the wider panel */
+.d-account-panel-body .m-current-order-card,
+.d-account-panel-body .m-stamp-card,
+.d-account-panel-body .m-offer-card,
+.d-account-panel-body .m-history-item { margin-left: 20px; margin-right: 20px; }
+.d-account-panel-body .m-acct-empty-history { padding-left: 20px; padding-right: 20px; }
+.d-account-panel-body .m-account-loading { padding-left: 20px; }
+/* Desktop sign-out button */
+.d-signout-acct-btn {
+  display: block; margin: 8px 20px 28px;
+  background: transparent;
+  color: rgba(255,255,255,0.35);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px; padding: 14px 16px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 500;
+  cursor: pointer; text-align: center;
+  transition: all 0.2s; width: calc(100% - 40px);
+}
+.d-signout-acct-btn:hover { color: rgba(255,255,255,0.6); border-color: rgba(255,255,255,0.22); }
+
 /* Bottom nav */
 .m-bottom-nav {
   position: fixed; bottom: 0; left: 0; right: 0; height: 72px;
@@ -1395,7 +1472,7 @@ html { scroll-behavior: smooth; }
 @media (max-width: 767px) {
   html, body { width: 100%; height: 100%; overflow: hidden; }
   #mobile-app { display: flex; }
-  .d-basket-btn, .d-basket-panel, .d-order-overlay { display: none !important; }
+  .d-basket-btn, .d-basket-panel, .d-order-overlay, .d-account-panel { display: none !important; }
 }
 </style>
 </head>
@@ -1413,6 +1490,7 @@ html { scroll-behavior: smooth; }
       <li><a href="#d-menu">Menu</a></li>
       <li><a href="#d-story">Our Story</a></li>
       <li><a href="#d-contact">Find Us</a></li>
+      <li><a href="#" onclick="dToggleAccount();return false;">👤 Account</a></li>
       <li><a href="#d-contact" class="d-nav-cta">Book a Catering Event</a></li>
     </ul>
   </nav>
@@ -1553,6 +1631,77 @@ html { scroll-behavior: smooth; }
     <div id="d-order-err"></div>
   </div>
 </div>
+
+<!-- DESKTOP ACCOUNT PANEL
+     Same three states as mobile account page, driven by loadAccountPage('d').
+     IDs use d- prefix; JS buildAccountIds('d') maps them correctly.
+     Dynamic content (.m-coc-*, .m-history-*, .m-offer-*, .m-stamp-dot) reuses
+     mobile CSS classes — .d-account-panel-body context overrides set margins. -->
+<div class="d-account-panel" id="d-account-panel">
+  <div class="d-account-panel-header">
+    <div class="d-account-panel-title">👤 Your Account</div>
+    <button class="d-basket-close" onclick="dToggleAccount()">×</button>
+  </div>
+  <div class="d-account-panel-body">
+
+    <!-- Logged out -->
+    <div id="d-account-out">
+      <div class="d-acct-logout-wrap">
+        <div class="d-acct-logout-icon">👤</div>
+        <div class="d-acct-logout-title">Your Account</div>
+        <p class="d-acct-logout-sub">Sign in to track your orders, collect loyalty stamps, and access exclusive offers.</p>
+        <button class="d-btn-primary" style="justify-content:center;" onclick="dAccountSignIn()">📱 Sign In</button>
+      </div>
+    </div>
+
+    <!-- Logged in -->
+    <div id="d-account-in" style="display:none;">
+
+      <!-- Welcome — text set by JS -->
+      <div id="d-account-name" class="d-acct-welcome">Welcome!</div>
+
+      <!-- Live Orders -->
+      <div id="d-current-orders-section" style="display:none;">
+        <div class="d-acct-section-label">🔴 Live Orders</div>
+        <div id="d-current-orders-list"></div>
+      </div>
+
+      <!-- Loyalty Stamp Card -->
+      <div class="d-acct-section-label">🎫 Loyalty Card</div>
+      <div class="m-stamp-card">
+        <div class="m-stamp-card-header">
+          <div class="m-stamp-card-title">La Muletti Loyalty</div>
+          <div class="m-coming-badge">Coming soon</div>
+        </div>
+        <div class="m-stamp-sub">Buy 9 pizzas, get your 10th free 🍕</div>
+        <div class="m-stamps-grid" id="d-stamps-grid">
+          <div class="m-stamp-dot">🍕</div><div class="m-stamp-dot">🍕</div>
+          <div class="m-stamp-dot">🍕</div><div class="m-stamp-dot">🍕</div>
+          <div class="m-stamp-dot">🍕</div><div class="m-stamp-dot">🍕</div>
+          <div class="m-stamp-dot">🍕</div><div class="m-stamp-dot">🍕</div>
+          <div class="m-stamp-dot">🍕</div><div class="m-stamp-dot">🍕</div>
+        </div>
+        <div id="d-stamp-progress" class="m-stamp-progress">0 of 10 stamps collected</div>
+      </div>
+
+      <!-- Offers — JS populates -->
+      <div class="d-acct-section-label">🎁 Offers</div>
+      <div id="d-offers-list"></div>
+
+      <!-- Order History — JS populates -->
+      <div class="d-acct-section-label">📋 Order History</div>
+      <div id="d-order-history-list"></div>
+      <div id="d-order-history-empty" class="m-acct-empty-history" style="display:none;">
+        No orders yet — your first pizza is waiting 🍕
+      </div>
+
+      <!-- Sign Out -->
+      <button class="d-signout-acct-btn" onclick="accountSignOut('d')">Sign Out</button>
+
+    </div><!-- /d-account-in -->
+
+  </div><!-- /d-account-panel-body -->
+</div><!-- /d-account-panel -->
 
 <!-- DESKTOP ORDER CONFIRM -->
 <div class="d-order-overlay" id="d-order-overlay">
@@ -1768,8 +1917,8 @@ html { scroll-behavior: smooth; }
     <div class="auth-modal">
       <button class="auth-back" onclick="authClose()">✕ Cancel</button>
       <div class="auth-icon">📱</div>
-      <div class="auth-title">Confirm your order</div>
-      <p class="auth-sub">Enter your mobile and we'll text you when your order is ready to collect</p>
+      <div class="auth-title" id="auth-title">Confirm your order</div>
+      <p class="auth-sub" id="auth-sub-text">Enter your mobile and we'll text you when your order is ready to collect</p>
       <div class="auth-field">
         <label class="auth-label">Mobile number</label>
         <div class="auth-phone-row">

@@ -402,6 +402,14 @@ function dToggleBasket() {
   if (panel) panel.classList.toggle('open');
 }
 
+function dToggleAccount() {
+  const panel = document.getElementById('d-account-panel');
+  if (!panel) return;
+  const opening = !panel.classList.contains('open');
+  panel.classList.toggle('open');
+  if (opening) loadAccountPage('d');
+}
+
 
 /* ============================================================================
    12. DESKTOP — ORDER CONFIRMATION
@@ -471,7 +479,7 @@ window.addEventListener('scroll', () => {
    ============================================================================ */
 function mShowPage(page) {
   if (page === 'basket')  renderMobileBasket();
-  if (page === 'account') loadAccountPage();
+  if (page === 'account') loadAccountPage('m');
 
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.m-nav-item').forEach(n => n.classList.remove('active'));
@@ -798,6 +806,13 @@ function authClearErrors() {
    ============================================================================ */
 function authGateway(orderFn) {
   pendingOrderFn = orderFn;
+
+  // Reset auth overlay to order-placement context
+  const titleEl = document.getElementById('auth-title');
+  const subEl   = document.getElementById('auth-sub-text');
+  if (titleEl) titleEl.textContent = 'Confirm your order';
+  if (subEl)   subEl.textContent   = "Enter your mobile and we'll text you when your order is ready to collect";
+
   const user = auth.currentUser;
 
   if (user) {
@@ -1378,31 +1393,42 @@ function stopOrderStatusListener() {
 /* ============================================================================
    32. ACCOUNT PAGE — MEMBERS AREA
    ============================================================================
-   Three states:
-     • Logged out  — clean login prompt
-     • Logged in, no orders — welcome + loyalty + offers + empty history nudge
-     • Logged in with activity — current orders (live) + loyalty + offers + history
+   Supports both mobile (prefix 'm') and desktop (prefix 'd') panels.
+   buildAccountIds(prefix) maps the prefix to the correct element IDs.
+   All render functions accept an ids object so both panels share the same logic.
 
    Listener architecture:
      accountOrderListeners — map keyed by orderId.
      Separate from the single orderStatusUnsubscribe in Section 31.
      Section 31 serves the confirmation modal only (ephemeral).
-     Section 32 serves the account page (persistent).
+     Section 32 serves the account page/panel (persistent).
 
    Firestore query for orders:
      orders where customerId == uid, orderBy createdAt desc
      Requires composite index on (customerId, createdAt).
      Firestore surfaces a one-click creation link on first run — not a blocker.
-
-   Loyalty stamp card:
-     Static for demo — 3/10 filled. "Coming soon" badge.
-
-   Offers:
-     Static for demo — two placeholder cards. "Coming soon" badge.
    ============================================================================ */
 
 // Map of active account-page order listeners: { orderId: unsubscribeFn }
 const accountOrderListeners = {};
+
+/**
+ * Builds the element ID map for a given panel prefix ('m' or 'd').
+ */
+function buildAccountIds(prefix) {
+  return {
+    out:            `${prefix}-account-out`,
+    in:             `${prefix}-account-in`,
+    name:           `${prefix}-account-name`,
+    currentSection: `${prefix}-current-orders-section`,
+    currentList:    `${prefix}-current-orders-list`,
+    stampsGrid:     `${prefix}-stamps-grid`,
+    stampProgress:  `${prefix}-stamp-progress`,
+    offersList:     `${prefix}-offers-list`,
+    historyList:    `${prefix}-order-history-list`,
+    historyEmpty:   `${prefix}-order-history-empty`,
+  };
+}
 
 /**
  * Stops all account-page order listeners.
@@ -1419,14 +1445,16 @@ function stopAllAccountListeners() {
 }
 
 /**
- * Main entry point for the Account page.
- * Called by mShowPage('account').
- * Determines auth state and renders the appropriate view.
+ * Main entry point for the Account page/panel.
+ * @param {string} prefix — 'm' for mobile page, 'd' for desktop panel
+ * Called by mShowPage('account') and dToggleAccount().
  */
-function loadAccountPage() {
-  const user  = auth.currentUser;
-  const outEl = document.getElementById('m-account-out');
-  const inEl  = document.getElementById('m-account-in');
+function loadAccountPage(prefix = 'm') {
+  const ids  = buildAccountIds(prefix);
+  const user = auth.currentUser;
+
+  const outEl = document.getElementById(ids.out);
+  const inEl  = document.getElementById(ids.in);
   if (!outEl || !inEl) return;
 
   if (!user) {
@@ -1439,27 +1467,28 @@ function loadAccountPage() {
   inEl.style.display  = 'block';
 
   // Welcome name
-  const nameEl = document.getElementById('m-account-name');
+  const nameEl = document.getElementById(ids.name);
   if (nameEl) {
     nameEl.textContent = customerName ? `Hi, ${customerName}!` : 'Welcome back!';
   }
 
-  // Static sections — render once per visit
-  renderStampCard(3, 10);
-  renderAccountOffers();
+  // Static sections
+  renderStampCard(3, 10, ids);
+  renderAccountOffers(ids);
 
   // Orders — fresh load every visit
-  loadUserOrders(user.uid);
+  loadUserOrders(user.uid, ids);
 }
 
 /**
  * Renders the loyalty stamp card.
- * @param {number} filled  — number of filled stamps (3 for demo)
- * @param {number} total   — total stamps needed (10)
+ * @param {number} filled — stamps filled (3 for demo)
+ * @param {number} total  — total stamps needed (10)
+ * @param {object} ids    — element ID map from buildAccountIds()
  */
-function renderStampCard(filled, total) {
-  const grid = document.getElementById('m-stamps-grid');
-  const prog = document.getElementById('m-stamp-progress');
+function renderStampCard(filled, total, ids) {
+  const grid = document.getElementById(ids.stampsGrid);
+  const prog = document.getElementById(ids.stampProgress);
   if (!grid) return;
 
   grid.innerHTML = Array.from({ length: total }, (_, i) => {
@@ -1472,9 +1501,10 @@ function renderStampCard(filled, total) {
 
 /**
  * Renders static offer placeholder cards.
+ * @param {object} ids — element ID map from buildAccountIds()
  */
-function renderAccountOffers() {
-  const list = document.getElementById('m-offers-list');
+function renderAccountOffers(ids) {
+  const list = document.getElementById(ids.offersList);
   if (!list) return;
   list.innerHTML = `
     <div class="m-offer-card">
@@ -1497,20 +1527,20 @@ function renderAccountOffers() {
 
 /**
  * Loads all orders for the current user from Firestore.
- * Splits into current (active) and history on the client side.
- * Requires composite index on (customerId, createdAt) — Firestore
- * will surface a one-click creation link in the console on first run.
+ * Splits into current (active) and history.
+ * Requires composite index on (customerId, createdAt) — Firestore will
+ * surface a one-click creation link in the console on first run.
+ * @param {string} uid  — Firebase UID
+ * @param {object} ids  — element ID map from buildAccountIds()
  */
-function loadUserOrders(uid) {
-  // Clean up previous listeners before reloading
+function loadUserOrders(uid, ids) {
   stopAllAccountListeners();
 
-  const currentSection = document.getElementById('m-current-orders-section');
-  const currentList    = document.getElementById('m-current-orders-list');
-  const historyList    = document.getElementById('m-order-history-list');
-  const historyEmpty   = document.getElementById('m-order-history-empty');
+  const currentSection = document.getElementById(ids.currentSection);
+  const currentList    = document.getElementById(ids.currentList);
+  const historyList    = document.getElementById(ids.historyList);
+  const historyEmpty   = document.getElementById(ids.historyEmpty);
 
-  // Show loading state
   if (historyList) {
     historyList.innerHTML = `<div class="m-account-loading">Loading your orders…</div>`;
   }
@@ -1537,7 +1567,6 @@ function loadUserOrders(uid) {
             wrapper.className = 'm-current-order-card';
             wrapper.innerHTML = buildCurrentOrderCardHTML(order);
             currentList.appendChild(wrapper);
-            // Start live listener for this card
             startAccountOrderListener(order.id);
           });
         }
@@ -1571,7 +1600,7 @@ function loadUserOrders(uid) {
 /**
  * Builds the inner HTML for a current-order card.
  * The status row has a predictable ID (m-coc-status-{orderId}) so the
- * live listener can update it in place without re-rendering the whole card.
+ * live listener can update it in place.
  */
 function buildCurrentOrderCardHTML(order) {
   const cfg          = ORDER_STATUS_CONFIG[order.status] || ORDER_STATUS_CONFIG.pending;
@@ -1637,12 +1666,11 @@ function buildHistoryItemHTML(order) {
 }
 
 /**
- * Starts a Firestore onSnapshot listener on a single order document for the
- * account page. Updates the status row in place on the current-order card.
- * Stops and removes itself when the order reaches a terminal state.
+ * Starts a Firestore onSnapshot listener on a single order for the account panel.
+ * Updates the status row in place. Stops on terminal state.
  */
 function startAccountOrderListener(orderId) {
-  if (accountOrderListeners[orderId]) return; // already listening
+  if (accountOrderListeners[orderId]) return;
 
   const docRef = db.collection('orders').doc(orderId);
 
@@ -1651,7 +1679,6 @@ function startAccountOrderListener(orderId) {
       if (!snapshot.exists) return;
       const { status, waitMins } = snapshot.data();
 
-      // Update the status row in the current-order card
       const statusEl = document.getElementById(`m-coc-status-${orderId}`);
       if (statusEl) {
         const cfg      = ORDER_STATUS_CONFIG[status] || ORDER_STATUS_CONFIG.pending;
@@ -1666,25 +1693,25 @@ function startAccountOrderListener(orderId) {
           </div>`;
       }
 
-      // Terminal states — stop listener, hide card after brief delay
       if (status === 'collected' || status === 'cancelled') {
         if (accountOrderListeners[orderId]) {
           accountOrderListeners[orderId]();
           delete accountOrderListeners[orderId];
         }
-        // Fade out the card
         const cardEl = document.getElementById(`m-coc-${orderId}`);
         if (cardEl) {
           cardEl.style.transition = 'opacity 0.4s';
           cardEl.style.opacity    = '0';
           setTimeout(() => {
             cardEl.remove();
-            // Hide section header if no cards remain
-            const section = document.getElementById('m-current-orders-section');
-            const list    = document.getElementById('m-current-orders-list');
-            if (section && list && list.children.length === 0) {
-              section.style.display = 'none';
-            }
+            // Hide section if no cards remain in either panel
+            ['m', 'd'].forEach(prefix => {
+              const section = document.getElementById(`${prefix}-current-orders-section`);
+              const list    = document.getElementById(`${prefix}-current-orders-list`);
+              if (section && list && list.children.length === 0) {
+                section.style.display = 'none';
+              }
+            });
           }, 400);
         }
         console.log(`[Stalliq] Account listener stopped for ${orderId} (${status}).`);
@@ -1699,27 +1726,42 @@ function startAccountOrderListener(orderId) {
 }
 
 /**
- * Tapping "Sign In" on the logged-out account screen.
- * Reuses the existing phone auth overlay — after successful auth, the
- * account page loads the logged-in view via pendingOrderFn.
+ * Sign In from mobile account page.
+ * Sets pendingOrderFn to reload mobile account page after auth.
  */
 function accountSignIn() {
-  pendingOrderFn = () => loadAccountPage();
+  pendingOrderFn = () => loadAccountPage('m');
+  document.getElementById('auth-title').textContent = 'Sign in to your account';
+  document.getElementById('auth-sub-text').textContent = 'Enter your mobile number to sign in';
   authClearErrors();
   authShowOverlay('phone');
 }
 
 /**
- * Signs the current user out and returns account page to logged-out state.
+ * Sign In from desktop account panel.
+ * Sets pendingOrderFn to reload desktop account panel after auth.
  */
-function accountSignOut() {
+function dAccountSignIn() {
+  pendingOrderFn = () => loadAccountPage('d');
+  document.getElementById('auth-title').textContent = 'Sign in to your account';
+  document.getElementById('auth-sub-text').textContent = 'Enter your mobile number to sign in';
+  authClearErrors();
+  authShowOverlay('phone');
+}
+
+/**
+ * Signs the current user out.
+ * @param {string} prefix — 'm' or 'd' — which panel triggered the sign-out
+ */
+function accountSignOut(prefix = 'm') {
   stopAllAccountListeners();
   auth.signOut()
     .then(() => {
       customerName = null;
-      loadAccountPage();
+      loadAccountPage(prefix);
     })
     .catch(err => {
       console.error('[Stalliq] Sign out error:', err);
     });
 }
+
