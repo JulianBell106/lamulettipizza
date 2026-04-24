@@ -1599,7 +1599,7 @@ function loadUserOrders(uid, ids) {
       } else {
         if (historyEmpty) historyEmpty.style.display = 'none';
 
-        const INITIAL_SHOW   = 5;
+        const INITIAL_SHOW   = 3;
         const shownOrders    = historyOrders.slice(0, INITIAL_SHOW);
         historyRemainder     = historyOrders.slice(INITIAL_SHOW);
 
@@ -1728,7 +1728,13 @@ function startAccountOrderListener(orderId) {
   accountOrderListeners[orderId] = docRef.onSnapshot(
     snapshot => {
       if (!snapshot.exists) return;
-      const { status, waitMins } = snapshot.data();
+      const data             = snapshot.data();
+      const { status, waitMins } = data;
+
+      // Keep cache fresh so detail overlay reflects current status
+      if (orderCache[orderId]) {
+        orderCache[orderId] = { ...orderCache[orderId], ...data };
+      }
 
       const statusEl = document.getElementById(`m-coc-status-${orderId}`);
       if (statusEl) {
