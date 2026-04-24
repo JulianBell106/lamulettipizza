@@ -23,6 +23,18 @@ const CONFIG = {
   },
 
   /* --------------------------------------------------------------------------
+     DOMAINS
+     Forward-compatible field — not used at runtime yet.
+     Lists all valid domains for this customer deployment.
+     Used in future for: domain validation, multi-tenant routing, CORS config.
+     Update when the customer goes live on their own domain.
+  -------------------------------------------------------------------------- */
+  domains: [
+    'stalliq-demo.netlify.app',
+    'lamulettipizza.co.uk',
+  ],
+
+  /* --------------------------------------------------------------------------
      BUSINESS IDENTITY
   -------------------------------------------------------------------------- */
   business: {
