@@ -1616,7 +1616,7 @@ function loadUserOrders(uid, ids) {
             </div>`;
         }
 
-        html += `<div class="m-account-loading" style="padding:8px 0 4px;font-size:11px;opacity:0.5;">
+        html += `<div style="text-align:center;padding:10px 0 4px;font-size:11px;color:rgba(255,255,255,0.45);letter-spacing:0.08em;text-transform:uppercase;">
                    Showing last 3 months
                  </div>`;
 
