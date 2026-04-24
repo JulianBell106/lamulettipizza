@@ -1143,14 +1143,14 @@ html { scroll-behavior: smooth; }
 .m-stamps-grid {
   display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
 }
-.m-stamp {
+.m-stamp-dot {
   aspect-ratio: 1; border-radius: 50%;
   border: 1.5px solid rgba(212,160,67,0.25);
   background: transparent;
   display: flex; align-items: center; justify-content: center;
-  font-size: 15px; transition: all 0.2s; opacity: 0.4;
+  font-size: 15px; transition: all 0.2s; opacity: 0.35;
 }
-.m-stamp.filled {
+.m-stamp-dot.filled {
   background: linear-gradient(135deg, var(--fire), #A83200);
   border-color: var(--fire);
   box-shadow: 0 2px 10px rgba(200,65,11,0.45);
@@ -1166,13 +1166,44 @@ html { scroll-behavior: smooth; }
   display: flex; gap: 14px; align-items: center;
 }
 .m-offer-icon { font-size: 32px; flex-shrink: 0; }
+.m-offer-body { flex: 1; }
 .m-offer-title { font-size: 15px; font-weight: 700; color: var(--cream); margin-bottom: 3px; }
 .m-offer-desc { font-size: 12px; color: rgba(255,255,255,0.6); line-height: 1.4; }
+.m-offer-badge {
+  font-size: 10px; padding: 3px 8px; border-radius: 20px; flex-shrink: 0;
+  background: rgba(200,65,11,0.2); border: 1px solid rgba(200,65,11,0.35);
+  color: var(--ember); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+}
+/* kept for backwards compat if used inline */
 .m-offer-coming {
   display: inline-block; margin-top: 6px;
   font-size: 10px; padding: 3px 8px; border-radius: 20px;
   background: rgba(200,65,11,0.2); border: 1px solid rgba(200,65,11,0.35);
   color: var(--ember); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+}
+
+/* Current order card — injected by app.js buildCurrentOrderCardHTML */
+.m-coc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.m-coc-ref { font-family: 'Playfair Display', serif; font-size: 15px; font-weight: 700; color: var(--gold); }
+.m-coc-total { font-family: 'Playfair Display', serif; font-size: 15px; font-weight: 700; color: var(--cream); }
+.m-coc-items { font-size: 13px; color: rgba(255,255,255,0.6); line-height: 1.5; margin-bottom: 10px; }
+.m-coc-status {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px; border-radius: 10px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(212,160,67,0.12);
+}
+.m-coc-status-icon { font-size: 20px; flex-shrink: 0; line-height: 1.2; }
+.m-coc-status-body { flex: 1; }
+.m-coc-status-text { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.85); line-height: 1.4; }
+.m-coc-wait { font-size: 12px; color: var(--gold); margin-top: 3px; }
+
+/* Account loading / empty states */
+.m-account-loading {
+  padding: 20px 16px; text-align: center;
+  font-size: 13px; color: rgba(255,255,255,0.4);
+}
+.m-stamp-progress {
+  margin-top: 10px; font-size: 12px; color: rgba(255,255,255,0.45); text-align: center;
 }
 
 /* Order history */
@@ -1617,35 +1648,38 @@ html { scroll-behavior: smooth; }
 
   <!-- ACCOUNT
        Three states — all present in DOM, JS shows/hides.
-       acct-logged-out   → shown when no Firebase user
-       acct-logged-in    → shown when authenticated
-         acct-current-orders → shown only when active orders exist
-         acct-stamps-grid    → stamp circles, JS fills based on count
-         acct-history-list   → JS populates history items
-         acct-history-empty  → shown when no history
+       m-account-out     → shown when no Firebase user
+       m-account-in      → shown when authenticated
+         m-current-orders-section → shown only when active orders exist
+         m-current-orders-list    → JS injects .m-current-order-card per active order
+         m-stamps-grid            → JS regenerates stamp dots (10 total, filled by count)
+         m-stamp-progress         → JS updates "X of 10 stamps collected" text
+         m-offers-list            → JS injects offer cards
+         m-order-history-list     → JS injects history items
+         m-order-history-empty    → shown when no history
   -->
   <div id="page-account" class="page">
 
     <!-- ── LOGGED OUT ── -->
-    <div id="acct-logged-out">
+    <div id="m-account-out">
       <div class="m-acct-logout-wrap">
         <div class="m-acct-logout-icon">👤</div>
         <div class="m-acct-logout-title">Your Account</div>
         <p class="m-acct-logout-sub">Sign in to track your orders, collect loyalty stamps, and access exclusive offers.</p>
-        <button class="m-btn" style="margin:0;width:100%;max-width:280px;" onclick="acctSignIn()">📱 Sign In</button>
+        <button class="m-btn" style="margin:0;width:100%;max-width:280px;" onclick="accountSignIn()">📱 Sign In</button>
       </div>
     </div>
 
     <!-- ── LOGGED IN ── -->
-    <div id="acct-logged-in" style="display:none;">
+    <div id="m-account-in" style="display:none;">
 
-      <!-- Welcome -->
-      <div class="m-acct-welcome">Hi, <span id="acct-first-name">there</span> 👋</div>
+      <!-- Welcome — full text set by JS -->
+      <div id="m-account-name" class="m-acct-welcome">Welcome!</div>
 
       <!-- Live Orders (shown only when active orders exist) -->
-      <div id="acct-current-orders" style="display:none;">
+      <div id="m-current-orders-section" style="display:none;">
         <div class="m-acct-section-label">🔴 Live Orders</div>
-        <div id="acct-orders-list">
+        <div id="m-current-orders-list">
           <!-- JS injects one .m-current-order-card per active order -->
         </div>
       </div>
@@ -1658,45 +1692,41 @@ html { scroll-behavior: smooth; }
           <div class="m-coming-badge">Coming soon</div>
         </div>
         <div class="m-stamp-sub">Buy 9 pizzas, get your 10th free 🍕</div>
-        <div class="m-stamps-grid" id="acct-stamps-grid">
-          <!-- 10 stamps — JS adds/removes .filled class based on stamp count -->
-          <div class="m-stamp">🍕</div>
-          <div class="m-stamp">🍕</div>
-          <div class="m-stamp">🍕</div>
-          <div class="m-stamp">🍕</div>
-          <div class="m-stamp">🍕</div>
-          <div class="m-stamp">🍕</div>
-          <div class="m-stamp">🍕</div>
-          <div class="m-stamp">🍕</div>
-          <div class="m-stamp">🍕</div>
-          <div class="m-stamp">🍕</div>
+        <div class="m-stamps-grid" id="m-stamps-grid">
+          <!-- JS regenerates these as .m-stamp-dot / .m-stamp-dot.filled -->
+          <div class="m-stamp-dot">🍕</div>
+          <div class="m-stamp-dot">🍕</div>
+          <div class="m-stamp-dot">🍕</div>
+          <div class="m-stamp-dot">🍕</div>
+          <div class="m-stamp-dot">🍕</div>
+          <div class="m-stamp-dot">🍕</div>
+          <div class="m-stamp-dot">🍕</div>
+          <div class="m-stamp-dot">🍕</div>
+          <div class="m-stamp-dot">🍕</div>
+          <div class="m-stamp-dot">🍕</div>
         </div>
+        <div id="m-stamp-progress" class="m-stamp-progress">0 of 10 stamps collected</div>
       </div>
 
-      <!-- Offers -->
+      <!-- Offers — JS populates via renderAccountOffers() -->
       <div class="m-acct-section-label">🎁 Offers</div>
-      <div class="m-offer-card">
-        <div class="m-offer-icon">🎉</div>
-        <div>
-          <div class="m-offer-title">Welcome Offer</div>
-          <div class="m-offer-desc">10% off your second order — a little thank you from Daniele &amp; Danielle.</div>
-          <div class="m-offer-coming">Coming soon</div>
-        </div>
+      <div id="m-offers-list">
+        <!-- JS injects offer cards here -->
       </div>
 
-      <!-- Order History -->
+      <!-- Order History — JS populates via loadUserOrders() -->
       <div class="m-acct-section-label">📋 Order History</div>
-      <div id="acct-history-list">
+      <div id="m-order-history-list">
         <!-- JS injects .m-history-item elements -->
       </div>
-      <div id="acct-history-empty" class="m-acct-empty-history" style="display:none;">
+      <div id="m-order-history-empty" class="m-acct-empty-history" style="display:none;">
         No orders yet — your first pizza is waiting 🍕
       </div>
 
       <!-- Sign Out -->
-      <button class="m-signout-btn" onclick="acctSignOut()">Sign Out</button>
+      <button class="m-signout-btn" onclick="accountSignOut()">Sign Out</button>
 
-    </div><!-- /acct-logged-in -->
+    </div><!-- /m-account-in -->
 
   </div><!-- /page-account -->
 

@@ -1483,7 +1483,7 @@ function renderAccountOffers() {
         <div class="m-offer-title">Welcome Offer</div>
         <div class="m-offer-desc">10% off your next order — launching soon</div>
       </div>
-      <div class="m-offer-badge">Locked</div>
+      <div class="m-offer-badge">Coming soon</div>
     </div>
     <div class="m-offer-card">
       <div class="m-offer-icon">🍕</div>
@@ -1491,7 +1491,7 @@ function renderAccountOffers() {
         <div class="m-offer-title">Buy 9, Get 1 Free</div>
         <div class="m-offer-desc">Collect 9 stamps to unlock your free pizza</div>
       </div>
-      <div class="m-offer-badge">Locked</div>
+      <div class="m-offer-badge">Coming soon</div>
     </div>`;
 }
 
@@ -1563,7 +1563,7 @@ function loadUserOrders(uid) {
         console.warn('[Stalliq] Check the Firestore console — it will show a direct link to create it.');
       }
       if (historyList) {
-        historyList.innerHTML = `<div class="m-account-empty"><p>Could not load orders — please try again.</p></div>`;
+        historyList.innerHTML = `<div class="m-account-loading">Could not load orders — please try again.</div>`;
       }
     });
 }
