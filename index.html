@@ -18,22 +18,26 @@
 <style>
 /* ═══════════════════════════════════════
    SHARED VARIABLES
+   COLOUR NOTES (Session 12):
+   --fire was #C8410B (HSL 19° — orange). Now #C4271A (HSL 5° — true red).
+   --ember follows as a brighter red hover, not orange hover.
+   --text-muted raised from 0.45 to 0.55 — was failing WCAG AA on dark bg.
 ═══════════════════════════════════════ */
 :root {
-  --fire:   #C8410B;
+  --fire:   #C4271A;
   --gold:   #D4A043;
   --cream:  #FDF6EC;
   --dark:   #1A0A00;
   --char:   #2C1A0A;
   --smoke:  #5C3D1E;
-  --ember:  #E85D2A;
+  --ember:  #D93B25;
   --ash:    #8B6347;
   --gold-pale: rgba(212,160,67,0.10);
   --gold-mid:  rgba(212,160,67,0.22);
   --gold-rule: rgba(212,160,67,0.12);
   --text-primary:   rgba(253,246,236,0.95);
   --text-secondary: rgba(253,246,236,0.75);
-  --text-muted:     rgba(253,246,236,0.45);
+  --text-muted:     rgba(253,246,236,0.55);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -64,6 +68,39 @@ html { scroll-behavior: smooth; }
               transform 0.75s cubic-bezier(0.16,1,0.3,1) var(--reveal-delay, 0ms);
 }
 .reveal.visible { opacity: 1; transform: none; }
+
+/* ═══════════════════════════════════════
+   DIETARY BADGES
+   CSS pills — consistent cross-device vs emoji circles
+═══════════════════════════════════════ */
+.diet-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 20px;
+  white-space: nowrap;
+  vertical-align: middle;
+  line-height: 1.6;
+}
+.diet-badge-ve {
+  background: rgba(30,130,30,0.18);
+  border: 1px solid rgba(30,130,30,0.40);
+  color: #5CB85C;
+}
+.diet-badge-v {
+  background: rgba(100,180,100,0.15);
+  border: 1px solid rgba(100,180,100,0.35);
+  color: #8BC34A;
+}
+.diet-badge-hot {
+  background: rgba(196,39,26,0.14);
+  border: 1px solid rgba(196,39,26,0.35);
+  color: #E57373;
+}
 
 /* ═══════════════════════════════════════
    DESKTOP SITE
@@ -264,7 +301,7 @@ html { scroll-behavior: smooth; }
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  box-shadow: 0 6px 24px rgba(200,65,11,0.35);
+  box-shadow: 0 6px 24px rgba(196,39,26,0.35);
   transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
   border: none;
   cursor: pointer;
@@ -273,7 +310,7 @@ html { scroll-behavior: smooth; }
 .d-btn-primary:hover {
   background: var(--ember);
   transform: translateY(-2px);
-  box-shadow: 0 10px 32px rgba(200,65,11,0.5);
+  box-shadow: 0 10px 32px rgba(196,39,26,0.5);
 }
 .d-btn-ghost {
   display: inline-flex;
@@ -335,9 +372,65 @@ html { scroll-behavior: smooth; }
 }
 
 /* ─── MENU SECTION ─── */
+/* Cream background breaks the all-dark monotony and makes menu the visual hero */
 #d-menu {
-  background: linear-gradient(180deg, #3A2010 0%, #2C1A0A 100%);
+  background: #F5ECD6;
 }
+
+/* Scoped text overrides for cream bg — dark text reads cleanly on light */
+#d-menu .d-eyebrow { color: var(--fire); }
+#d-menu .d-eyebrow::after { background: var(--fire); opacity: 0.45; }
+#d-menu .d-title { color: var(--dark); }
+#d-menu .d-title em { color: var(--fire); }
+#d-menu .d-menu-header-note { color: rgba(26,10,0,0.55); }
+#d-menu .d-menu-note { color: rgba(26,10,0,0.45); }
+
+/* Cards on cream — light card with true red accents, high contrast */
+#d-menu .d-pizza-card {
+  background: rgba(255,250,244,0.96);
+  border: 1px solid rgba(196,39,26,0.12);
+  border-left: 3px solid rgba(196,39,26,0.38);
+  box-shadow: 0 2px 12px rgba(26,10,0,0.06);
+}
+#d-menu .d-pizza-card:hover {
+  border-color: rgba(196,39,26,0.32);
+  border-left-color: var(--fire);
+  box-shadow: 0 20px 48px rgba(26,10,0,0.12);
+}
+#d-menu .d-pizza-no-img {
+  background: linear-gradient(135deg, rgba(196,39,26,0.05), rgba(26,10,0,0.03));
+  border-bottom: 1px solid rgba(26,10,0,0.06);
+}
+#d-menu .d-pizza-no-img-num { color: rgba(196,39,26,0.10); }
+#d-menu .d-pizza-img-wrap::after {
+  background: linear-gradient(to top, rgba(255,250,244,0.55), transparent);
+}
+#d-menu .d-pizza-name { color: var(--dark); }
+#d-menu .d-pizza-desc { color: rgba(26,10,0,0.58); }
+#d-menu .d-pizza-price { color: var(--fire); }
+#d-menu .d-pizza-footer { border-top-color: rgba(26,10,0,0.08); }
+#d-menu .d-pizza-diet {
+  background: rgba(196,39,26,0.07);
+  border: 1px solid rgba(196,39,26,0.20);
+  color: var(--fire);
+}
+#d-menu .d-qty-btn {
+  border-color: rgba(26,10,0,0.18);
+  color: rgba(26,10,0,0.45);
+}
+#d-menu .d-qty-btn:hover { border-color: var(--fire); color: var(--fire); }
+#d-menu .d-qty-btn.add {
+  background: var(--fire);
+  border-color: var(--fire);
+  color: white;
+}
+#d-menu .d-qty-btn.add:hover {
+  background: var(--ember);
+  border-color: var(--ember);
+  color: white;
+}
+#d-menu .d-qty-num { color: var(--dark); }
+
 .d-menu-inner {
   max-width: 1280px;
   margin: 0 auto;
@@ -403,7 +496,7 @@ html { scroll-behavior: smooth; }
 }
 .d-pizza-no-img {
   width: 100%; height: 80px;
-  background: linear-gradient(135deg, rgba(212,160,67,0.08), rgba(200,65,11,0.06));
+  background: linear-gradient(135deg, rgba(212,160,67,0.08), rgba(196,39,26,0.06));
   display: flex; align-items: center; justify-content: center;
   border-bottom: 1px solid rgba(212,160,67,0.1);
 }
@@ -469,6 +562,7 @@ html { scroll-behavior: smooth; }
   font-family: 'Cormorant Garamond', serif;
   font-size: 16px; font-style: italic;
   color: var(--text-secondary); letter-spacing: 0.04em;
+  display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;
 }
 
 /* ─── ABOUT / STORY ─── */
@@ -621,10 +715,10 @@ html { scroll-behavior: smooth; }
   font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
   letter-spacing: 0.04em; cursor: pointer;
   display: none; align-items: center; gap: 10px;
-  box-shadow: 0 8px 32px rgba(200,65,11,0.5);
+  box-shadow: 0 8px 32px rgba(196,39,26,0.5);
   transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
 }
-.d-basket-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(200,65,11,0.6); background: var(--ember); }
+.d-basket-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(196,39,26,0.62); background: var(--ember); }
 .d-basket-btn.show { display: flex; }
 .d-basket-count {
   background: white; color: var(--fire); border-radius: 50%;
@@ -771,29 +865,31 @@ html { scroll-behavior: smooth; }
 .m-pill-text span { font-size: 13px; color: rgba(253,246,236,0.55); }
 .m-btn {
   display: block; margin: 8px 16px 20px;
-  background: linear-gradient(135deg, var(--fire), #A83200);
+  background: linear-gradient(135deg, var(--fire), #8B1810);
   color: var(--cream); border: none; border-radius: 14px; padding: 16px;
   font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600;
   cursor: pointer; text-align: center; letter-spacing: 0.02em;
-  box-shadow: 0 4px 20px rgba(200,65,11,0.35);
+  box-shadow: 0 4px 20px rgba(196,39,26,0.35);
 }
 .m-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .m-menu-card-img { width: 100%; height: 140px; object-fit: cover; object-position: center; display: block; border-radius: 12px 12px 0 0; border-bottom: 1px solid rgba(212,160,67,0.12); }
 .m-menu-card.has-image { flex-direction: column; align-items: stretch; padding: 0; }
 .m-menu-card.has-image .m-card-info { padding: 14px 14px 10px; }
 .m-menu-card.has-image .m-card-controls { padding: 0 14px 14px; justify-content: flex-end; }
-.diet-legend { display: flex; gap: 16px; padding: 0 16px 16px; flex-wrap: wrap; }
-.diet-legend span { font-size: 12px; color: rgba(253,246,236,0.6); }
+
+/* Dietary legend — CSS badge pills, consistent cross-device */
+.diet-legend { display: flex; gap: 8px; padding: 0 16px 16px; flex-wrap: wrap; align-items: center; }
+
 .m-menu-list { padding: 0 16px; display: flex; flex-direction: column; gap: 12px; }
 .m-menu-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(212,160,67,0.15); border-radius: 16px; padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .m-card-info { flex: 1; min-width: 0; }
 .m-card-name { font-size: 15px; font-weight: 600; color: var(--cream); margin-bottom: 3px; }
 .m-card-desc { font-size: 12px; color: rgba(253,246,236,0.75); line-height: 1.4; margin-bottom: 6px; }
 .m-card-price { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 700; color: var(--gold); }
-.m-card-diet { font-size: 11px; color: rgba(253,246,236,0.45); margin-left: 6px; }
+.m-card-diet { font-size: 11px; color: rgba(253,246,236,0.55); margin-left: 6px; }
 .m-card-controls { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .qty-btn { width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid rgba(212,160,67,0.4); background: transparent; color: var(--gold); font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; line-height: 1; font-family: 'DM Sans', sans-serif; }
-.qty-btn.add { background: linear-gradient(135deg, var(--fire), #A83200); border-color: var(--fire); color: var(--cream); }
+.qty-btn.add { background: linear-gradient(135deg, var(--fire), #8B1810); border-color: var(--fire); color: var(--cream); }
 .qty-display { font-size: 15px; font-weight: 600; color: var(--cream); min-width: 20px; text-align: center; }
 .m-basket-empty { text-align: center; padding: 60px 24px; color: rgba(253,246,236,0.4); }
 .m-basket-empty .ei { font-size: 48px; margin-bottom: 12px; }
@@ -806,7 +902,7 @@ html { scroll-behavior: smooth; }
 .m-basket-total { margin: 16px 16px 0; background: rgba(212,160,67,0.08); border: 1px solid rgba(212,160,67,0.25); border-radius: 14px; padding: 16px; display: flex; justify-content: space-between; align-items: center; }
 .m-total-label { font-size: 14px; color: rgba(253,246,236,0.7); }
 .m-total-amount { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; color: var(--gold); }
-.m-payment-note { margin: 12px 16px 0; font-size: 13px; color: rgba(253,246,236,0.45); text-align: center; line-height: 1.5; }
+.m-payment-note { margin: 12px 16px 0; font-size: 13px; color: rgba(253,246,236,0.55); text-align: center; line-height: 1.5; }
 #m-order-err { color: #ff8080; font-size: 13px; text-align: center; padding: 0 16px; margin-top: 8px; min-height: 18px; }
 .m-about-bar { padding: 20px 16px 16px; text-align: center; border-bottom: 1px solid rgba(212,160,67,0.12); }
 .m-about-bar p { font-size: 13px; color: rgba(253,246,236,0.55); line-height: 1.6; margin-top: 4px; }
@@ -828,7 +924,7 @@ html { scroll-behavior: smooth; }
 .m-value-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(212,160,67,0.12); border-radius: 12px; padding: 14px 12px; text-align: center; }
 .m-value-icon { font-size: 24px; margin-bottom: 6px; }
 .m-value-name { font-size: 12px; font-weight: 700; color: var(--cream); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 3px; }
-.m-value-desc { font-size: 11px; color: rgba(253,246,236,0.45); line-height: 1.4; }
+.m-value-desc { font-size: 11px; color: rgba(253,246,236,0.55); line-height: 1.4; }
 .m-contact-list { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
 .m-contact-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(212,160,67,0.12); border-radius: 14px; padding: 16px; display: flex; align-items: center; gap: 14px; text-decoration: none; }
 .m-ci { width: 44px; height: 44px; border-radius: 12px; background: rgba(212,160,67,0.12); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
@@ -850,7 +946,7 @@ html { scroll-behavior: smooth; }
 .m-confirm-icon { font-size: 64px; margin-bottom: 16px; }
 .m-confirm-title { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; color: var(--cream); margin-bottom: 8px; }
 .m-confirm-time { font-size: 48px; font-weight: 700; color: var(--gold); font-family: 'Playfair Display', serif; margin: 12px 0 4px; }
-.m-confirm-timelabel { font-size: 13px; color: rgba(253,246,236,0.5); margin-bottom: 20px; }
+.m-confirm-timelabel { font-size: 13px; color: rgba(253,246,236,0.55); margin-bottom: 20px; }
 .m-confirm-ref { font-size: 13px; color: var(--ash); margin-bottom: 8px; }
 .m-confirm-details { background: rgba(255,255,255,0.05); border: 1px solid rgba(212,160,67,0.15); border-radius: 14px; padding: 16px; width: 100%; max-width: 320px; margin: 12px 0 20px; text-align: left; }
 .m-confirm-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; color: rgba(253,246,236,0.65); }
@@ -872,14 +968,14 @@ html { scroll-behavior: smooth; }
 .m-coming-badge { font-size: 10px; padding: 3px 8px; border-radius: 20px; background: rgba(212,160,67,0.15); border: 1px solid rgba(212,160,67,0.3); color: var(--gold); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
 .m-stamp-sub { font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 14px; }
 .m-stamps-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-.m-stamp-dot { aspect-ratio: 1; border-radius: 50%; border: 1.5px solid rgba(212,160,67,0.25); background: transparent; display: flex; align-items: center; justify-content: center; font-size: 15px; transition: all 0.2s; opacity: 0.35; }
-.m-stamp-dot.filled { background: linear-gradient(135deg, var(--fire), #A83200); border-color: var(--fire); box-shadow: 0 2px 10px rgba(200,65,11,0.45); opacity: 1; }
-.m-offer-card { margin: 0 16px 10px; background: linear-gradient(135deg, rgba(200,65,11,0.12), rgba(44,26,10,0.5)); border: 1px solid rgba(200,65,11,0.25); border-radius: 16px; padding: 16px; display: flex; gap: 14px; align-items: center; }
+.m-stamp-dot { aspect-ratio: 1; border-radius: 50%; border: 1.5px solid rgba(212,160,67,0.3); background: transparent; display: flex; align-items: center; justify-content: center; font-size: 15px; transition: all 0.2s; opacity: 0.4; }
+.m-stamp-dot.filled { background: linear-gradient(135deg, var(--fire), #8B1810); border-color: var(--fire); box-shadow: 0 2px 10px rgba(196,39,26,0.45); opacity: 1; }
+.m-offer-card { margin: 0 16px 10px; background: linear-gradient(135deg, rgba(196,39,26,0.10), rgba(44,26,10,0.5)); border: 1px solid rgba(196,39,26,0.22); border-radius: 16px; padding: 16px; display: flex; gap: 14px; align-items: center; }
 .m-offer-icon { font-size: 30px; flex-shrink: 0; }
 .m-offer-body { flex: 1; }
 .m-offer-title { font-size: 15px; font-weight: 700; color: var(--cream); margin-bottom: 3px; }
 .m-offer-desc { font-size: 12px; color: rgba(255,255,255,0.6); line-height: 1.4; }
-.m-offer-badge { font-size: 10px; padding: 3px 8px; border-radius: 20px; flex-shrink: 0; background: rgba(200,65,11,0.2); border: 1px solid rgba(200,65,11,0.35); color: var(--ember); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+.m-offer-badge { font-size: 10px; padding: 3px 8px; border-radius: 20px; flex-shrink: 0; background: rgba(196,39,26,0.18); border: 1px solid rgba(196,39,26,0.35); color: var(--ember); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
 .m-coc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .m-coc-ref { font-family: 'Playfair Display', serif; font-size: 15px; font-weight: 700; color: var(--gold); }
 .m-coc-total { font-family: 'Playfair Display', serif; font-size: 15px; font-weight: 700; color: var(--cream); }
@@ -899,14 +995,14 @@ html { scroll-behavior: smooth; }
 .m-history-footer { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .m-history-total { font-family: 'Playfair Display', serif; font-size: 16px; color: var(--gold); font-weight: 700; }
 .m-history-status { font-size: 11px; padding: 3px 8px; border-radius: 20px; }
-.m-reorder-btn { font-size: 12px; padding: 5px 12px; border-radius: 20px; background: rgba(200,65,11,0.18); border: 1px solid rgba(200,65,11,0.4); color: var(--ember); font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; white-space: nowrap; transition: background 0.2s, border-color 0.2s; flex-shrink: 0; }
-.m-reorder-btn:hover { background: rgba(200,65,11,0.32); border-color: rgba(200,65,11,0.6); }
+.m-reorder-btn { font-size: 12px; padding: 5px 12px; border-radius: 20px; background: rgba(196,39,26,0.16); border: 1px solid rgba(196,39,26,0.38); color: var(--ember); font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; white-space: nowrap; transition: background 0.2s, border-color 0.2s; flex-shrink: 0; }
+.m-reorder-btn:hover { background: rgba(196,39,26,0.30); border-color: rgba(196,39,26,0.55); }
 .m-acct-empty-history { padding: 20px 16px 8px; text-align: center; font-size: 13px; color: rgba(255,255,255,0.35); line-height: 1.6; }
 .m-signout-btn { display: block; margin: 8px 16px 24px; background: transparent; color: rgba(255,255,255,0.35); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 14px 16px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; text-align: center; transition: all 0.2s; width: calc(100% - 32px); }
 .m-signout-btn:hover { color: rgba(255,255,255,0.6); border-color: rgba(255,255,255,0.22); }
 .status-pending   { background: rgba(255,200,50,0.15);  color: #FFD040; border: 1px solid rgba(255,200,50,0.3); }
 .status-accepted  { background: rgba(80,160,255,0.15);  color: #70B8FF; border: 1px solid rgba(80,160,255,0.3); }
-.status-preparing { background: rgba(255,130,50,0.15);  color: var(--ember); border: 1px solid rgba(255,130,50,0.3); }
+.status-preparing { background: rgba(217,59,37,0.15);   color: var(--ember); border: 1px solid rgba(217,59,37,0.3); }
 .status-ready     { background: rgba(80,200,80,0.15);   color: #60D060;  border: 1px solid rgba(80,200,80,0.3); }
 .status-collected { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.15); }
 .status-cancelled { background: rgba(255,80,80,0.12);   color: #FF8080;  border: 1px solid rgba(255,80,80,0.25); }
@@ -943,8 +1039,8 @@ html { scroll-behavior: smooth; }
 .auth-input { width: 100%; padding: 13px 16px; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(212,160,67,0.2); border-radius: 12px; color: var(--cream); font-size: 17px; font-family: 'DM Sans', sans-serif; outline: none; transition: border-color 0.2s; }
 .auth-input:focus { border-color: var(--gold); }
 .auth-code-input { text-align: center !important; letter-spacing: 0.4em; font-size: 22px !important; }
-.auth-primary-btn { width: 100%; padding: 15px; background: linear-gradient(135deg, var(--fire), #A83200); color: white; border: none; border-radius: 14px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; margin-bottom: 10px; box-shadow: 0 4px 20px rgba(200,65,11,0.3); transition: transform 0.15s, box-shadow 0.15s; }
-.auth-primary-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(200,65,11,0.4); }
+.auth-primary-btn { width: 100%; padding: 15px; background: linear-gradient(135deg, var(--fire), #8B1810); color: white; border: none; border-radius: 14px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; margin-bottom: 10px; box-shadow: 0 4px 20px rgba(196,39,26,0.3); transition: transform 0.15s, box-shadow 0.15s; }
+.auth-primary-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(196,39,26,0.42); }
 .auth-primary-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 .auth-err { color: #ff8080; font-size: 13px; margin-top: 10px; min-height: 18px; line-height: 1.4; }
 
@@ -1037,7 +1133,11 @@ html { scroll-behavior: smooth; }
         </p>
       </div>
       <div class="d-menu-grid" id="d-menu-grid"></div>
-      <p class="d-menu-note reveal">VE — Vegan &nbsp;·&nbsp; V — Vegetarian &nbsp;·&nbsp; 🌶 Contains chilli</p>
+      <p class="d-menu-note reveal">
+        <span class="diet-badge diet-badge-ve">VE</span> Vegan &nbsp;·&nbsp;
+        <span class="diet-badge diet-badge-v">V</span> Vegetarian &nbsp;·&nbsp;
+        <span class="diet-badge diet-badge-hot">🌶</span> Contains chilli
+      </p>
     </div>
   </section>
 
@@ -1231,7 +1331,11 @@ html { scroll-behavior: smooth; }
   <div id="page-menu" class="page">
     <div class="m-section-header">Our Menu</div>
     <div class="m-section-sub">All pizzas fresh to order · Pay on collection</div>
-    <div class="diet-legend"><span>🟢 VE = Vegan</span><span>🟡 V = Vegetarian</span><span>🌶️ = Spicy</span></div>
+    <div class="diet-legend">
+      <span class="diet-badge diet-badge-ve">VE = Vegan</span>
+      <span class="diet-badge diet-badge-v">V = Vegetarian</span>
+      <span class="diet-badge diet-badge-hot">🌶 Spicy</span>
+    </div>
     <div class="m-menu-list" id="m-menu-list"></div>
   </div>
 
