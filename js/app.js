@@ -617,6 +617,25 @@ function renderMobileMenu() {
          <button class="qty-btn add" onclick="mQty(${item.id}, 1)">+</button>`
       : `<button class="qty-btn add" onclick="mQty(${item.id}, 1)">+</button>`;
     const dietTag = item.diet ? ` <span class="m-card-diet">${esc(item.diet)}</span>` : '';
+
+    // Image support — only use URL if it looks like a real URL
+    const imgUrl = item.image && item.image.startsWith('http') ? item.image : null;
+
+    if (imgUrl) {
+      // Image card — stacked layout with photo at top
+      return `
+        <div class="m-menu-card has-image">
+          <img class="m-menu-card-img" src="${imgUrl}" alt="${esc(item.name)}" loading="lazy">
+          <div class="m-card-info">
+            <div class="m-card-name">${esc(item.name)}${dietTag}</div>
+            <div class="m-card-desc">${esc(item.desc)}</div>
+            <div class="m-card-price">${CONFIG.business.currency}${item.price.toFixed(2)}</div>
+          </div>
+          <div class="m-card-controls">${controls}</div>
+        </div>`;
+    }
+
+    // No image — original side-by-side layout
     return `
       <div class="m-menu-card">
         <div class="m-card-info">
