@@ -207,8 +207,9 @@ function renderDesktopNav() {
     const last  = parts.pop();
     logo.innerHTML = `${parts.join(' ')} <span>${last}</span>`;
   }
+  // Nav CTA — "Order Now", no emoji
   const navCta = document.querySelector('.d-nav-cta');
-  if (navCta) navCta.textContent = CONFIG.hero.navCta;
+  if (navCta) navCta.textContent = 'Order Now';
 }
 
 function renderDesktopHero() {
@@ -217,57 +218,79 @@ function renderDesktopHero() {
   set('.d-hero-eyebrow',  h.eyebrow);
   set('.d-hero-title',    `${h.titleLine1}<br><em>${h.titleLine2}</em>`);
   set('.d-hero-sub',      h.subtitle.replace(/&/g, '&amp;'));
+  // Strip emoji from desktop hero buttons — text only on desktop
+  const stripEmoji = s => s.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
   const primary   = document.querySelector('.d-btn-primary');
   const secondary = document.querySelector('.d-btn-ghost');
-  if (primary)   primary.textContent   = h.ctaPrimary;
-  if (secondary) secondary.textContent = h.ctaSecondary;
+  if (primary)   primary.textContent   = stripEmoji(h.ctaPrimary);
+  if (secondary) secondary.textContent = stripEmoji(h.ctaSecondary);
 }
 
 
 /* ============================================================================
-   6. DESKTOP — STRIP BAR
+   6. DESKTOP — CREDENTIAL LINE (replaces strip bar)
+   Reads CONFIG.stripItems but renders as refined text inside the hero,
+   not a full-width coloured band.
    ============================================================================ */
 function renderDesktopStrip() {
-  const strip = document.querySelector('.d-strip');
-  if (!strip) return;
-  strip.innerHTML = CONFIG.stripItems
-    .map(i => `<div class="d-strip-item"><span>${i.icon}</span> ${i.text}</div>`)
+  const el = document.getElementById('d-hero-credentials');
+  if (!el || !CONFIG.stripItems || CONFIG.stripItems.length === 0) return;
+  el.innerHTML = CONFIG.stripItems
+    .map((item, i) => {
+      const sep = i < CONFIG.stripItems.length - 1
+        ? `<span class="d-cred-sep">·</span>`
+        : '';
+      return `<span class="d-cred-item">${item.text}</span>${sep}`;
+    })
     .join('');
 }
 
 
 /* ============================================================================
-   7. DESKTOP — MENU
+   7. DESKTOP — MENU (editorial list)
+   ============================================================================
+   Renders as a typographic list: number · name + description · price · qty.
+   Each item separated by a thin gold rule. No card grid.
+   Staggered reveal: each row gets --reveal-delay set inline.
    esc() applied to all sheet-sourced fields: name, desc, diet.
    ============================================================================ */
 function renderDesktopMenu() {
-  const grid = document.getElementById('d-menu-grid');
-  if (!grid) return;
+  const list = document.getElementById('d-menu-list');
+  if (!list) return;
 
   const items = menuData.filter(m => m.available !== false);
 
-  grid.innerHTML = items.map((item, i) => {
+  list.innerHTML = items.map((item, i) => {
     const qty = basket[item.id] || 0;
+    const num = String(i + 1).padStart(2, '0');
+
     const controls = qty > 0
       ? `<button class="d-qty-btn"     data-id="${item.id}" data-delta="-1">−</button>
          <span   class="d-qty-num">${qty}</span>
          <button class="d-qty-btn add" data-id="${item.id}" data-delta="1">+</button>`
       : `<button class="d-qty-btn add" data-id="${item.id}" data-delta="1">+</button>`;
 
+    const dietTag = item.diet
+      ? `<span class="d-menu-row-diet">${esc(item.diet)}</span>`
+      : '';
+
     return `
-      <div class="d-pizza-card" id="d-card-${item.id}">
-        <div class="d-pizza-num">0${i + 1}</div>
-        <div class="d-pizza-name">${esc(item.name)}</div>
-        <div class="d-pizza-desc">${esc(item.desc)}</div>
-        <div class="d-pizza-footer">
-          <div class="d-pizza-price">${CONFIG.business.currency}${item.price.toFixed(2)}</div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            ${item.diet ? `<div class="d-pizza-diet">${esc(item.diet)}</div>` : ''}
-            ${controls}
+      <div class="d-menu-row reveal" id="d-row-${item.id}" style="--reveal-delay:${i * 65}ms">
+        <div class="d-menu-row-num">${num}</div>
+        <div class="d-menu-row-content">
+          <div class="d-menu-row-header">
+            <div class="d-menu-row-name">${esc(item.name)}</div>
+            ${dietTag}
           </div>
+          ${item.desc ? `<div class="d-menu-row-desc">${esc(item.desc)}</div>` : ''}
         </div>
+        <div class="d-menu-row-price">${CONFIG.business.currency}${item.price.toFixed(2)}</div>
+        <div class="d-menu-row-controls">${controls}</div>
       </div>`;
   }).join('');
+
+  // Re-run scroll reveal so newly rendered rows get observed
+  initScrollReveal();
 }
 
 // Event delegation — catches all qty clicks across desktop menu + basket panel
@@ -311,83 +334,83 @@ function renderDesktopStory() {
 
   const pills = document.querySelector('.d-founders-mini');
   if (pills) {
-    pills.innerHTML = a.founders.map(f => `
-      <div class="d-founder-pill">
-        <div class="d-founder-pill-avatar">${f.avatar}</div>
-        <div class="d-founder-pill-name">${f.name}</div>
-        <div class="d-founder-pill-role">${f.role}</div>
-      </div>`).join('');
+    pills.innerHTML = a.founders.map(f => {
+      // Initials from name — styled circle, no emoji avatar
+      const initials = f.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+      return `
+        <div class="d-founder-pill">
+          <div class="d-founder-pill-avatar">${initials}</div>
+          <div>
+            <div class="d-founder-pill-name">${f.name}</div>
+            <div class="d-founder-pill-role">${f.role}</div>
+          </div>
+        </div>`;
+    }).join('');
   }
 }
 
 
 /* ============================================================================
    9. DESKTOP — VALUES
+   No-op — replaced by static "How It Works" section hardcoded in index.html.
+   CONFIG.values retained for mobile about page via renderMobileAbout().
    ============================================================================ */
 function renderDesktopValues() {
-  const v = CONFIG.values;
-
-  const eyebrow = document.querySelector('#d-values .d-eyebrow');
-  if (eyebrow) eyebrow.textContent = v.eyebrow;
-  const title = document.querySelector('#d-values .d-title');
-  if (title) title.innerHTML = `${v.titleLine1} <em>${v.titleLine2}</em>`;
-
-  const grid = document.querySelector('.d-values-grid');
-  if (grid) {
-    grid.innerHTML = v.items.map(item => `
-      <div class="d-value-card reveal">
-        <div class="d-value-icon">${item.icon}</div>
-        <div class="d-value-name">${item.name}</div>
-        <div class="d-value-desc">${item.desc}</div>
-      </div>`).join('');
-  }
+  // Intentionally empty — desktop values section replaced with
+  // "How It Works" in HTML (#d-howitworks). Mobile still uses CONFIG.values.
 }
 
 
 /* ============================================================================
    10. DESKTOP — CONTACT + EVENTS
-   renderEventsList() reads from eventsData (Section 22b), not CONFIG.events.
+   Contact cards use inline SVG icons — no emoji.
+   renderEventsList() reads from eventsData (Section 22b).
    ============================================================================ */
+
+const SVG_ICONS = {
+  phone: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.28h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7a2 2 0 0 1 1.72 2z"/></svg>`,
+  email: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>`,
+  web:   `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>`,
+  social:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>`
+};
+
 function renderDesktopContact() {
   const c = CONFIG.contact;
-  const grid = document.querySelector('.d-contact-grid');
+  // id-based selector matches new index.html — falls back to class selector
+  const grid = document.getElementById('d-contact-grid') || document.querySelector('.d-contact-grid');
   if (grid) {
     grid.innerHTML = `
       <a href="tel:${c.phone.replace(/\s/g,'')}" class="d-contact-card">
-        <div class="d-contact-icon">📞</div>
-        <div class="d-contact-label">Phone</div>
-        <div class="d-contact-value">${c.phone}</div>
+        <div class="d-contact-icon">${SVG_ICONS.phone}</div>
+        <div><div class="d-contact-label">Phone</div><div class="d-contact-value">${c.phone}</div></div>
       </a>
       <a href="mailto:${c.email}" class="d-contact-card">
-        <div class="d-contact-icon">✉️</div>
-        <div class="d-contact-label">Email</div>
-        <div class="d-contact-value">${c.email}</div>
+        <div class="d-contact-icon">${SVG_ICONS.email}</div>
+        <div><div class="d-contact-label">Email</div><div class="d-contact-value">${c.email}</div></div>
       </a>
       <a href="${c.websiteUrl}" target="_blank" rel="noopener" class="d-contact-card">
-        <div class="d-contact-icon">🌐</div>
-        <div class="d-contact-label">Website</div>
-        <div class="d-contact-value">${c.website}</div>
+        <div class="d-contact-icon">${SVG_ICONS.web}</div>
+        <div><div class="d-contact-label">Website</div><div class="d-contact-value">${c.website}</div></div>
       </a>
       <a href="${c.facebookUrl}" target="_blank" rel="noopener" class="d-contact-card">
-        <div class="d-contact-icon">📘</div>
-        <div class="d-contact-label">Facebook</div>
-        <div class="d-contact-value">${c.facebook}</div>
+        <div class="d-contact-icon">${SVG_ICONS.social}</div>
+        <div><div class="d-contact-label">Facebook</div><div class="d-contact-value">${c.facebook}</div></div>
       </a>`;
   }
 
-  renderEventsList('.d-popup-list', 'd-popup-card', 'd-popup-date', 'd-popup-day', 'd-popup-month', 'd-popup-event', 'd-popup-loc');
+  // id-based selector for new HTML; class-based for old
+  renderEventsList('#d-popup-list, .d-popup-list', 'd-popup-card', 'd-popup-date', 'd-popup-day', 'd-popup-month', 'd-popup-event', 'd-popup-loc');
 }
 
 /**
- * Renders the events/locations list.
- * Reads from eventsData (module-level) — seeded from CONFIG.events or sheet.
+ * Renders the events/locations list from eventsData.
  * esc() applied to event name and location (sheet-sourced).
  */
 function renderEventsList(containerSel, cardCls, dateCls, dayCls, monthCls, nameCls, locCls) {
   const el = document.querySelector(containerSel);
   if (!el) return;
   if (!eventsData || eventsData.length === 0) {
-    el.innerHTML = `<p style="color:rgba(253,246,236,0.45);font-size:14px;">No upcoming events — follow us on socials for updates!</p>`;
+    el.innerHTML = `<p style="color:rgba(253,246,236,0.4);font-size:15px;font-style:italic;font-family:'Cormorant Garamond',serif;">No upcoming events — follow us on socials for updates.</p>`;
     return;
   }
   el.innerHTML = eventsData.map(ev => `
@@ -755,7 +778,7 @@ function renderMobileFindUs() {
    21. SCROLL REVEAL
    ============================================================================ */
 function initScrollReveal() {
-  const els = document.querySelectorAll('.reveal');
+  const els = document.querySelectorAll('.reveal:not(.visible)');
   if (!els.length) return;
   const observer = new IntersectionObserver(entries => {
     entries.forEach(entry => {
@@ -764,7 +787,7 @@ function initScrollReveal() {
         observer.unobserve(entry.target);
       }
     });
-  }, { threshold: 0.12 });
+  }, { threshold: 0.1 });
   els.forEach(el => observer.observe(el));
 }
 
@@ -1190,14 +1213,14 @@ document.addEventListener('DOMContentLoaded', async function () {
     fetchOffersFromSheet()
   ]);
 
-  // ── Desktop renders ───────────────────────────────────────────────────────
+  // Desktop renders
   renderDesktopNav();
   renderDesktopHero();
-  renderDesktopStrip();
-  renderDesktopMenu();
+  renderDesktopStrip();   // → credential line in hero
+  renderDesktopMenu();    // → editorial list
   renderDesktopStory();
-  renderDesktopValues();
-  renderDesktopContact(); // uses eventsData
+  // renderDesktopValues() omitted — How It Works hardcoded in HTML
+  renderDesktopContact(); // uses eventsData, SVG icons
 
   // ── Mobile renders ────────────────────────────────────────────────────────
   renderMobileHome();
