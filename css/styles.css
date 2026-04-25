@@ -115,7 +115,7 @@ html { scroll-behavior: smooth; }
   transition: color 0.2s;
 }
 .d-nav-links a:hover { color: var(--gold); }
-.d-nav-cta { background: var(--fire) !important; color: white !important; padding: 10px 22px; border-radius: 8px; transition: background 0.2s !important; line-height: 1; display: inline-flex; align-items: center; }
+.d-nav-cta { background: var(--fire) !important; color: white !important; padding: 10px 22px !important; border-radius: 8px !important; transition: background 0.2s !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; align-self: center !important; line-height: 1 !important; }
 .d-nav-cta:hover { background: var(--ember) !important; }
 
 
@@ -135,7 +135,7 @@ html { scroll-behavior: smooth; }
   position: absolute; inset: 0;
   background: linear-gradient(105deg, rgba(26,10,0,0.92) 0%, rgba(26,10,0,0.75) 45%, rgba(26,10,0,0.35) 100%);
 }
-.d-hero-content { position: relative; z-index: 2; padding: 88px 60px 24px; max-width: 680px; }
+.d-hero-content { position: relative; z-index: 2; padding: 88px 60px 24px; max-width: 680px; width: 100%; }
 .d-hero-eyebrow {
   display: inline-flex; align-items: center; gap: 10px;
   font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
