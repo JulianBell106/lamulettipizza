@@ -1,5 +1,5 @@
 # Stalliq — Project Bible
-> Last updated: April 2026 — Session 11 Complete (Walk-in Orders + Desktop CSS overhaul)
+> Last updated: April 2026 — Session 12 Complete (Colour & UX overhaul)
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -136,9 +136,10 @@ Firebase SDK (CDN compat v10.12.2) → js/config.js → js/firebase.js → js/ap
 **Mobile nav (6 items):**
 🏠 Home · 🍕 Menu · 🛒 Basket · 👫 About · 📍 Find Us · 👤 Account
 
-**Design tokens:**
-- Primary: `#C8410B` (fire red)
-- Accent: `#D4A043` (gold)
+**Design tokens (current — updated Session 12):**
+- Primary fire: `#C4271A` (true red, HSL 5° — was #C8410B orange at HSL 19°)
+- Ember hover: `#D93B25` (deeper red — was #E85D2A orange)
+- Accent gold: `#D4A043`
 - Background: `#1A0A00` (near black)
 - Light: `#FDF6EC` (cream)
 - Fonts: Playfair Display, DM Sans, Cormorant Garamond
@@ -149,7 +150,15 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 **Contrast values (current):**
 - `--text-primary`:   `rgba(253,246,236,0.95)`
 - `--text-secondary`: `rgba(253,246,236,0.75)`
-- `--text-muted`:     `rgba(253,246,236,0.45)` — UI chrome only, never for readable body text
+- `--text-muted`:     `rgba(253,246,236,0.55)` — raised from 0.45 (Session 12); 0.45 was failing WCAG AA on dark bg
+
+**Colour architecture rules (established Session 12):**
+- `--fire` reserved for: nav CTA, hero primary button, basket button, Place Order button, pizza card left accent border, dietary hot badge, stamp dot fill, auth buttons, basket badge
+- `--gold` reserved for: prices, dates, section eyebrows, founder roles, accent rules, active nav state
+- Fire red and gold must never both appear on the same element — they are separate roles, not interchangeable
+- No cream section backgrounds — the brand is dark. Light/dark rhythm is achieved by varying the darkness of dark sections, not by introducing cream panels
+- Gradient button endpoint: `#8B1810` (dark true red — was #A83200 dark orange)
+- All hardcoded `rgba(200,65,11,...)` shadow values → `rgba(196,39,26,...)`
 
 ---
 
@@ -180,16 +189,17 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 08 | News & Locations Feed | ✅ Done | eventsSheetUrl in config.js, CSV fetch, Find Us page (mobile + desktop), graceful fallback |
 | 09 | Offers | ✅ Done | offersSheetUrl in config.js, CSV fetch, Account page Offers section (mobile + desktop), graceful fallback |
 | 10 | Walk-in Manual Order Entry | ✅ Done | "➕ New Order" on kitchen dashboard — vendor enters walk-up orders, drops into Pending column |
-| 11 | SMS & WhatsApp Status Notifications | ⏳ Planned | Customer notified on order status changes — Twilio. Applies to app orders AND walk-ins with phone number |
-| 12 | Live Location Broadcast | ⏳ Planned | Van location shown live on customer app — foundation for geofence at scale |
-| 13 | Geofence Notifications | ⏳ Planned | Van enters subscriber's area → phone buzzes |
-| 14 | Flash Sales & Broadcasts | ⏳ Planned | Vendor launches deal in seconds, broadcasts to subscribers |
-| 15 | Loyalty Stamp Card | ⏳ Planned | Digital stamp card — no paper needed |
-| 16 | Flash Offers by Geolocation | ⏳ Planned | Customer in area gets notified of live deal |
-| 17 | Pre-order Time Slots | ⏳ Planned | Order now, collect at chosen time |
-| 18 | Vendor Self-Service | ⏳ Planned | Vendor manages own menu, events, location — full self-service portal |
-| 19 | MI & Reporting | ⏳ Planned | Daily order count, revenue totals, product breakdown — CSV or Looker Studio |
-| 20 | AI Order Assist | 🌟 Vision | Customer orders in natural language — type or dictate. AI parses into basket, normal checkout flow. |
+| 11 | Colour & UX Overhaul | ✅ Done | True red token, dietary CSS badges, deeper menu section, card left accent — Session 12 |
+| 12 | SMS & WhatsApp Status Notifications | ⏳ Planned | Customer notified on order status changes — Twilio. Applies to app orders AND walk-ins with phone number |
+| 13 | Live Location Broadcast | ⏳ Planned | Van location shown live on customer app — foundation for geofence at scale |
+| 14 | Geofence Notifications | ⏳ Planned | Van enters subscriber's area → phone buzzes |
+| 15 | Flash Sales & Broadcasts | ⏳ Planned | Vendor launches deal in seconds, broadcasts to subscribers |
+| 16 | Loyalty Stamp Card | ⏳ Planned | Digital stamp card — no paper needed |
+| 17 | Flash Offers by Geolocation | ⏳ Planned | Customer in area gets notified of live deal |
+| 18 | Pre-order Time Slots | ⏳ Planned | Order now, collect at chosen time |
+| 19 | Vendor Self-Service | ⏳ Planned | Vendor manages own menu, events, location — full self-service portal |
+| 20 | MI & Reporting | ⏳ Planned | Daily order count, revenue totals, product breakdown — CSV or Looker Studio |
+| 21 | AI Order Assist | 🌟 Vision | Customer orders in natural language — type or dictate. AI parses into basket, normal checkout flow. |
 
 **Feature backlog (future):**
 - Item notes (per-item text input in basket — data model already supports `notes: null`)
@@ -217,7 +227,7 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 10b | Desktop UX Redesign | ✅ Premium redesign: editorial menu, no strip bar, SVG icons, How It Works, noise texture, staggered reveals |
 | 10c | Menu images + contrast sweep | ✅ Food photos via Google Sheet image column, mobile image cards, all brown-on-brown text fixed |
 | 11 | Walk-in Manual Order Entry + Desktop CSS overhaul | ✅ Walk-in orders on kitchen dashboard; full index.html CSS rebuild |
-| 12 | Demo polish | End-to-end demo reset function, rough edges removed |
+| 12 | Colour & UX overhaul | ✅ True red token, dietary badges, deeper menu section, card accent — index.html only |
 | 13 | Pitch deck update | Stalliq rebrand, kitchen co-pilot angle, roadmap slide with vision features |
 
 **What gets demoed live at the meeting:**
@@ -260,7 +270,7 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | +44 7700 900004 | 123456 |
 | +44 7700 900005 | 123456 |
 
-⚠️ **Real numbers should never be used for testing** — Firebase throttles/blocks repeated SMS to the same number. Use test numbers only.
+⚠️ **Real numbers must never be used for testing** — Firebase throttles/blocks repeated SMS to the same number. Use test numbers only.
 
 **Order flow:**
 1. Customer places order → status: `pending`
@@ -414,12 +424,45 @@ All fetches run concurrently via `Promise.all` at init. Graceful fallback to `CO
 
 ---
 
-## 13. Desktop Site — Architecture & CSS Notes
+## 13. Colour & UX Overhaul — ✅ COMPLETE (Session 12)
+
+**Root cause identified:** The entire palette lived within a ~20° hue arc (HSL 15–40°). Background, primary CTA, and accent gold were all in the same warm orange-brown thermal register. No hue contrast — only lightness contrast. Buttons glowed weakly. Sections blurred together.
+
+**Changes made to `index.html` only:**
+
+| What | Before | After | Reason |
+|------|--------|-------|--------|
+| `--fire` | `#C8410B` (HSL 19° — orange) | `#C4271A` (HSL 5° — true red) | Orange on dark brown = low contrast; red pops cleanly |
+| `--ember` | `#E85D2A` (orange hover) | `#D93B25` (red hover) | Hover state must follow the base shift |
+| `--text-muted` | `rgba(253,246,236,0.45)` | `rgba(253,246,236,0.55)` | 0.45 was ~3.2:1 contrast — failing WCAG AA |
+| Gradient endpoint | `#A83200` (dark orange) | `#8B1810` (dark red) | All button gradients now graduate within red family |
+| Box shadows | `rgba(200,65,11,...)` | `rgba(196,39,26,...)` | Shadow colour matched to new fire token |
+| Dietary badges | Mixed emoji (🟢🟡🌶️) | CSS pills `.diet-badge-ve/.diet-badge-v/.diet-badge-hot` | Emoji render inconsistently across Android/iOS/Samsung |
+| Desktop menu bg | `linear-gradient(#3A2010 → #2C1A0A)` | `linear-gradient(#1C0906 → #0E0401)` | Deeper/richer dark creates section contrast without leaving the dark palette |
+| Pizza card left border | `rgba(212,160,67,0.55)` gold | `var(--fire)` true red | Red accent per card — immediate visual identity for menu items |
+| Pizza card hover | Gold border glow | Red ring `rgba(196,39,26,0.25)` + lift | Consistent with red-left-accent language |
+| `.status-preparing` | `rgba(255,130,50,...)` orange | `rgba(217,59,37,...)` red-aligned | Matches new ember token |
+
+**What was tried and rejected:** Cream background (`#F5ECD6`) for the desktop menu section. Looked out of place — breaks the premium dark brand feel. The section needed more darkness, not less.
+
+**Dietary badge classes:**
+```css
+.diet-badge      — base pill styles
+.diet-badge-ve   — green, for Vegan
+.diet-badge-v    — soft green, for Vegetarian
+.diet-badge-hot  — muted red, for Spicy
+```
+Used in both the mobile diet legend and the desktop menu note. `app.js` uses `.m-card-diet` for inline diet labels — those remain as text; only the legend/note use the new pill classes.
+
+---
+
+## 14. Desktop Site — Architecture & CSS Notes
 
 **All desktop styles live in the `<style>` block inside `index.html`** — not in `css/styles.css`. This was discovered after multiple failed attempts to fix the hero via `styles.css`. Key lesson: never edit `css/styles.css` for desktop layout fixes.
 
 **Desktop design principles:**
-- Fire red (`#C8410B`) reserved for exactly three CTAs: nav Order Now, hero View Menu, basket Place Order
+- Fire red (`#C4271A`) reserved for exactly three CTAs: nav Order Now, hero View Menu, basket Place Order — plus pizza card left accent border
+- Gold reserved for: prices, dates, eyebrow labels, accent rules, active nav state
 - No emoji on desktop — SVG line icons for contact cards, plain text elsewhere
 - Cormorant Garamond for: menu descriptions, event locations, hero subtitle area, step descriptions, editorial notes
 - `.d-texture` noise overlay on all dark sections — 2.8% opacity SVG fractalNoise
@@ -429,7 +472,6 @@ All fetches run concurrently via `Promise.all` at init. Graceful fallback to `CO
 - `height: 52vh; min-height: 400px`
 - Title: `clamp(36px, 3vw, 46px)` — "Authentic Pizza," stays on one line at all desktop widths
 - Subtitle hidden (`display: none`) — reduces visual clutter
-- Scroll indicator removed
 - `d-hero-content` has `width: 100%` — essential to prevent text-wrapping in flex container
 
 **Nav CTA specificity fix:**
@@ -437,7 +479,7 @@ All fetches run concurrently via `Promise.all` at init. Graceful fallback to `CO
 
 ---
 
-## 14. Geofence Feature — Spec
+## 15. Geofence Feature — Spec
 
 1. Customer subscribes, sets location + radius (1/3/5 miles) + notification preference
 2. Cheap Android device in van pings GPS to Firebase every 60 seconds
@@ -449,7 +491,7 @@ All fetches run concurrently via `Promise.all` at init. Graceful fallback to `CO
 
 ---
 
-## 15. Flash Sales — Spec
+## 16. Flash Sales — Spec
 
 Vendor taps "Launch Flash Deal" → picks preset or custom → sets claim limit/time limit → broadcasts instantly.
 Presets: First N orders X% off / Item at special price / Buy 2 get drink / Tonight only price
@@ -457,17 +499,17 @@ Dashboard shows live claim count. Auto-expires at zero.
 
 ---
 
-## 16. AI Order Assist — Vision Feature
+## 17. AI Order Assist — Vision Feature
 
 Customer taps AI chat bubble → types or dictates order in natural language → AI parses into basket items → customer reviews and confirms → normal checkout flow.
 
 **Why it works:** Menu is small and fixed. "Two Margheritas and a Bella Pepperoni" is a solved problem for an LLM.
 **Why it matters:** No Just Eat, no Deliveroo, no Flipdish offers this at £19/month. It's a demo moment.
-**Roadmap position:** Feature 20 — post loyalty and self-service.
+**Roadmap position:** Feature 21 — post loyalty and self-service.
 
 ---
 
-## 17. Deployment Pipeline ✅
+## 18. Deployment Pipeline ✅
 
 **Hosting:** Netlify — https://stalliq-demo.netlify.app/
 **GitHub:** https://github.com/JulianBell106/lamulettipizza
@@ -481,7 +523,7 @@ Customer taps AI chat bubble → types or dictates order in natural language →
 
 ---
 
-## 18. Key Decisions Made
+## 19. Key Decisions Made
 
 - Multi-tenancy: one deployment per customer for 0-5, then scale
 - `config.js` is single file that changes per customer
@@ -514,30 +556,32 @@ Customer taps AI chat bubble → types or dictates order in natural language →
 - Walk-in orders: `source: 'walkin'`, `customerId: null`, customer name required, phone number optional
 - Walk-in phone number seeds customer database from day one — SMS notifications apply automatically when built
 - Walk-in order uses same `getNextOrderRef()` daily counter as app orders — one unified sequence
-- Walk-in order card in kanban is visually identical to app order card — same flow, same status progression
 - Kitchen kanban: columns scroll vertically independently; board scrolls horizontally — full overflow solved Session 11
 - `CONFIG.business.currency` and `CONFIG.ordering.paymentNote` used in `kitchen.js` — no hardcoded £ or payment strings
-- **ALL desktop CSS is in the `<style>` block in `index.html`** — `css/styles.css` does NOT contain desktop styles; editing it for desktop fixes has no effect
-- Hero height: `52vh / 400px min` — tighter, professional, menu visible below the fold immediately
-- Hero title: `clamp(36px, 3vw, 46px)` — "Authentic Pizza," on one line at all desktop widths
-- Hero subtitle hidden — reduces clutter; credential line and two CTAs are sufficient
-- Nav CTA `.d-nav-cta` requires `!important` on all layout properties — `.d-nav-links a` (specificity 0,1,1) beats `.d-nav-cta` (0,1,0) on any conflicting property without it
-- `.d-nav-cta::after { display: none !important }` — kills the underline pseudo-element inherited from `.d-nav-links a::after` which was adding height to the button and pushing text off-centre
-- `d-hero-content` must have `width: 100%` — without it, flex container shrink-wraps the content box and title wraps at a narrow width regardless of font size
+- **ALL desktop CSS is in the `<style>` block in `index.html`** — `css/styles.css` does NOT contain desktop styles
+- Hero height: `52vh / 400px min`; title: `clamp(36px, 3vw, 46px)`; subtitle hidden
+- Nav CTA `.d-nav-cta` requires `!important` on all layout properties — specificity war with `.d-nav-links a`
+- `d-hero-content` must have `width: 100%` — prevents flex shrink-wrapping and title wrapping
 - Pricing: £19 Starter / £59 Growth / £99 Pro — annual plans 2 months free — monthly rolling, no contracts
 - Founding customer offer: 50% lifetime discount locked as long as subscription continuous (first 5 customers)
 - Sophie partnership: 20% recurring commission, 24-month cap per customer — structure locked in Section 22
 - Desktop account panel: 440px slide-in, z-index 1100 (above nav at 1000)
 - `orderCache` — client-side map populated on account load, enables instant detail drill-down without Firestore re-fetch
-- Post-order dismiss routes to Account page, not Home — customer immediately sees their live order
+- Post-order dismiss routes to Account page — customer immediately sees their live order
 - History shows collected/cancelled only — pending/active orders live in Live Orders section exclusively
 - Reorder button on collected history cards — `reorderItems()` clears basket, adds available items, routes to basket
 - Real phone numbers must never be used for testing — Firebase throttles repeated SMS; always use Firebase test numbers
 - Session chunking: large file outputs cause conversation timeouts — break each session into single-file chunks
+- **Primary colour `--fire` is true red `#C4271A` (HSL 5°), not orange** — orange on warm dark bg = low contrast
+- **No cream section backgrounds** — the brand is dark; light/dark rhythm via depth variation in dark sections, not light panels
+- Dietary badges are CSS pills, not emoji — emoji render inconsistently cross-device
+- Pizza card left border is `var(--fire)` (red) — gold borders are for surrounding structure only
+- `--text-muted` is `rgba(253,246,236,0.55)` — never go below 0.55 on dark bg (WCAG AA)
+- Gradient button dark endpoint is `#8B1810` — always a dark red, never a dark orange
 
 ---
 
-## 19. Core Product Principle — Kitchen Management Co-pilot
+## 20. Core Product Principle — Kitchen Management Co-pilot
 
 Independent food vendors are brilliant at their craft but are not trained kitchen managers. When orders pile up they have no system — they react. Quality drops, customers wait without knowing why, the experience falls apart.
 
@@ -547,18 +591,23 @@ The app promotes good decisions at exactly the moments when a vendor is most lik
 
 ---
 
-## 20. Next Session — Session 12: Demo Polish
+## 21. Next Session — Session 13: Pitch Deck Update
 
-**Goal:** End-to-end demo reset so the app can be shown cleanly at any meeting without leftover test orders, stale state, or rough edges.
+**Goal:** Update the pitch deck to reflect Stalliq branding and the current product.
 
-**What to build:**
-- Demo reset function: clears test orders from Firestore, resets daily counter, logs out current user — one tap from kitchen dashboard
-- Any rough edges surfaced during the Daniele meeting
-- Review overall flow for the pitch
+**What to cover:**
+- Rename/rebrand from the v2 deck to Stalliq
+- Update slide 11 with real Endoo contact details
+- Add QR code to demo site on appropriate slide
+- Add kitchen management co-pilot angle
+- Add roadmap slide: SMS/WhatsApp, live location, geofence, loyalty, AI Order Assist
+- Replace any placeholder content with real La Muletti screenshots or descriptions
+
+**File:** `vendorapp-pitch-v2.pptx` — paste the raw GitHub URL at session start so Claude can fetch it.
 
 ---
 
-## 21. Working Rhythm
+## 22. Working Rhythm
 
 **Start:** "New session — ignore the project file attachment, read the live PROJECT.md from GitHub instead: https://raw.githubusercontent.com/JulianBell106/lamulettipizza/refs/heads/main/PROJECT.md — today we're working on [task]"
 
@@ -570,7 +619,7 @@ The app promotes good decisions at exactly the moments when a vendor is most lik
 
 ---
 
-## 22. Sophie Partnership
+## 23. Sophie Partnership
 
 **Who:** Sophie (sophieetc.com) — runs MK's definitive food blog, organises Sophie's Street Feast, background in marketing (ex-Bletchley Park), currently runs her own social media consultancy.
 
@@ -590,7 +639,7 @@ The app promotes good decisions at exactly the moments when a vendor is most lik
 
 ---
 
-## 23. Go-Live Checklist ⚠️
+## 24. Go-Live Checklist ⚠️
 
 | # | Task | Notes |
 |---|------|-------|
