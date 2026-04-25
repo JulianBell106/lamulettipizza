@@ -120,7 +120,7 @@ html { scroll-behavior: smooth; }
 
 
 /* ─── 3b. HERO ─── */
-.d-hero { position: relative; height: 100vh; min-height: 680px; overflow: hidden; display: flex; align-items: center; }
+.d-hero { position: relative; height: 65vh; min-height: 560px; overflow: hidden; display: flex; align-items: center; }
 .d-hero-bg {
   position: absolute; inset: 0;
   background-size: cover; background-position: center;
