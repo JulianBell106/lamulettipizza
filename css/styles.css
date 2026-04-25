@@ -123,7 +123,7 @@ html { scroll-behavior: smooth; }
 .d-hero { position: relative; height: 44vh; min-height: 360px; overflow: hidden; display: flex; align-items: center; }
 .d-hero-bg {
   position: absolute; inset: 0;
-  background-size: cover; background-position: center;
+  background-size: cover; background-position: 30% center;
   transform: scale(1.05);
   animation: heroZoom 18s ease-in-out infinite alternate;
 }
@@ -133,7 +133,7 @@ html { scroll-behavior: smooth; }
 }
 .d-hero-overlay {
   position: absolute; inset: 0;
-  background: linear-gradient(105deg, rgba(26,10,0,0.92) 0%, rgba(26,10,0,0.75) 45%, rgba(26,10,0,0.35) 100%);
+  background: linear-gradient(105deg, rgba(26,10,0,0.94) 0%, rgba(26,10,0,0.82) 45%, rgba(26,10,0,0.68) 100%);
 }
 .d-hero-content { position: relative; z-index: 2; padding: 0 60px; max-width: 680px; }
 .d-hero-eyebrow {
