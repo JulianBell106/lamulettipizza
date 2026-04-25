@@ -247,20 +247,25 @@ function renderDesktopStrip() {
 
 
 /* ============================================================================
-   7. DESKTOP — MENU (editorial list)
+   7. DESKTOP — MENU (card grid with optional food photography)
    ============================================================================
-   Renders as a typographic list: number · name + description · price · qty.
-   Each item separated by a thin gold rule. No card grid.
-   Staggered reveal: each row gets --reveal-delay set inline.
+   Renders as a 3-column card grid. Each card has:
+     - Food image at top (if item.image URL provided via sheet) or a no-image
+       placeholder showing the item number in large italic Playfair type
+     - Gold left border accent on the card
+     - Name (Playfair), description (Cormorant italic), price (gold), qty controls
+   Graceful degradation: no image URL → placeholder renders, card still complete.
    esc() applied to all sheet-sourced fields: name, desc, diet.
+   Image URLs come from sheet and are used in src — not passed through esc()
+   as they are URLs not HTML content. URLs are validated to start with http.
    ============================================================================ */
 function renderDesktopMenu() {
-  const list = document.getElementById('d-menu-list');
-  if (!list) return;
+  const grid = document.getElementById('d-menu-grid');
+  if (!grid) return;
 
   const items = menuData.filter(m => m.available !== false);
 
-  list.innerHTML = items.map((item, i) => {
+  grid.innerHTML = items.map((item, i) => {
     const qty = basket[item.id] || 0;
     const num = String(i + 1).padStart(2, '0');
 
@@ -271,25 +276,37 @@ function renderDesktopMenu() {
       : `<button class="d-qty-btn add" data-id="${item.id}" data-delta="1">+</button>`;
 
     const dietTag = item.diet
-      ? `<span class="d-menu-row-diet">${esc(item.diet)}</span>`
+      ? `<div class="d-pizza-diet">${esc(item.diet)}</div>`
       : '';
 
+    // Image: only use URL if it looks like a real URL — basic safety check
+    const imgUrl = item.image && item.image.startsWith('http') ? item.image : null;
+    const imageBlock = imgUrl
+      ? `<div class="d-pizza-img-wrap">
+           <img class="d-pizza-img" src="${imgUrl}" alt="${esc(item.name)}" loading="lazy">
+         </div>`
+      : `<div class="d-pizza-no-img">
+           <div class="d-pizza-no-img-num">${num}</div>
+         </div>`;
+
     return `
-      <div class="d-menu-row reveal" id="d-row-${item.id}" style="--reveal-delay:${i * 65}ms">
-        <div class="d-menu-row-num">${num}</div>
-        <div class="d-menu-row-content">
-          <div class="d-menu-row-header">
-            <div class="d-menu-row-name">${esc(item.name)}</div>
-            ${dietTag}
+      <div class="d-pizza-card reveal" id="d-card-${item.id}" style="--reveal-delay:${i * 60}ms">
+        ${imageBlock}
+        <div class="d-pizza-body">
+          <div class="d-pizza-name">${esc(item.name)}</div>
+          ${item.desc ? `<div class="d-pizza-desc">${esc(item.desc)}</div>` : '<div class="d-pizza-desc"></div>'}
+          <div class="d-pizza-footer">
+            <div class="d-pizza-price">${CONFIG.business.currency}${item.price.toFixed(2)}</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              ${dietTag}
+              <div class="d-pizza-controls">${controls}</div>
+            </div>
           </div>
-          ${item.desc ? `<div class="d-menu-row-desc">${esc(item.desc)}</div>` : ''}
         </div>
-        <div class="d-menu-row-price">${CONFIG.business.currency}${item.price.toFixed(2)}</div>
-        <div class="d-menu-row-controls">${controls}</div>
       </div>`;
   }).join('');
 
-  // Re-run scroll reveal so newly rendered rows get observed
+  // Re-run scroll reveal so newly rendered cards get observed
   initScrollReveal();
 }
 
@@ -877,7 +894,8 @@ function parseMenuCSV(csvText) {
     price: headers.indexOf('price'),
     desc:  headers.findIndex(h => h === 'description' || h === 'desc'),
     diet:  headers.indexOf('diet'),
-    avail: headers.findIndex(h => h === 'available' || h === 'avail')
+    avail: headers.findIndex(h => h === 'available' || h === 'avail'),
+    image: headers.findIndex(h => h === 'image' || h === 'img' || h === 'photo')
   };
 
   if (col.id === -1 || col.name === -1 || col.price === -1) {
@@ -900,6 +918,7 @@ function parseMenuCSV(csvText) {
 
     const desc  = col.desc  >= 0 && cols[col.desc]  ? cols[col.desc].trim()  : '';
     const diet  = col.diet  >= 0 && cols[col.diet]  ? cols[col.diet].trim()  : null;
+    const image = col.image >= 0 && cols[col.image] ? cols[col.image].trim() : null;
 
     let available = true;
     if (col.avail >= 0 && cols[col.avail]) {
@@ -907,7 +926,7 @@ function parseMenuCSV(csvText) {
       available = (v !== 'FALSE' && v !== 'N' && v !== 'NO' && v !== '0');
     }
 
-    items.push({ id, name, price, desc, diet: diet || null, available });
+    items.push({ id, name, price, desc, diet: diet || null, image: image || null, available });
   }
 
   return items;
