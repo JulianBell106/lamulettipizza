@@ -116,7 +116,8 @@ html { scroll-behavior: smooth; }
 }
 .d-nav-links a:hover { color: var(--gold); }
 .d-nav-links li { display: flex; align-items: center; }
-.d-nav-cta { background: var(--fire) !important; color: white !important; padding: 0 20px !important; height: 38px !important; line-height: 38px !important; border-radius: 8px !important; transition: background 0.2s !important; display: inline-block !important; text-align: center !important; letter-spacing: 0.06em !important; vertical-align: middle !important; }
+.d-nav-cta { background: var(--fire) !important; color: white !important; padding: 0 20px !important; height: 38px !important; line-height: 1 !important; border-radius: 8px !important; transition: background 0.2s !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; letter-spacing: 0.06em !important; }
+.d-nav-cta::after { display: none !important; }
 .d-nav-cta:hover { background: var(--ember) !important; }
 
 
