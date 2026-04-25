@@ -1,5 +1,5 @@
 # Stalliq — Project Bible
-> Last updated: April 2026 — Session 10c Complete (Menu images, contrast sweep, mobile image support)
+> Last updated: April 2026 — Session 11 Complete (Walk-in Orders + Desktop CSS overhaul)
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -48,7 +48,7 @@ Julian has ~30 years IT experience and a development background but no longer co
 **Facebook:** @lamulettipizza
 **Website:** lamulettipizza.co.uk
 
-**Commercial arrangement:** Free for year one in exchange for being a reference customer and providing feedback. Year two onwards moves to standard pricing. **Daniele has confirmed he wants to go ahead — meeting in ~3 weeks.**
+**Commercial arrangement:** Free for year one in exchange for being a reference customer and providing feedback. Year two onwards moves to standard pricing. **Daniele has confirmed he wants to go ahead — meeting happened April 2026.**
 
 **Demo site (live):** https://stalliq-demo.netlify.app/
 **GitHub repo:** https://github.com/JulianBell106/lamulettipizza
@@ -109,20 +109,22 @@ Sophie (sophieetc.com) runs the definitive MK food blog and organises Sophie's S
 
 | File | Purpose |
 |------|---------|
-| `index.html` | Customer app — pure structure, zero hardcoded business content |
-| `css/styles.css` | All styling — desktop + mobile |
+| `index.html` | Customer app — ALL styles live here in an embedded `<style>` block. Zero hardcoded business content in HTML. |
+| `css/styles.css` | Legacy file — mobile-only styles and responsive breakpoints. **Desktop styles are in index.html, not here.** |
 | `js/config.js` | ALL customer-specific data lives here |
 | `js/firebase.js` | Firebase initialisation — exposes `db` and `auth` globals |
 | `js/app.js` | All logic — reads entirely from CONFIG, integrates Firebase |
-| `kitchen.html` | Kitchen dashboard — PIN protected, separate URL |
+| `kitchen.html` | Kitchen dashboard — PIN protected, separate URL. All styles embedded in `<style>` block. |
 | `js/kitchen.js` | All kitchen dashboard logic |
 
 **Key principle:** `config.js` is the ONLY file that changes between customers.
 
-**Script load order (both index.html and kitchen.html):**
+**⚠️ CRITICAL CSS ARCHITECTURE NOTE (discovered Session 11):**
+ALL desktop styles for `index.html` live in the embedded `<style>` block inside `index.html` itself — NOT in `css/styles.css`. Any changes to `css/styles.css` targeting desktop classes (`.d-hero`, `.d-nav-cta`, etc.) have zero effect. Always edit the `<style>` block in `index.html` directly for desktop changes.
 
+**Script load order:**
 ```
-Firebase SDK (CDN compat v10.12.2) → js/config.js → js/firebase.js → js/app.js / js/kitchen.js
+Firebase SDK (CDN compat v10.12.2) → js/config.js → js/firebase.js → js/app.js
 ```
 
 **Output files location:** `/mnt/user-data/outputs/lamuletti/`
@@ -141,26 +143,13 @@ Firebase SDK (CDN compat v10.12.2) → js/config.js → js/firebase.js → js/ap
 - Light: `#FDF6EC` (cream)
 - Fonts: Playfair Display, DM Sans, Cormorant Garamond
 
-**Contrast rule (established Session 6, applied Session 7a):**
+**Contrast rule:**
 Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm cream at low opacity on warm dark backgrounds renders as brown-on-brown. White-based opacity renders as readable neutral grey.
 
 **Contrast values (current):**
-- `--cream-60`: `rgba(255,255,255,0.75)` — body text, labels
-- `--cream-50`: `rgba(255,255,255,0.70)` — descriptions, secondary
-- `--cream-45`: `rgba(255,255,255,0.65)` — notes, hints, captions
-
-**Desktop design principles (established Session 10b):**
-- Fire red (`#C8410B`) reserved exclusively for three primary conversion actions: nav CTA, hero CTA, basket/place order button. Everywhere else uses gold or neutral.
-- No emoji on desktop site — replaced with SVG icons (contact cards) or text only (nav, buttons)
-- Strip bar eliminated — replaced with single credential text line inside hero
-- Menu section: editorial list layout (typographic rows with gold rule separators) not card grid
-- Values section replaced with "How It Works" — three steps, large italic numerals, Cormorant Garamond descriptions
-- Noise/grain texture overlay (`.d-texture`) on all dark sections — adds warmth and depth
-- Nav links: underline slide-in on hover, small caps, low opacity at rest
-- Founder pills: initials in styled gold circle, not emoji avatars
-- Cormorant Garamond committed to deliberate large-use role: menu descriptions, event locations, editorial notes
-- Staggered reveal animations on menu rows — `--reveal-delay` CSS custom property, 65ms between items
-- `initScrollReveal()` updated to use `:not(.visible)` selector — prevents re-observing already-revealed elements
+- `--text-primary`:   `rgba(253,246,236,0.95)`
+- `--text-secondary`: `rgba(253,246,236,0.75)`
+- `--text-muted`:     `rgba(253,246,236,0.45)` — UI chrome only, never for readable body text
 
 ---
 
@@ -190,7 +179,7 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 07 | Google Sheets Menu Management | ✅ Done | menuSheetUrl in config.js, CSV fetch on load, graceful fallback, XSS defence via esc() |
 | 08 | News & Locations Feed | ✅ Done | eventsSheetUrl in config.js, CSV fetch, Find Us page (mobile + desktop), graceful fallback |
 | 09 | Offers | ✅ Done | offersSheetUrl in config.js, CSV fetch, Account page Offers section (mobile + desktop), graceful fallback |
-| 10 | Walk-in Manual Order Entry | 🔨 Session 11 | Vendor enters walk-up orders on kitchen dashboard — single source of truth for all orders |
+| 10 | Walk-in Manual Order Entry | ✅ Done | "➕ New Order" on kitchen dashboard — vendor enters walk-up orders, drops into Pending column |
 | 11 | SMS & WhatsApp Status Notifications | ⏳ Planned | Customer notified on order status changes — Twilio. Applies to app orders AND walk-ins with phone number |
 | 12 | Live Location Broadcast | ⏳ Planned | Van location shown live on customer app — foundation for geofence at scale |
 | 13 | Geofence Notifications | ⏳ Planned | Van enters subscriber's area → phone buzzes |
@@ -216,7 +205,7 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 
 ---
 
-## 9. Pitch Sprint Plan — 3 Weeks to La Muletti Meeting
+## 9. Pitch Sprint Plan — La Muletti Meeting
 
 | Session | Focus | Goal |
 |---------|-------|------|
@@ -227,8 +216,8 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 10 | News/Locations feed + Offers | ✅ eventsSheetUrl + offersSheetUrl in config.js, both live from Google Sheets |
 | 10b | Desktop UX Redesign | ✅ Premium redesign: editorial menu, no strip bar, SVG icons, How It Works, noise texture, staggered reveals |
 | 10c | Menu images + contrast sweep | ✅ Food photos via Google Sheet image column, mobile image cards, all brown-on-brown text fixed |
-| 11 | Walk-in Manual Order Entry | Kitchen dashboard "New Order" button — vendor enters walk-up orders, optional phone number |
-| 12 | Demo polish | End-to-end demo reset function, rough edges removed, kitchen.js tidy |
+| 11 | Walk-in Manual Order Entry + Desktop CSS overhaul | ✅ Walk-in orders on kitchen dashboard; full index.html CSS rebuild |
+| 12 | Demo polish | End-to-end demo reset function, rough edges removed |
 | 13 | Pitch deck update | Stalliq rebrand, kitchen co-pilot angle, roadmap slide with vision features |
 
 **What gets demoed live at the meeting:**
@@ -271,7 +260,7 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | +44 7700 900004 | 123456 |
 | +44 7700 900005 | 123456 |
 
-⚠️ **Real numbers should never be used for testing** — Firebase throttles/blocks repeated SMS to the same number. Use test numbers only. Each test number is an independent Firebase user — `900002` onward will hit the full registration flow fresh.
+⚠️ **Real numbers should never be used for testing** — Firebase throttles/blocks repeated SMS to the same number. Use test numbers only.
 
 **Order flow:**
 1. Customer places order → status: `pending`
@@ -287,7 +276,7 @@ vendors/{vendorId}/
   counters/daily → { date, count }  ← order ref counter, resets midnight
 
 orders/{orderId}/
-  vendorId, orderRef, customerId, customerName, customerPhone,
+  vendorId, orderRef, source, customerId, customerName, customerPhone,
   items, orderTotal, payment, status, waitMins,
   expiresAt, createdAt, updatedAt
 
@@ -308,7 +297,7 @@ match /orders/{orderId} {
 ```
 
 **Firestore composite index required:**
-The Account page queries orders by `(customerId + createdAt desc)`. Firestore will not create it automatically — on first run it surfaces a direct link in the browser console (`failed-precondition` error). Click the link, create the index, wait ~60–90 seconds to build. **Already created for La Muletti ✅**
+The Account page queries orders by `(customerId + createdAt desc)`. Already created for La Muletti ✅. For each new customer deployment: on first login to Account, open browser console — Firestore will log a `failed-precondition` error with a direct link to create the index.
 
 ---
 
@@ -338,32 +327,26 @@ The Account page queries orders by `(customerId + createdAt desc)`. Firestore wi
 
 ---
 
-## 10c. Kitchen Dashboard — ✅ COMPLETE (MVP scope)
+## 10c. Kitchen Dashboard — ✅ COMPLETE
 
 **URL:** `stalliq-demo.netlify.app/kitchen.html`
 **PIN:** 1234 (set in `CONFIG.kitchen.pin`)
 
-**Built in Session 7b Task 1 (Kitchen Closed → Customer App) ✅:**
-- `app.js` Section 30: `initKitchenStatusListener()` — Firestore `onSnapshot` on `vendors/lamuletti`
-- `applyKitchenStatus(status)` — updates shared `kitchenStatus` var and reacts across both views
-- Mobile: sticky red banner at top of home page + Place Order button disabled/renamed "Kitchen Closed"
-- Desktop: dark (`#1A0A00`) full-width sticky banner injected as first child of `<body>`, above nav, with fire red bottom border
-- All three closed statuses show correct message
-- Fails open — if Firestore unreachable, ordering stays available
+**Scroll architecture (fixed Session 11):**
+- `html, body` → `overflow: hidden`
+- `#k-dashboard` → `display: flex; flex-direction: column; height: 100dvh`
+- `.k-orders` → `flex: 1; align-items: stretch` — fills remaining height
+- `.k-col` → `overflow: hidden; flex column` — clips content
+- `.k-col-cards` → `flex: 1; overflow-y: auto` — vertical scroll per column
+- `.k-orders.is-empty` toggles `align-items: center` for the no-orders state
 
-**Built in Session 7b Task 2 (Real-time Order Status) ✅:**
-- `app.js` Section 31: `startOrderStatusListener(orderId)` — Firestore `onSnapshot` on specific order doc
-- Status block injected into confirm modal (mobile) and overlay (desktop)
-- Time display updates live: ⏳ pending → ~X mins on accept
-- Ready state: icon, title, button text all flip on mobile + desktop
-- `stopOrderStatusListener()` fully resets modal + overlay for next use
-- `[Stalliq]` console diagnostics throughout
-
-**Built in Session 6:**
-- PIN screen on load — 4-digit, auto-submits, shakes on wrong entry
+**Built features:**
+- PIN screen — 4-digit, auto-submits, shakes on wrong entry
 - Kanban board — 4 columns: Pending | Accepted | Preparing | Ready
 - Horizontal drag/scroll between columns (Pointer Events API)
+- Vertical scroll within each column when cards overflow
 - Order cards — ref, customer name, items, elapsed time, status badge, action button
+- Walk-in badge on cards (`source: 'walkin'`)
 - Accept order + wait time modal — options from `CONFIG.ordering.waitOptions`
 - Status tap-through: `accepted → preparing` (single tap), `preparing → ready` (confirm modal)
 - Collected (removes from queue)
@@ -371,33 +354,18 @@ The Account page queries orders by `(customerId + createdAt desc)`. Firestore wi
 - Order detail drill-down — tap card body to open full detail modal
 - Sound alert on new pending order (two beeps via Web Audio API)
 - Elapsed time counter per card — turns amber at 10 mins, red at 20 mins
-
-**Pending (locked spec — post-pitch):**
-- Large order handling (distinct card colour + surfaces close kitchen option)
-- Backwards status movement (long press + confirm)
-- Named credentials / role-based access (owner vs staff)
-- ⚠️ Minor tidy (Session 12): `kitchen.js` `orderCardHTML` hardcodes `£` and `'cash on collection'` — should use `CONFIG.business.currency` and `CONFIG.ordering.paymentNote`
+- ➕ New Order button — walk-in order entry (see Section 10d)
+- `CONFIG.business.currency` and `CONFIG.ordering.paymentNote` used throughout (no hardcoded £ or 'cash on collection')
 
 ---
 
-## 10d. Walk-in Manual Order Entry — Spec (Session 11)
+## 10d. Walk-in Manual Order Entry — ✅ COMPLETE (Session 11)
 
-**Problem:** At events, the majority of customers approach the van directly and order verbally. Without a way to enter these into the system, the kitchen dashboard only tracks app orders — creating a split queue and potential chaos when both types are in flight simultaneously.
+**Problem solved:** Walk-up customers not in the system — split queue between app and verbal orders.
 
-**Solution:** A "➕ New Order" button on the kitchen dashboard. Vendor enters the order manually in a few taps. The order lands in the Pending column identically to an app order — one unified queue, one source of truth.
+**Solution:** "➕ New Order" button in kitchen header. Vendor taps, picks items, enters customer name (required) and optional phone number. Order drops into Pending column identically to an app order.
 
-**UI — where it lives:**
-"➕ New Order" button in the kitchen header, same row as the kitchen close toggle. Always visible. Opens a modal.
-
-**Walk-in order modal — fields:**
-
-| Field | Required | Notes |
-|-------|----------|-------|
-| Item picker | Yes | Same menu items + qty controls as the customer app |
-| Customer name | Yes | Free text — e.g. "Sarah", "Blue jacket", "Table 4" |
-| Phone number | No | Optional — clearly labelled "For loyalty & order updates" |
-
-**Firestore order document — differences from app orders:**
+**Firestore order document differences from app orders:**
 
 | Field | App order | Walk-in order |
 |-------|-----------|---------------|
@@ -406,183 +374,70 @@ The Account page queries orders by `(customerId + createdAt desc)`. Firestore wi
 | `customerPhone` | Verified by Firebase Auth | Entered manually, unverified |
 | `customerName` | From users/{uid} doc | Entered by vendor in modal |
 
-All other fields identical: `orderRef`, `vendorId`, `items`, `orderTotal`, `payment`, `status`, `waitMins`, `createdAt`, `updatedAt`.
-
-**Order ref:** Uses the same `getNextOrderRef()` daily sequential counter as app orders — one unified sequence per day. Walk-in orders are not distinguishable by ref number.
-
-**Kanban behaviour:** Walk-in order card looks and behaves identically to an app order card — same status progression (pending → accepted → preparing → ready → collected), same elapsed time counter, same drill-down detail.
-
-**Phone number — database value:**
-If captured, `customerPhone` is stored raw (no Firebase Auth verification). When SMS notifications are built (roadmap item 11), the send logic checks for `customerPhone` regardless of `source` — walk-in customers with a number automatically receive the same status SMS as app customers. No code change required at that point.
-
-**Pitch angle:** "Every walk-up customer who gives their number is already in your database. The day you switch on loyalty stamps or WhatsApp alerts, they're already there — you didn't lose them."
-
-**Session 11 file to produce:** `kitchen.js` only. `kitchen.html` may need a minor button addition.
+**Walk-in badge** shown on kanban card and in detail drill-down.
+**Order ref** uses same `getNextOrderRef()` daily sequential counter — one unified sequence.
+**Phone number** seeds customer database from day one — SMS notifications apply automatically when that feature is built, no code change required.
 
 ---
 
 ## 11. Customer Account / Members Area — ✅ COMPLETE (Session 8)
 
 **Mobile:** 6th page (`#page-account`) always present in nav (👤 Account)
-**Desktop:** 440px slide-in panel from nav link (👤 Account) — same content, z-index 1100 (above nav)
+**Desktop:** 440px slide-in panel from nav link — same content, z-index 1100
 
-**Three states (both mobile + desktop):**
+**Three states:** Logged out (login prompt) | Logged in no activity (welcome + placeholders) | Logged in with activity (live orders + history + placeholders)
 
-**Logged out:**
-Clean login prompt. "Sign in to track your orders and collect stamps." Reuses existing phone auth overlay. Auth overlay title/subtitle switches context (order flow vs account sign-in) and resets correctly when triggered from the order flow.
-
-**Logged in, no activity:**
-- Welcome by first name
-- Loyalty stamp card: 3/10 filled stamps, "Buy 9 get your 10th free", "Coming soon" badge
-- Offers: from offersSheetUrl (or defaults if sheet unavailable), "Coming soon" badges
-- Empty order history nudge
-
-**Logged in with activity:**
-- Live Orders section — one card per active order (pending/accepted/preparing/ready) with real-time status listener. Live section and history are strictly separated — pending orders never appear in history.
-- Loyalty + offers as above
-- Order history — collected/cancelled orders only, most recent first
-
-**Order history display:**
-- 90-day window — keeps display manageable
-- Limit 50 per query
-- Shows 3 items initially; "Show X more" button reveals the rest inline (no second Firestore call)
-- "Showing last 3 months" label at foot of list
-- `status-collected` badge: neutral white. `status-cancelled` badge: red tint.
-
-**Order detail drill-down (shared mobile + desktop):**
-Slide-up sheet on mobile, centred modal on desktop. Shows: order ref, date/time, status badge, itemised list with per-line prices, payment method, total. Populated from `orderCache`.
-
-**Reorder:**
-Collected history cards have a 🔁 Reorder button. `reorderItems(orderId)` clears basket, adds back available items, routes to basket. Items removed from menu silently skipped.
-
-**Post-order flow:**
-Modal dismiss routes to Account page (not Home) so customer immediately sees their live order.
-
-**Firestore queries:**
-- Orders: `where customerId == uid, where createdAt >= 90 days ago, orderBy createdAt desc, limit 50`
-- Requires composite index on `(customerId, createdAt)` — already created for La Muletti ✅
+**Live orders:** real-time Firestore listeners keyed by `orderId` (map, not single var)
+**Order history:** 90-day window, limit 50, 3 shown initially with "Show X more"
+**Reorder:** button on collected history cards — clears basket, adds available items, routes to basket
+**Composite Firestore index** on `(customerId, createdAt)` — already created for La Muletti ✅
 
 ---
 
-## 12. Google Sheets Menu Management — ✅ COMPLETE (Session 9)
+## 12. Google Sheets — Menu, Events & Offers — ✅ COMPLETE
 
-**Problem solved:** Menu changes previously required editing `config.js`, pushing to GitHub, waiting for Netlify deploy.
+**Three sheets, three URLs in config.js:**
 
-**Implementation:**
-- `CONFIG.menuSheetUrl` — published CSV URL in `config.js`
-- `app.js` Section 22a — `fetchMenuFromSheet()`, `parseMenuCSV()`, `parseCSVLine()`
-- Graceful fallback to `CONFIG.menu` if sheet unavailable
-- XSS defence via `esc()` on all sheet-sourced fields
+| Sheet | Config key | Page |
+|-------|-----------|------|
+| Menu | `menuSheetUrl` | Menu (mobile + desktop card grid) |
+| Events | `eventsSheetUrl` | Find Us (mobile + desktop contact section) |
+| Offers | `offersSheetUrl` | Account page Offers section |
 
-**Sheet structure:** `id | name | price | description | diet | available`
+All fetches run concurrently via `Promise.all` at init. Graceful fallback to `CONFIG` data if sheet unavailable. `active = FALSE` on any row hides it without deleting. `esc()` applied to all sheet-sourced fields.
 
-**Vendor workflow:** Edit Google Sheet → autosaves → app picks up on next page load.
+**Menu sheet column:** `id | name | price | description | diet | available | image`
+**Events sheet column:** `day | month | name | location | active`
+**Offers sheet column:** `icon | title | description | badge | active`
 
----
-
-## 12b. Google Sheets Events & Offers — ✅ COMPLETE (Session 10)
-
-**Events (Find Us page):**
-- `CONFIG.eventsSheetUrl` — published CSV URL in `config.js`
-- `app.js` Section 22b — `fetchEventsFromSheet()`, `parseEventsCSV()`
-- Renders on Find Us page (mobile `.m-popup-list`) and desktop contact section (`.d-popup-list`)
-- Graceful fallback to `CONFIG.events` if sheet unavailable
-- `active = FALSE` hides a row without deleting it
-
-**Sheet structure:** `day | month | name | location | active`
-
-**La Muletti events sheet URL:**
-`https://docs.google.com/spreadsheets/d/e/2PACX-1vTedQCoKEWfdPwuhUYqQoYeGrb5dGTB9pay0ecFv2BBTDrLxeHfjJ-DTssRTpnWagNUh07jCmWTjBei/pub?output=csv`
+**Menu food images:** optional `image` column — vendor pastes ibb.co direct link. Desktop card: 180px photo at top. Mobile card: stacked layout with photo when present. URL validated to start with `http` before use.
 
 ---
 
-**Offers (Account page):**
-- `CONFIG.offersSheetUrl` — published CSV URL in `config.js`
-- `app.js` Section 22c — `fetchOffersFromSheet()`, `parseOffersCSV()`
-- Renders in Account page "🎁 Offers" section (mobile + desktop panel)
-- Graceful fallback to `CONFIG.offers` or hardcoded defaults if sheet unavailable
-- `active = FALSE` hides a row without deleting it
+## 13. Desktop Site — Architecture & CSS Notes
 
-**Sheet structure:** `icon | title | description | badge | active`
+**All desktop styles live in the `<style>` block inside `index.html`** — not in `css/styles.css`. This was discovered after multiple failed attempts to fix the hero via `styles.css`. Key lesson: never edit `css/styles.css` for desktop layout fixes.
 
-**La Muletti offers sheet URL:**
-`https://docs.google.com/spreadsheets/d/e/2PACX-1vReFvkHBO0a-QRn9dCJQCjjgFd0N0s_0cqOWNYb3-4qiwbAOkfs1p47w8HOeclwzKQW93ovnruJafRp/pub?output=csv`
+**Desktop design principles:**
+- Fire red (`#C8410B`) reserved for exactly three CTAs: nav Order Now, hero View Menu, basket Place Order
+- No emoji on desktop — SVG line icons for contact cards, plain text elsewhere
+- Cormorant Garamond for: menu descriptions, event locations, hero subtitle area, step descriptions, editorial notes
+- `.d-texture` noise overlay on all dark sections — 2.8% opacity SVG fractalNoise
+- Nav links: `::after` underline slides in from left on hover
 
----
+**Hero (current values after Session 11 overhaul):**
+- `height: 52vh; min-height: 400px`
+- Title: `clamp(36px, 3vw, 46px)` — "Authentic Pizza," stays on one line at all desktop widths
+- Subtitle hidden (`display: none`) — reduces visual clutter
+- Scroll indicator removed
+- `d-hero-content` has `width: 100%` — essential to prevent text-wrapping in flex container
 
-**All three sheet fetches run concurrently via `Promise.all` at init** — no sequential delay. All module-level vars (`menuData`, `eventsData`, `offersData`) are populated before any render function runs.
-
-**Console diagnostics:**
-- `[Stalliq] Events loaded from sheet: X item(s).`
-- `[Stalliq] Offers loaded from sheet: X item(s).`
-- Any fallback or error clearly logged with `[Stalliq]` prefix.
-
----
-
-## 12c. Desktop UX Redesign — ✅ COMPLETE (Session 10b)
-
-**Problem:** The desktop site read as a food delivery app template — overuse of fire red, emoji icons throughout, full-width strip bar, uniform card grid menu, generic values section. Didn't match the premium artisan brand the copy and typography were reaching for.
-
-**Changes to `index.html`:**
-- Strip bar removed — replaced with `#d-hero-credentials` credential line inside the hero
-- Menu section restructured: `d-menu-list` contains `d-menu-row` editorial rows — name + description left, price right, gold rule separators between items
-- Values section (`#d-values`) removed — replaced with "How It Works" (`#d-howitworks`) — three numbered steps, large italic Playfair numerals (80px, 9% gold opacity), Cormorant Garamond step descriptions
-- Contact grid uses `id="d-contact-grid"` — icon containers use `d-contact-icon` div with SVG content
-- Events list uses `id="d-popup-list"`
-- Nav CTA: "Order Now", no emoji — links to `#d-menu`
-- `.d-texture` applied to all dark sections — SVG noise overlay for warmth and depth
-- Nav `::after` pseudo-element: gold underline slides in from left on hover
-- Founder pills: `d-founder-pill-avatar` div with initials, not emoji
-- New CSS variables: `--gold-rule`, `--text-primary`, `--text-secondary`, `--text-muted` — consistent opacity naming
-- `--reveal-delay` CSS custom property on each menu row — staggered animation timing
-
-**Changes to `app.js`:**
-- `renderDesktopNav()` — CTA text hardcoded to "Order Now"
-- `renderDesktopHero()` — strips emoji from CTA button text via regex
-- `renderDesktopStrip()` — writes credential items to `#d-hero-credentials`, not `.d-strip`
-- `renderDesktopMenu()` — editorial list rows, staggered `--reveal-delay`, calls `initScrollReveal()` after render
-- `renderDesktopStory()` — founder pill avatars use initials extracted from `f.name`
-- `renderDesktopValues()` — no-op (intentionally empty)
-- `renderDesktopContact()` — SVG_ICONS constant, `id`-based grid selector, updated event empty state
-- `initScrollReveal()` — selects `:not(.visible)` to prevent double-triggering
-- `SVG_ICONS` constant: phone, email, web, social as inline SVG strings
+**Nav CTA specificity fix:**
+`.d-nav-links a` has specificity (0,1,1) and `.d-nav-cta` has (0,1,0). Any property set in `.d-nav-cta` without `!important` that also appears in `.d-nav-links a` will lose. All layout-critical properties on `.d-nav-cta` use `!important`. The `::after` pseudo-element (underline effect) is suppressed with `.d-nav-cta::after { display: none !important; }`.
 
 ---
 
-## 12d. Menu Food Photography + Contrast Sweep — ✅ COMPLETE (Session 10c)
-
-**Menu food images via Google Sheet:**
-
-Added optional `image` column to the menu sheet. Vendor or operator pastes a public image URL (ibb.co direct link format: `https://i.ibb.co/...`). App loads photo on next page load — no deploy needed.
-
-**Sheet column:** `image` (also accepts `img` or `photo` as header). Optional — missing column or blank cell falls back to numbered placeholder. Existing sheets need no changes.
-
-**Desktop card:** Full-width 180px food photo at top of card with gradient overlay at base. `object-fit: cover`. Graceful fallback: large italic item number (80px, 15% gold opacity) when no image URL present.
-
-**Mobile card:** When image present, card switches to stacked layout — photo full-width at top (140px), info below, controls at bottom. When no image, original side-by-side layout unchanged.
-
-**URL safety check:** Image URL validated to start with `http` before use in `src` — prevents malformed data from sheet reaching the DOM.
-
-**`parseMenuCSV()` update:** Gains `image` field. Column matched by header name (`image`, `img`, or `photo`) — flexible, order-independent. Item object now: `{ id, name, price, desc, diet, image, available }`.
-
-**Contrast sweep — all brown-on-brown text fixed:**
-
-Root cause: `--text-muted` is `rgba(253,246,236,0.45)` — warm cream at 45% opacity on warm dark backgrounds renders as brown, not grey. All readable body/description text must use `--text-secondary` (`rgba(253,246,236,0.75)`) or higher.
-
-| Element | Was | Now |
-|---------|-----|-----|
-| `.d-menu-header-note` | `--text-muted` | `--text-secondary` |
-| `.d-menu-note` | `--text-muted` | `--text-secondary` |
-| `.d-pizza-desc` | `--text-muted` | `--text-secondary` |
-| `.d-popup-loc` | `--text-muted` | `--text-secondary` |
-| `.d-socials-note` | `--text-muted` | `--text-secondary` |
-| `.m-card-desc` | `rgba(253,246,236,0.5)` | `rgba(253,246,236,0.75)` |
-
-**Rule going forward:** `--text-muted` is for truly secondary UI chrome only — dates, labels, hints, captions, placeholders. Any sentence a user needs to read is `--text-secondary` minimum.
-
----
-
-## 13. Geofence Feature — Spec
+## 14. Geofence Feature — Spec
 
 1. Customer subscribes, sets location + radius (1/3/5 miles) + notification preference
 2. Cheap Android device in van pings GPS to Firebase every 60 seconds
@@ -594,33 +449,25 @@ Root cause: `--text-muted` is `rgba(253,246,236,0.45)` — warm cream at 45% opa
 
 ---
 
-## 14. Flash Sales — Spec
+## 15. Flash Sales — Spec
 
 Vendor taps "Launch Flash Deal" → picks preset or custom → sets claim limit/time limit → broadcasts instantly.
-
 Presets: First N orders X% off / Item at special price / Buy 2 get drink / Tonight only price
-
 Dashboard shows live claim count. Auto-expires at zero.
-
-Broadcast to: geofence subscribers only OR full list.
 
 ---
 
-## 15. AI Order Assist — Vision Feature
+## 16. AI Order Assist — Vision Feature
 
 Customer taps AI chat bubble → types or dictates order in natural language → AI parses into basket items → customer reviews and confirms → normal checkout flow.
 
-**Why it works:** Menu is small and fixed. "Two Margheritas and a Bella Pepperoni" is a solved problem for an LLM. Dictation is free via smartphone keyboard.
-
-**Why it matters:** No Just Eat, no Deliveroo, no Flipdish offers this at £29/month. It's a demo moment.
-
-**Guardrails needed:** Stay on-task (no off-menu items), handle allergy questions carefully, cost per conversation monitoring at scale.
-
-**Roadmap position:** Feature 19 — post loyalty and self-service.
+**Why it works:** Menu is small and fixed. "Two Margheritas and a Bella Pepperoni" is a solved problem for an LLM.
+**Why it matters:** No Just Eat, no Deliveroo, no Flipdish offers this at £19/month. It's a demo moment.
+**Roadmap position:** Feature 20 — post loyalty and self-service.
 
 ---
 
-## 16. Deployment Pipeline ✅
+## 17. Deployment Pipeline ✅
 
 **Hosting:** Netlify — https://stalliq-demo.netlify.app/
 **GitHub:** https://github.com/JulianBell106/lamulettipizza
@@ -634,20 +481,19 @@ Customer taps AI chat bubble → types or dictates order in natural language →
 
 ---
 
-## 17. Key Decisions Made
+## 18. Key Decisions Made
 
 - Multi-tenancy: one deployment per customer for 0-5, then scale
 - `config.js` is single file that changes per customer
 - Desktop = landing page + slide-in panels, Mobile = PWA app shell, 768px breakpoint
-- Endoo stays as IT services holding company
-- Platform trades as Stalliq (stalliq.co.uk)
+- Endoo stays as IT services holding company; platform trades as Stalliq (stalliq.co.uk)
 - La Muletti free year 1 — agreed with Daniele
 - No commission ever — flat monthly fee
 - Build SMS notifications first, WhatsApp later
 - Dedicated Android device in van for geofence tracking
 - Midsummer Place vendors = secondary market year 2+
 - Approach Sophie once La Muletti has real orders flowing
-- Payment: cash on collection for MVP
+- Payment: cash or card on collection for MVP
 - Auth: Firebase Phone Auth — verified mobile captured at first order, remembered on device
 - Order ref: daily sequential (`#001` format), resets midnight, Firestore transaction
 - MI data: captured automatically from order object from day one
@@ -657,94 +503,41 @@ Customer taps AI chat bubble → types or dictates order in natural language →
 - Kitchen dashboard = same Netlify deployment as customer app (`/kitchen.html`)
 - Wait time options configurable per vendor in `CONFIG.ordering.waitOptions`
 - Secondary text colour must use `rgba(255,255,255,0.X)` not cream-based opacity (brown-on-brown problem)
-- `kitchen.html` CSS is embedded (not separate file) — branding is data-driven via CONFIG at runtime
+- CSS for both `index.html` and `kitchen.html` is embedded in their respective `<style>` blocks — not in external files
 - Item notes field (`notes: null`) already in order data model — UI deferred to post-pitch backlog
-- SMS/WhatsApp and live location: roadmap promises for pitch — not built before meeting
-- AI Order Assist: vision feature — natural language + dictation ordering, no comparable product at this price point
-- Kitchen closed banner on desktop: dark background (`#1A0A00`) injected at top of `<body>` — fire red banner blended invisibly into the orange strip bar
-- Kitchen status listener fails open — Firestore unreachable does not block ordering
-- Session chunking: large file outputs cause conversation timeouts — break each session into single-file chunks with fresh conversation per chunk
-- Order status listener: inject-into-modal approach (not separate page) — modal is ephemeral, Account page is persistent
-- Multiple concurrent orders supported — customer can dismiss modal → routed to Account page; both orders visible with individual listeners
-- Account page always visible in nav (logged out shows login prompt) — loyalty card is a reason to open app even without ordering
-- Loyalty + offers: sheet-driven for demo, "Coming soon" badge — shows roadmap without over-promising
-- `stopOrderStatusListener()` fully resets modal + overlay state so second order in same session renders cleanly
+- Menu management: Google Sheets CSV approach — vendor edits sheet, app updates within minutes, no deploy
+- `CONFIG.menuSheetUrl` must be inside the CONFIG object
+- `esc()` utility — HTML-encodes sheet-sourced strings before innerHTML; Firestore writes use raw values
+- All three sheet fetches run via `Promise.all` at init — concurrent, not sequential
+- `active = FALSE` on any sheet row hides it without deleting
+- Walk-in manual order entry on kitchen dashboard — single source of truth for all orders
+- Walk-in orders: `source: 'walkin'`, `customerId: null`, customer name required, phone number optional
+- Walk-in phone number seeds customer database from day one — SMS notifications apply automatically when built
+- Walk-in order uses same `getNextOrderRef()` daily counter as app orders — one unified sequence
+- Walk-in order card in kanban is visually identical to app order card — same flow, same status progression
+- Kitchen kanban: columns scroll vertically independently; board scrolls horizontally — full overflow solved Session 11
+- `CONFIG.business.currency` and `CONFIG.ordering.paymentNote` used in `kitchen.js` — no hardcoded £ or payment strings
+- **ALL desktop CSS is in the `<style>` block in `index.html`** — `css/styles.css` does NOT contain desktop styles; editing it for desktop fixes has no effect
+- Hero height: `52vh / 400px min` — tighter, professional, menu visible below the fold immediately
+- Hero title: `clamp(36px, 3vw, 46px)` — "Authentic Pizza," on one line at all desktop widths
+- Hero subtitle hidden — reduces clutter; credential line and two CTAs are sufficient
+- Nav CTA `.d-nav-cta` requires `!important` on all layout properties — `.d-nav-links a` (specificity 0,1,1) beats `.d-nav-cta` (0,1,0) on any conflicting property without it
+- `.d-nav-cta::after { display: none !important }` — kills the underline pseudo-element inherited from `.d-nav-links a::after` which was adding height to the button and pushing text off-centre
+- `d-hero-content` must have `width: 100%` — without it, flex container shrink-wraps the content box and title wraps at a narrow width regardless of font size
 - Pricing: £19 Starter / £59 Growth / £99 Pro — annual plans 2 months free — monthly rolling, no contracts
 - Founding customer offer: 50% lifetime discount locked as long as subscription continuous (first 5 customers)
 - Sophie partnership: 20% recurring commission, 24-month cap per customer — structure locked in Section 22
-- Desktop account panel: 440px slide-in, z-index 1100 (above nav at 1000) — same pattern as basket panel
-- `buildAccountIds(prefix)` maps 'm'/'d' to correct element IDs — single render logic serves both panels
+- Desktop account panel: 440px slide-in, z-index 1100 (above nav at 1000)
 - `orderCache` — client-side map populated on account load, enables instant detail drill-down without Firestore re-fetch
-- Order detail overlay: shared mobile/desktop — slide-up sheet on mobile, centred modal on desktop (CSS handles difference)
 - Post-order dismiss routes to Account page, not Home — customer immediately sees their live order
-- Firestore composite index on `(customerId, createdAt)` required for order history query — already created for La Muletti ✅
-- Real phone numbers must never be used for testing — Firebase throttles repeated SMS; always use Firebase test numbers
 - History shows collected/cancelled only — pending/active orders live in Live Orders section exclusively
-- 90-day history window with limit 50 — display concern not storage; Cloud Function for actual deletion is a future task
-- Show 3 history items initially with "Show X more" button — `historyRemainder` stores hidden orders, revealed inline without a second Firestore call
-- Status badge colours: collected = neutral white, cancelled = red tint — never use opacity stacking on already-low-opacity rgba colours
 - Reorder button on collected history cards — `reorderItems()` clears basket, adds available items, routes to basket
-- Items removed from menu silently skipped on reorder; if all unavailable a gentle alert is shown
-- Session 8b audit: no `"lamuletti"` literals found in `app.js` or `kitchen.js` — `CONFIG.vendor.id` used consistently
-- `CONFIG.domains` added to `config.js` as a forward-compatible field — lists valid domains per deployment
-- Minor tidy deferred to Session 11: `kitchen.js` `orderCardHTML` hardcodes `£` and `'cash on collection'`
-- Menu management: Google Sheets CSV approach — vendor edits sheet, app updates within minutes, no deploy
-- `CONFIG.menuSheetUrl` must be inside the CONFIG object — placing it outside breaks the entire file
-- `menuData` module-level variable — seeded from `CONFIG.menu`, replaced by sheet data if fetch succeeds
-- `DOMContentLoaded` made async to await all sheet fetches before any render call
-- `esc()` utility — HTML-encodes sheet-sourced strings before innerHTML; Firestore writes use raw values
-- Sheet is intentionally public — menu/events/offers data already visible to all customers, no sensitive data
-- `initScrollReveal()` called again after menu sheet load — fixes double-render issue with scroll reveal observer
-- Allergen false-info risk and 2FA recommendation to be added to go-live checklist + vendor onboarding doc (Session 11)
-- CSV column order is flexible — parsers match columns by header name, not position
-- Quoted CSV fields handled correctly — commas inside "double quoted" descriptions are safe
-- Google Sheet protect header row on setup — vendor can edit values but not break column structure
-- Events and offers both Google Sheets-driven — same pattern as menu, same fallback behaviour
-- Offers live on Account page (👤), not a new nav item — keeps nav at 6 items (Option B chosen Session 10)
-- Two separate sheets for events and offers — different column structures, vendor manages independently
-- `offersData` seeded from `CONFIG.offers` if present, otherwise hardcoded demo defaults — no blank state
-- `eventsData` seeded from `CONFIG.events || []` — empty array shows "no upcoming events" message cleanly
-- `active = FALSE` on any sheet row hides it without deleting — vendor can toggle events/offers on/off
-- All three sheet fetches run via `Promise.all` at init — concurrent, not sequential; faster page load
-- `splitCSVLines()` utility extracted — shared by all three CSV parsers
-- `parseEventsCSV()` returns null on header error (fallback), empty array on zero active rows (valid state)
-- `parseOffersCSV()` returns null on header error, empty array on zero active rows (renders nothing)
-- Walk-in manual order entry on kitchen dashboard — single source of truth for all orders regardless of how placed
-- Walk-in orders: `source: 'walkin'`, `customerId: null`, customer name required, phone number optional
-- Walk-in phone number seeds customer database from day one — SMS notifications apply automatically when that feature is built, no code change required
-- Walk-in customers with phone number will receive same status SMS as app customers — arguably better UX than app-only for early adopters
-- "➕ New Order" button in kitchen header, same row as kitchen close toggle — always visible, one tap to open
-- Walk-in order uses same `getNextOrderRef()` daily counter as app orders — one unified sequence, no separate walk-in refs
-- Walk-in order card in kanban is visually identical to app order card — same flow, same status progression, same elapsed timer
-- Desktop UX redesign (Session 10b): full premium overhaul of desktop site — not a template refresh, a brand-level upgrade
-- Fire red reserved for exactly three CTA elements on desktop: nav Order Now, hero View Menu, basket Place Order — nowhere else
-- Emoji removed from entire desktop site — SVG line icons for contact cards, plain text for nav and buttons
-- Strip bar eliminated — `renderDesktopStrip()` now writes a credential text line into `#d-hero-credentials` inside the hero
-- Desktop menu redesigned as editorial typographic list (`d-menu-list` / `d-menu-row`) — name + Cormorant desc left, price right, gold rule separators. No card grid.
-- Desktop qty buttons: outlined gold circles not filled fire-red — `border: 1px solid rgba(212,160,67,0.45)`, fills gold on hover, not red
-- Values section (`#d-values`) removed from desktop — replaced with "How It Works" (`#d-howitworks`) — three steps with large italic numerals (80px Playfair at 9% gold opacity), Cormorant step descriptions
-- `.d-texture` class added — subtle SVG noise overlay (2.8% opacity) on all dark sections. Adds warmth and depth; prevents flat black app feel.
-- Nav links: `::after` pseudo-element underline slides in from left on hover — gold, 1px, 0.25s cubic-bezier. Zero JS, pure CSS quality signal.
-- Founder pills: initials extracted from `f.name` in JS, rendered in styled gold circle — no emoji avatars
-- Cormorant Garamond committed to specific role: menu descriptions, event locations, hero subtitle, "How it works" step descriptions, editorial notes
-- Menu rows use CSS custom property `--reveal-delay` (65ms stagger per item) picked up by `.reveal` transition — cascade effect on scroll
-- `initScrollReveal()` updated: selects `.reveal:not(.visible)` — safe to call multiple times without resetting already-revealed elements
-- `renderDesktopValues()` made no-op — still exists so old callers don't break, but does nothing; mobile about page uses `CONFIG.values` via `renderMobileAbout()` as before
-- Desktop contact grid targets `id="d-contact-grid"` in new HTML — `renderDesktopContact()` falls back to class selector for backward compat
-- SVG_ICONS constant in `app.js` Section 10 — phone, email, web, social icons as inline SVG strings. Thin 1.6px stroke, consistent Lucide-style line weight.
-- Menu food photos: optional `image` column in Google Sheet — vendor pastes ibb.co direct link (`https://i.ibb.co/...`), app loads on next page load, no deploy
-- Image URL validated to start with `http` before use in `src` — basic safety check prevents malformed sheet data reaching DOM
-- Desktop menu card: photo at top (180px), gradient overlay at base, numbered placeholder when no image
-- Mobile menu card: stacked layout with photo when image present, original side-by-side when no image — no broken layouts either way
-- `parseMenuCSV()` gains `image` field — column optional, matched by header name (`image`, `img`, or `photo`)
-- Item object now includes `image: null` field — safe to add to existing `CONFIG.menu` items as fallback
-- `--text-muted` rule established: for UI chrome only (dates, labels, hints, placeholders). Any readable sentence uses `--text-secondary` (75% opacity) minimum
-- Brown-on-brown problem: `--text-muted` at 45% opacity warm cream on warm dark background renders as brown — established root cause, all instances fixed
-- Six contrast fixes applied in Session 10c: menu header note, menu dietary note, pizza description, event location, socials note, mobile card description
+- Real phone numbers must never be used for testing — Firebase throttles repeated SMS; always use Firebase test numbers
+- Session chunking: large file outputs cause conversation timeouts — break each session into single-file chunks
 
 ---
 
-## 18. Core Product Principle — Kitchen Management Co-pilot
+## 19. Core Product Principle — Kitchen Management Co-pilot
 
 Independent food vendors are brilliant at their craft but are not trained kitchen managers. When orders pile up they have no system — they react. Quality drops, customers wait without knowing why, the experience falls apart.
 
@@ -754,33 +547,14 @@ The app promotes good decisions at exactly the moments when a vendor is most lik
 
 ---
 
-## 19. Pitch Deck
+## 20. Next Session — Session 12: Demo Polish
 
-**File:** `vendorapp-pitch-v2.pptx` (11 slides)
-**TODO:** Rename/update to reflect Stalliq branding.
-**TODO:** Update slide 11 with real Endoo contact details. Add QR code to slide 7.
-**TODO:** Add kitchen management co-pilot angle.
-**TODO:** Add roadmap slide covering SMS/WhatsApp, live location, geofence, customer login, loyalty, AI Order Assist.
-
----
-
-## 20. Next Session — Session 11: Walk-in Manual Order Entry
-
-Paste the current `kitchen.js` and `kitchen.html` at the start of the session.
+**Goal:** End-to-end demo reset so the app can be shown cleanly at any meeting without leftover test orders, stale state, or rough edges.
 
 **What to build:**
-A "➕ New Order" button on the kitchen dashboard header (same row as the kitchen close toggle). Vendor taps it to enter a walk-up order manually — item picker, customer name, optional phone number. Order drops straight into the Pending column exactly like an app order.
-
-**Detailed spec:** See Section 10d below.
-
-**Key things to get right:**
-- `source: 'walkin'` on the Firestore order document — distinguishes from app orders for analytics
-- `customerId: null` — no Firebase Auth user, vendor is placing on behalf of customer
-- Customer name required — so the card is identifiable in a busy queue
-- Phone number optional — if the kitchen is slammed Daniele won't always capture it
-- Walk-in order ref uses the same daily sequential counter as app orders — one unified sequence
-- Order card in kanban looks identical to app order cards — same flow, same status progression
-- If phone number given, customer is in the database from day one — SMS notifications apply when that feature is built
+- Demo reset function: clears test orders from Firestore, resets daily counter, logs out current user — one tap from kitchen dashboard
+- Any rough edges surfaced during the Daniele meeting
+- Review overall flow for the pitch
 
 ---
 
@@ -798,9 +572,7 @@ A "➕ New Order" button on the kitchen dashboard header (same row as the kitche
 
 ## 22. Sophie Partnership
 
-**Who:** Sophie (sophieetc.com) — runs MK's definitive food blog, organises Sophie's Street Feast, background in marketing (ex-Bletchley Park), currently runs her own social media consultancy. Commercially literate, understands SaaS economics, has the relationships we don't.
-
-**Why:** Independent food vendors trust other vendors and trusted local voices — not founders cold-calling. Sophie is the fast path to credibility across MK, Bedford, Northampton. Without her the plan still works but slower and with lower close rates.
+**Who:** Sophie (sophieetc.com) — runs MK's definitive food blog, organises Sophie's Street Feast, background in marketing (ex-Bletchley Park), currently runs her own social media consultancy.
 
 **Commercial structure:**
 
@@ -814,27 +586,24 @@ A "➕ New Order" button on the kitchen dashboard header (same row as the kitche
 | After 24 months | Commission ends, customer becomes full-margin to Stalliq |
 
 **Timing of approach:** Month 4-5, once La Muletti has 2-3 months of real order data and at least one quotable success metric.
-
 **Written agreement required before first customer signs.**
 
 ---
 
 ## 23. Go-Live Checklist ⚠️
 
-Tasks that must be completed before going live with any real customer. Not blockers for demo/testing — blockers for production.
-
 | # | Task | Notes |
 |---|------|-------|
-| 1 | **Firestore composite index** | Required for Account page order history query. Already created for La Muletti ✅. For each new customer deployment: on first login to Account, open browser console — Firestore will log a `failed-precondition` error with a direct link to create the index. Click it, wait ~60–90 seconds to build. One-time task per Firebase project. |
-| 2 | **Firestore security rules** | Ensure the orders read rule is deployed: `allow read: if request.auth != null && resource.data.customerId == request.auth.uid;` Check in Firebase Console → Firestore → Rules. |
-| 3 | **Remove `noindex, nofollow`** | The demo site has a robots meta tag preventing search indexing. Remove from `index.html` before going live on the customer's real domain. |
-| 4 | **Firebase Phone Auth — real domain** | Add the production domain to Firebase Auth → Settings → Authorised Domains. Without this, Phone Auth will silently fail on the live URL. |
-| 5 | **Remove Firebase test numbers** | Before or shortly after go-live, remove test numbers from Firebase Console → Authentication → Sign-in method → Phone → Test numbers. Not a security risk but keeps things clean. |
-| 6 | **CONFIG.vendor.id** | Confirm `config.js` has correct vendor ID. Never hardcode as a string literal anywhere in `app.js` or `kitchen.js`. |
-| 7 | **CONFIG.domains** | Update `config.js` `domains` array to include the customer's live domain once known. |
-| 8 | **Kitchen PIN** | Change `CONFIG.kitchen.pin` from `1234` to something the vendor chooses. |
-| 9 | **`noindex` on kitchen.html** | Add `<meta name="robots" content="noindex, nofollow">` to `kitchen.html` — the kitchen dashboard should never appear in search results. |
-| 10 | **Google Sheet — protect header row** | Right-click row 1 → Protect range — vendor can edit cell values but cannot delete or reorder columns. Applies to menu, events, and offers sheets. |
-| 11 | **Google Sheet — vendor 2FA** | Advise vendor to enable 2FA on their Google account. A compromised account could write false allergen information to the menu sheet — this is a real-world liability risk, not just a technical one. Include in vendor onboarding doc. |
-| 12 | **Allergen disclaimer** | Add to vendor onboarding doc: the menu sheet is public and customer-facing. Only put accurate, customer-safe content in it. False allergen info (accidental or via compromised account) is a liability. |
-| 13 | **Events + offers sheet URLs** | Add `CONFIG.eventsSheetUrl` and `CONFIG.offersSheetUrl` to `config.js` for each new customer. Create and publish their sheets, protect header rows, share with vendor. |
+| 1 | **Firestore composite index** | Required for Account page order history query. Already created for La Muletti ✅. One-time task per Firebase project. |
+| 2 | **Firestore security rules** | `allow read: if request.auth != null && resource.data.customerId == request.auth.uid;` |
+| 3 | **Remove `noindex, nofollow`** | Remove from `index.html` before going live on the customer's real domain. |
+| 4 | **Firebase Phone Auth — real domain** | Add production domain to Firebase Auth → Settings → Authorised Domains. |
+| 5 | **Remove Firebase test numbers** | Firebase Console → Authentication → Sign-in method → Phone → Test numbers. |
+| 6 | **CONFIG.vendor.id** | Confirm correct vendor ID. Never hardcode as a string literal. |
+| 7 | **CONFIG.domains** | Update to include the customer's live domain. |
+| 8 | **Kitchen PIN** | Change from `1234` to vendor's chosen PIN. |
+| 9 | **`noindex` on kitchen.html** | `<meta name="robots" content="noindex, nofollow">` — kitchen dashboard must never appear in search results. |
+| 10 | **Google Sheet — protect header row** | Right-click row 1 → Protect range — vendor can edit values but not break column structure. |
+| 11 | **Google Sheet — vendor 2FA** | Advise vendor to enable 2FA on Google account. Compromised account could write false allergen info. |
+| 12 | **Allergen disclaimer** | Include in vendor onboarding doc: menu sheet is public and customer-facing. Accuracy is a liability. |
+| 13 | **Events + offers sheet URLs** | Add `CONFIG.eventsSheetUrl` and `CONFIG.offersSheetUrl` for each new customer. |
