@@ -120,7 +120,7 @@ html { scroll-behavior: smooth; }
 
 
 /* ─── 3b. HERO ─── */
-.d-hero { position: relative; height: 65vh; min-height: 560px; overflow: hidden; display: flex; align-items: center; }
+.d-hero { position: relative; height: 44vh; min-height: 360px; overflow: hidden; display: flex; align-items: center; }
 .d-hero-bg {
   position: absolute; inset: 0;
   background-size: cover; background-position: center;
@@ -139,30 +139,24 @@ html { scroll-behavior: smooth; }
 .d-hero-eyebrow {
   display: inline-flex; align-items: center; gap: 10px;
   font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
-  color: var(--gold); font-weight: 600; margin-bottom: 24px;
+  color: var(--gold); font-weight: 600; margin-bottom: 10px;
   opacity: 0; animation: fadeUp 0.8s 0.2s forwards;
 }
 .d-hero-eyebrow::before { content: ''; display: block; width: 32px; height: 1px; background: var(--gold); }
 .d-hero-title {
-  font-family: var(--font-display); font-size: clamp(52px, 6vw, 88px); font-weight: 700;
-  line-height: 1.0; color: var(--cream); margin-bottom: 12px;
+  font-family: var(--font-display); font-size: clamp(34px, 3.6vw, 52px); font-weight: 700;
+  line-height: 1.05; color: var(--cream); margin-bottom: 8px;
   opacity: 0; animation: fadeUp 0.8s 0.4s forwards;
 }
 .d-hero-title em { font-style: italic; color: var(--gold); }
 .d-hero-sub {
-  font-family: var(--font-italic); font-size: clamp(18px, 2vw, 24px);
+  font-family: var(--font-italic); font-size: clamp(14px, 1.4vw, 18px);
   font-weight: 300; font-style: italic; color: rgba(255,255,255,0.80);
-  margin-bottom: 36px; line-height: 1.5;
+  margin-bottom: 20px; line-height: 1.5;
   opacity: 0; animation: fadeUp 0.8s 0.6s forwards;
 }
-.d-hero-actions { display: flex; gap: 16px; flex-wrap: wrap; opacity: 0; animation: fadeUp 0.8s 0.8s forwards; }
-.d-hero-scroll {
-  position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%);
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
-  color: rgba(255,255,255,0.5); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
-  animation: bounce 2s infinite;
-}
-.d-hero-scroll::after { content: '↓'; font-size: 18px; color: var(--gold); }
+.d-hero-actions { display: flex; gap: 12px; flex-wrap: wrap; opacity: 0; animation: fadeUp 0.8s 0.8s forwards; }
+.d-hero-scroll { display: none; }
 
 
 /* ─── 3c. STRIP BAR ─── */
