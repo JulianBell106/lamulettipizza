@@ -1,10 +1,7 @@
 /**
- * Stalliq — Kitchen Dashboard JS
+ * kitchen.js — La Muletti Pizza Kitchen Dashboard
  * ============================================================================
- * Reads CONFIG from js/config.js (same file as customer app).
- * Uses db + auth globals from js/firebase.js.
- *
- * Structure:
+ * Sections:
  *   1.  State
  *   2.  Theme + page identity
  *   3.  Clock
@@ -16,9 +13,11 @@
  *   9.  Wait time modal
  *   10. Accept order
  *   11. Status progression
- *   12. Ready confirm modal
+ *   12. Ready confirm modal + Order detail modal
  *   13. Elapsed time + sound alert
- *   14. Dashboard start + init
+ *   14. Kanban drag scroll
+ *   15. Dashboard start + init
+ *   16. Walk-in order modal
  * ============================================================================
  */
 
@@ -33,6 +32,9 @@ let pendingReadyId    = null;     // orderId waiting for ready confirmation
 let selectedWaitMins  = null;     // chosen wait time value
 let elapsedTimers     = {};       // setInterval handles keyed by orderId
 let ordersUnsubscribe = null;
+
+// Walk-in modal state
+let walkinQty         = {};       // { menuItemId: qty }
 
 
 /* ============================================================================
@@ -113,7 +115,8 @@ function checkPin() {
   const correctPin = String(CONFIG.kitchen?.pin || '1234');
   if (pinEntry === correctPin) {
     document.getElementById('pin-overlay').classList.add('hidden');
-    document.getElementById('k-dashboard').style.display = 'block';
+    const dashboard = document.getElementById('k-dashboard');
+    if (dashboard) dashboard.style.display = 'flex'; // flex for column layout
     startDashboard();
   } else {
     document.getElementById('pin-error').textContent = 'Incorrect PIN — try again';
@@ -140,7 +143,7 @@ function listenKitchenStatus() {
     .onSnapshot(doc => {
       kitchenStatus = (doc.exists && doc.data().kitchenStatus) || 'open';
       renderKitchenStatusBtn();
-    }, err => console.error('Kitchen status listener:', err));
+    }, err => console.error('[Stalliq] Kitchen status listener:', err));
 }
 
 function renderKitchenStatusBtn() {
@@ -162,7 +165,7 @@ async function setKitchenStatus(status) {
     await db.collection('vendors').doc(CONFIG.vendor.id)
       .set({ kitchenStatus: status }, { merge: true });
   } catch (err) {
-    console.error('Set kitchen status error:', err);
+    console.error('[Stalliq] Set kitchen status error:', err);
   }
   closeKitchenModal();
 }
@@ -199,7 +202,7 @@ function listenOrders() {
 
     currentOrders = incoming;
     renderOrders();
-  }, err => console.error('Orders listener:', err));
+  }, err => console.error('[Stalliq] Orders listener:', err));
 }
 
 
@@ -222,6 +225,7 @@ function renderOrders() {
   clearElapsedTimers();
 
   if (orders.length === 0) {
+    container.classList.add('is-empty');
     container.innerHTML = `
       <div class="k-empty">
         <div class="k-empty-icon">🍕</div>
@@ -229,6 +233,8 @@ function renderOrders() {
       </div>`;
     return;
   }
+
+  container.classList.remove('is-empty');
 
   const statuses = ['pending', 'accepted', 'preparing', 'ready'];
   const labels   = { pending: 'Pending', accepted: 'Accepted', preparing: 'Preparing', ready: 'Ready' };
@@ -267,6 +273,9 @@ function renderOrders() {
    8. ORDER CARD HTML
    ============================================================================ */
 function orderCardHTML(order) {
+  const currency    = CONFIG.business.currency    || '£';
+  const paymentNote = CONFIG.ordering.paymentNote || 'Cash on collection';
+
   const statusLabels = {
     pending:   'Awaiting Acceptance',
     accepted:  'Accepted',
@@ -282,6 +291,11 @@ function orderCardHTML(order) {
   ).join('');
 
   const waitLabel = order.waitMins ? `${order.waitMins} min wait` : '';
+
+  // Walk-in badge
+  const sourceBadge = order.source === 'walkin'
+    ? `<span class="k-card-source-badge">Walk-in</span>`
+    : '';
 
   let actionBtn = '';
   switch (order.status) {
@@ -302,7 +316,7 @@ function orderCardHTML(order) {
   return `
     <div class="k-card status-${order.status}" id="k-card-${order.id}">
       <div class="k-card-header">
-        <div class="k-card-ref">${order.orderRef || '—'}</div>
+        <div class="k-card-ref">${order.orderRef || '—'}${sourceBadge}</div>
         <div class="k-card-meta">
           <div class="k-card-name">${order.customerName || 'Customer'}</div>
           <div class="k-card-elapsed" id="elapsed-${order.id}">0:00</div>
@@ -310,7 +324,7 @@ function orderCardHTML(order) {
       </div>
       <div class="k-card-body k-card-tappable" onclick="openDetailModal('${order.id}')">
         <ul class="k-card-items">${itemsHTML}</ul>
-        <div class="k-card-total">£${(order.orderTotal || 0).toFixed(2)} · cash on collection</div>
+        <div class="k-card-total">${currency}${(order.orderTotal || 0).toFixed(2)} · ${paymentNote}</div>
         <div class="k-card-drill-hint">Tap for full details</div>
       </div>
       <div class="k-card-status-bar">
@@ -408,10 +422,8 @@ async function confirmAccept() {
     });
     closeWaitModal();
   } catch (err) {
-    console.error('Accept order error:', err);
-    if (btn) btn.textContent = 'Error — try again';
-  } finally {
-    if (btn) { btn.textContent = 'Accept Order →'; btn.disabled = false; }
+    console.error('[Stalliq] Accept order error:', err);
+    if (btn) { btn.textContent = 'Error — try again'; btn.disabled = false; }
   }
 }
 
@@ -428,7 +440,7 @@ async function advanceStatus(orderId, newStatus) {
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
   } catch (err) {
-    console.error('Advance status error:', err);
+    console.error('[Stalliq] Advance status error:', err);
   }
 }
 
@@ -439,19 +451,51 @@ async function markCollected(orderId) {
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
   } catch (err) {
-    console.error('Mark collected error:', err);
+    console.error('[Stalliq] Mark collected error:', err);
   }
 }
 
 
 /* ============================================================================
-   12b. ORDER DETAIL MODAL
-   Full drill-down — phone, timestamp, all items, total, wait time set.
-   Opened by tapping the card body. Action buttons remain on the card.
+   12. READY CONFIRM MODAL + ORDER DETAIL MODAL
    ============================================================================ */
+
+/* Ready confirm */
+function openReadyModal(orderId) {
+  pendingReadyId = orderId;
+  const order = currentOrders[orderId];
+  const refEl = document.getElementById('ready-modal-ref');
+  if (refEl) refEl.textContent = order ? order.orderRef : '';
+  document.getElementById('ready-modal').classList.add('show');
+}
+
+function closeReadyModal() {
+  document.getElementById('ready-modal').classList.remove('show');
+  pendingReadyId = null;
+}
+
+async function confirmReady() {
+  if (!pendingReadyId) return;
+  const btn = document.querySelector('#ready-modal .k-modal-btn.primary');
+  if (btn) { btn.textContent = 'Updating…'; btn.disabled = true; }
+  try {
+    await advanceStatus(pendingReadyId, 'ready');
+    closeReadyModal();
+  } catch (err) {
+    console.error('[Stalliq] Confirm ready error:', err);
+    if (btn) { btn.textContent = 'Error — try again'; btn.disabled = false; }
+  } finally {
+    if (btn) { btn.textContent = 'Mark as Ready ✓'; btn.disabled = false; }
+  }
+}
+
+/* Order detail drill-down */
 function openDetailModal(orderId) {
   const order = currentOrders[orderId];
   if (!order) return;
+
+  const currency    = CONFIG.business.currency    || '£';
+  const paymentNote = CONFIG.ordering.paymentNote || 'Cash on collection';
 
   const statusLabels = {
     pending:   'Awaiting Acceptance',
@@ -471,8 +515,8 @@ function openDetailModal(orderId) {
     : '';
 
   // Phone — format for display and tel: link
-  const phone    = order.customerPhone || null;
-  const phoneEl  = phone
+  const phone   = order.customerPhone || null;
+  const phoneEl = phone
     ? `<a href="tel:${phone}" class="k-detail-phone">${phone} 📞</a>`
     : `<span class="k-detail-phone muted">No phone on record</span>`;
 
@@ -488,13 +532,18 @@ function openDetailModal(orderId) {
           ${noteEl}
         </div>
         <span class="k-detail-item-qty">× ${item.quantity}</span>
-        <span class="k-detail-item-price">£${(item.price * item.quantity).toFixed(2)}</span>
+        <span class="k-detail-item-price">${currency}${(item.price * item.quantity).toFixed(2)}</span>
       </div>`;
   }).join('');
 
   // Wait time
   const waitEl = order.waitMins
     ? `<div class="k-detail-row"><span>Wait set</span><strong>${order.waitMins} mins</strong></div>`
+    : '';
+
+  // Source row (walk-in only)
+  const sourceEl = order.source === 'walkin'
+    ? `<div class="k-detail-row"><span>Source</span><strong>Walk-in</strong></div>`
     : '';
 
   document.getElementById('detail-modal-body').innerHTML = `
@@ -520,9 +569,10 @@ function openDetailModal(orderId) {
     </div>
 
     <div class="k-detail-section k-detail-totals">
-      <div class="k-detail-row"><span>Order total</span><strong>£${(order.orderTotal || 0).toFixed(2)}</strong></div>
-      <div class="k-detail-row"><span>Payment</span><strong>Cash on collection</strong></div>
+      <div class="k-detail-row"><span>Order total</span><strong>${currency}${(order.orderTotal || 0).toFixed(2)}</strong></div>
+      <div class="k-detail-row"><span>Payment</span><strong>${paymentNote}</strong></div>
       ${waitEl}
+      ${sourceEl}
     </div>`;
 
   document.getElementById('detail-modal').classList.add('show');
@@ -530,36 +580,6 @@ function openDetailModal(orderId) {
 
 function closeDetailModal() {
   document.getElementById('detail-modal').classList.remove('show');
-}
-
-
-
-function openReadyModal(orderId) {
-  pendingReadyId = orderId;
-  const order = currentOrders[orderId];
-  const refEl = document.getElementById('ready-modal-ref');
-  if (refEl) refEl.textContent = order ? order.orderRef : '';
-  document.getElementById('ready-modal').classList.add('show');
-}
-
-function closeReadyModal() {
-  document.getElementById('ready-modal').classList.remove('show');
-  pendingReadyId = null;
-}
-
-async function confirmReady() {
-  if (!pendingReadyId) return;
-  const btn = document.querySelector('#ready-modal .k-modal-btn.primary');
-  if (btn) { btn.textContent = 'Updating…'; btn.disabled = true; }
-  try {
-    await advanceStatus(pendingReadyId, 'ready');
-    closeReadyModal();
-  } catch (err) {
-    console.error('Confirm ready error:', err);
-    if (btn) btn.textContent = 'Error — try again';
-  } finally {
-    if (btn) { btn.textContent = 'Mark as Ready ✓'; btn.disabled = false; }
-  }
 }
 
 
@@ -683,3 +703,198 @@ document.addEventListener('DOMContentLoaded', () => {
   applyKitchenTheme();
   initPageIdentity();
 });
+
+
+/* ============================================================================
+   16. WALK-IN ORDER MODAL
+   Vendor enters a walk-up customer's order manually.
+   Creates a Firestore order doc with source:'walkin', customerId:null.
+   Uses the same daily sequential order ref counter as app orders.
+   ============================================================================ */
+
+/* --- Order ref counter (mirrors getNextOrderRef in app.js) --- */
+async function getNextOrderRef() {
+  const today      = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const counterRef = db.collection('vendors').doc(CONFIG.vendor.id)
+                       .collection('counters').doc('daily');
+  let orderNumber  = 1;
+
+  await db.runTransaction(async tx => {
+    const snap = await tx.get(counterRef);
+    if (snap.exists && snap.data().date === today) {
+      orderNumber = (snap.data().count || 0) + 1;
+    }
+    tx.set(counterRef, { date: today, count: orderNumber });
+  });
+
+  return `#${String(orderNumber).padStart(3, '0')}`;
+}
+
+/* --- Open / close --- */
+function openWalkinModal() {
+  walkinQty = {};
+  const nameInput  = document.getElementById('walkin-name');
+  const phoneInput = document.getElementById('walkin-phone');
+  const nudge      = document.getElementById('walkin-nudge');
+  if (nameInput)  { nameInput.value  = ''; nameInput.classList.remove('error'); }
+  if (phoneInput) phoneInput.value  = '';
+  if (nudge)      nudge.textContent = '';
+
+  renderWalkinItems();
+  updateWalkinTotal();
+
+  const btn = document.getElementById('walkin-submit-btn');
+  if (btn) { btn.textContent = 'Place Order →'; btn.disabled = false; }
+
+  document.getElementById('walkin-modal').classList.add('show');
+
+  // Focus name field after a short delay (modal animation)
+  setTimeout(() => { if (nameInput) nameInput.focus(); }, 300);
+}
+
+function closeWalkinModal() {
+  document.getElementById('walkin-modal').classList.remove('show');
+}
+
+/* --- Item picker --- */
+function renderWalkinItems() {
+  const menu = (CONFIG.menu || []).filter(item => item.available !== false);
+  const currency = CONFIG.business.currency || '£';
+  const el = document.getElementById('walkin-items');
+  if (!el) return;
+
+  if (menu.length === 0) {
+    el.innerHTML = `<div style="color:var(--ash);font-size:13px;padding:12px 0;">No menu items available</div>`;
+    return;
+  }
+
+  el.innerHTML = menu.map(item => `
+    <div class="k-walkin-item" id="walkin-row-${item.id}">
+      <div class="k-walkin-item-info">
+        <div class="k-walkin-item-name">${item.name}</div>
+        <div class="k-walkin-item-price">${currency}${Number(item.price).toFixed(2)}</div>
+      </div>
+      <div class="k-walkin-qty-controls">
+        <button class="k-walkin-qty-btn" onclick="adjustWalkinQty('${item.id}', -1)">−</button>
+        <span class="k-walkin-qty-val" id="walkin-qty-${item.id}">0</span>
+        <button class="k-walkin-qty-btn" onclick="adjustWalkinQty('${item.id}', 1)">+</button>
+      </div>
+    </div>`).join('');
+}
+
+function adjustWalkinQty(itemId, delta) {
+  const current = walkinQty[itemId] || 0;
+  const next    = Math.max(0, current + delta);
+
+  if (next === 0) {
+    delete walkinQty[itemId];
+  } else {
+    walkinQty[itemId] = next;
+  }
+
+  const qtyEl = document.getElementById(`walkin-qty-${itemId}`);
+  if (qtyEl) qtyEl.textContent = next;
+
+  // Highlight row when item is selected
+  const rowEl = document.getElementById(`walkin-row-${itemId}`);
+  if (rowEl) rowEl.classList.toggle('selected', next > 0);
+
+  updateWalkinTotal();
+}
+
+function updateWalkinTotal() {
+  const currency = CONFIG.business.currency || '£';
+  const menu     = CONFIG.menu || [];
+  let total      = 0;
+
+  Object.entries(walkinQty).forEach(([id, qty]) => {
+    const item = menu.find(m => String(m.id) === String(id));
+    if (item) total += Number(item.price) * qty;
+  });
+
+  const el = document.getElementById('walkin-total');
+  if (el) el.textContent = total > 0 ? `Total: ${currency}${total.toFixed(2)}` : '';
+}
+
+/* --- Submit --- */
+async function submitWalkinOrder() {
+  const nameInput = document.getElementById('walkin-name');
+  const nudge     = document.getElementById('walkin-nudge');
+  const name      = (nameInput?.value || '').trim();
+
+  // Validate: at least one item
+  if (Object.keys(walkinQty).length === 0) {
+    if (nudge) nudge.textContent = 'Please add at least one item.';
+    // Flash items section
+    const itemsEl = document.getElementById('walkin-items');
+    if (itemsEl) {
+      itemsEl.style.outline = '2px solid var(--s-urgent)';
+      itemsEl.style.borderRadius = '10px';
+      setTimeout(() => { itemsEl.style.outline = ''; }, 800);
+    }
+    return;
+  }
+
+  // Validate: customer name required
+  if (!name) {
+    if (nudge) nudge.textContent = 'Customer name is required.';
+    if (nameInput) {
+      nameInput.classList.add('error');
+      nameInput.focus();
+      setTimeout(() => nameInput.classList.remove('error'), 2000);
+    }
+    return;
+  }
+
+  if (nudge) nudge.textContent = '';
+
+  // Build items array from walkinQty
+  const menu     = CONFIG.menu || [];
+  const currency = CONFIG.business.currency || '£';
+  const items    = Object.entries(walkinQty).map(([id, qty]) => {
+    const item = menu.find(m => String(m.id) === String(id));
+    return {
+      id:       item.id,
+      name:     item.name,
+      price:    Number(item.price),
+      quantity: qty,
+      notes:    null,
+    };
+  });
+
+  const orderTotal  = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const phoneRaw    = (document.getElementById('walkin-phone')?.value || '').trim();
+  const phone       = phoneRaw || null;
+  const paymentNote = CONFIG.ordering.paymentNote || 'Cash on collection';
+
+  const btn = document.getElementById('walkin-submit-btn');
+  if (btn) { btn.textContent = 'Placing…'; btn.disabled = true; }
+
+  try {
+    const orderRef = await getNextOrderRef();
+
+    await db.collection('orders').add({
+      vendorId:      CONFIG.vendor.id,
+      orderRef,
+      source:        'walkin',
+      customerId:    null,
+      customerName:  name,
+      customerPhone: phone,
+      items,
+      orderTotal,
+      payment:       paymentNote,
+      status:        'pending',
+      waitMins:      null,
+      expiresAt:     null,
+      createdAt:     firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt:     firebase.firestore.FieldValue.serverTimestamp(),
+    });
+
+    console.log(`[Stalliq] Walk-in order placed: ${orderRef} for "${name}"`);
+    closeWalkinModal();
+
+  } catch (err) {
+    console.error('[Stalliq] Walk-in order error:', err);
+    if (btn) { btn.textContent = 'Error — try again'; btn.disabled = false; }
+  }
+}

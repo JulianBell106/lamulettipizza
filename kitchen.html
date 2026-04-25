@@ -2,17 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="robots" content="noindex, nofollow">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Kitchen Dashboard</title>
-
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
-
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
   <style>
+
     /* ============================================================
        CSS CUSTOM PROPERTIES
        Base values — overwritten at runtime by kitchen.js from CONFIG
@@ -40,11 +40,15 @@
     ============================================================ */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    html, body {
+      height: 100%;
+      overflow: hidden; /* page never scrolls — kanban handles its own scroll */
+    }
+
     body {
       background: var(--dark);
       color: var(--cream);
       font-family: 'DM Sans', system-ui, sans-serif;
-      min-height: 100vh;
       -webkit-font-smoothing: antialiased;
     }
 
@@ -143,16 +147,26 @@
     .pin-dots.shake { animation: shake 0.4s ease; }
 
     /* ============================================================
+       DASHBOARD LAYOUT — full height, no page scroll
+    ============================================================ */
+    #k-dashboard {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      height: 100dvh; /* dynamic viewport height — handles mobile browser chrome */
+      overflow: hidden;
+    }
+
+    /* ============================================================
        HEADER
     ============================================================ */
     .k-header {
-      position: sticky;
-      top: 0;
+      flex-shrink: 0;
       z-index: 100;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 14px 20px;
+      padding: 12px 16px;
       background: var(--char);
       border-bottom: 1px solid rgba(212,160,67,0.12);
     }
@@ -175,7 +189,7 @@
     .k-header-right {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 8px;
     }
 
     .k-time {
@@ -184,8 +198,25 @@
       font-variant-numeric: tabular-nums;
     }
 
+    /* New Order button */
+    .k-new-order-btn {
+      padding: 7px 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(212,160,67,0.35);
+      background: rgba(212,160,67,0.10);
+      color: var(--gold);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      transition: opacity 0.15s, background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+      white-space: nowrap;
+    }
+    .k-new-order-btn:active { opacity: 0.75; background: rgba(212,160,67,0.18); }
+
+    /* Kitchen status button */
     .k-status-btn {
-      padding: 7px 14px;
+      padding: 7px 12px;
       border-radius: 20px;
       border: 1px solid transparent;
       font-size: 12px;
@@ -193,6 +224,7 @@
       letter-spacing: 0.2px;
       transition: opacity 0.15s;
       -webkit-tap-highlight-color: transparent;
+      white-space: nowrap;
     }
     .k-status-btn:active { opacity: 0.75; }
     .k-status-btn.open {
@@ -210,10 +242,11 @@
        QUEUE BAR
     ============================================================ */
     .k-queue-bar {
+      flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 14px 20px 6px;
+      padding: 10px 16px 6px;
     }
     .k-queue-label {
       font-size: 11px;
@@ -227,31 +260,40 @@
     }
 
     /* ============================================================
-       KANBAN BOARD
+       KANBAN BOARD — horizontal scroll, columns scroll vertically
     ============================================================ */
     .k-orders {
+      flex: 1;               /* fills remaining viewport height */
       display: flex;
       gap: 12px;
-      padding: 12px 16px 40px;
+      padding: 8px 16px 0;
       overflow-x: auto;
       overflow-y: hidden;
-      align-items: flex-start;
-      min-height: calc(100vh - 110px);
+      align-items: stretch;  /* columns fill full height */
       touch-action: pan-x;
       cursor: grab;
       user-select: none;
       -webkit-user-select: none;
-      scrollbar-width: none;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(212,160,67,0.15) transparent;
     }
-    .k-orders::-webkit-scrollbar { display: none; }
+    .k-orders::-webkit-scrollbar { height: 4px; }
+    .k-orders::-webkit-scrollbar-track { background: transparent; }
+    .k-orders::-webkit-scrollbar-thumb { background: rgba(212,160,67,0.2); border-radius: 2px; }
     .k-orders.dragging { cursor: grabbing; }
+
+    /* Empty state — centre the message when no orders */
+    .k-orders.is-empty {
+      align-items: center;
+      justify-content: center;
+    }
 
     /* Snap columns into view on mobile */
     @media (max-width: 768px) {
       .k-orders { scroll-snap-type: x mandatory; }
     }
 
-    /* Column */
+    /* Column — fixed width, flex column, clips overflow so cards scroll inside */
     .k-col {
       flex: 0 0 272px;
       min-width: 272px;
@@ -259,6 +301,8 @@
       flex-direction: column;
       gap: 0;
       scroll-snap-align: start;
+      overflow: hidden;         /* cards scroll inside, column itself doesn't */
+      padding-bottom: 16px;
     }
 
     /* On wide screens let columns grow to fill space */
@@ -267,6 +311,7 @@
     }
 
     .k-col-header {
+      flex-shrink: 0;           /* never compress the column header */
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -303,7 +348,21 @@
       text-align: center;
     }
 
-    .k-col-cards { display: flex; flex-direction: column; gap: 12px; }
+    /* Cards — scrollable inside column */
+    .k-col-cards {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 0 2px 8px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(212,160,67,0.15) transparent;
+    }
+    .k-col-cards::-webkit-scrollbar { width: 3px; }
+    .k-col-cards::-webkit-scrollbar-track { background: transparent; }
+    .k-col-cards::-webkit-scrollbar-thumb { background: rgba(212,160,67,0.2); border-radius: 2px; }
 
     /* Per-column empty state */
     .k-col-empty {
@@ -317,11 +376,9 @@
 
     /* Global empty (no orders at all) */
     .k-empty {
-      flex: 1;
       padding: 80px 24px;
       text-align: center;
       color: var(--ash);
-      align-self: center;
     }
     .k-empty-icon { font-size: 44px; margin-bottom: 14px; }
     .k-empty-text { font-size: 15px; }
@@ -335,6 +392,7 @@
       border: 1px solid rgba(253,246,236,0.07);
       overflow: hidden;
       transition: border-color 0.2s;
+      flex-shrink: 0; /* cards don't compress */
     }
     .k-card.status-pending   { border-color: rgba(212,160,67,0.45); }
     .k-card.status-accepted  { border-color: rgba(74,144,217,0.4); }
@@ -351,6 +409,23 @@
     .k-card.status-accepted::before  { background: var(--s-accepted); }
     .k-card.status-preparing::before { background: var(--s-preparing); }
     .k-card.status-ready::before     { background: var(--s-ready); }
+
+    /* Walk-in badge on card */
+    .k-card-source-badge {
+      display: inline-block;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      font-weight: 600;
+      color: var(--ash);
+      background: rgba(253,246,236,0.06);
+      border: 1px solid rgba(253,246,236,0.1);
+      border-radius: 4px;
+      padding: 2px 6px;
+      margin-left: 6px;
+      vertical-align: middle;
+      line-height: 1.6;
+    }
 
     .k-card-header {
       display: flex;
@@ -530,6 +605,7 @@
       -webkit-tap-highlight-color: transparent;
     }
     .k-modal-btn:active { opacity: 0.8; transform: scale(0.98); }
+    .k-modal-btn:disabled { opacity: 0.5; }
     .k-modal-btn.primary  { background: var(--gold); color: var(--dark); }
     .k-modal-btn.secondary {
       background: rgba(253,246,236,0.07);
@@ -590,10 +666,7 @@
       font-family: inherit;
     }
     .k-custom-input::placeholder { color: var(--ash); }
-    .k-custom-input:focus {
-      outline: none;
-      border-color: var(--gold);
-    }
+    .k-custom-input:focus { outline: none; border-color: var(--gold); }
     .k-custom-label { font-size: 13px; color: var(--ash); white-space: nowrap; }
 
     /* ============================================================
@@ -618,7 +691,6 @@
       margin-bottom: 2px;
     }
     .k-close-opt-desc { font-size: 12px; color: var(--ash); line-height: 1.4; }
-
     .k-close-opt.opt-open  { border-color: rgba(39,174,96,0.25); }
     .k-close-opt.opt-open .k-close-opt-title { color: var(--s-ready); }
 
@@ -747,6 +819,142 @@
       line-height: 1.5;
     }
 
+    /* ============================================================
+       WALK-IN ORDER MODAL
+    ============================================================ */
+    .k-modal-walkin {
+      max-height: 92vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 20px;
+    }
+
+    /* Item picker list */
+    .k-walkin-items {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 20px;
+    }
+
+    .k-walkin-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(253,246,236,0.07);
+      background: rgba(253,246,236,0.03);
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .k-walkin-item.selected {
+      background: rgba(212,160,67,0.08);
+      border-color: rgba(212,160,67,0.3);
+    }
+
+    .k-walkin-item-info { flex: 1; }
+    .k-walkin-item-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--cream);
+      line-height: 1.2;
+    }
+    .k-walkin-item-price {
+      font-size: 12px;
+      color: var(--ash);
+      margin-top: 2px;
+    }
+
+    .k-walkin-qty-controls {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .k-walkin-qty-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 1px solid rgba(253,246,236,0.15);
+      background: rgba(253,246,236,0.07);
+      color: var(--cream);
+      font-size: 20px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.1s, border-color 0.1s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .k-walkin-qty-btn:active {
+      background: rgba(212,160,67,0.2);
+      border-color: var(--gold);
+      transform: scale(0.92);
+    }
+
+    .k-walkin-qty-val {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--cream);
+      min-width: 22px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+    .k-walkin-item.selected .k-walkin-qty-val { color: var(--gold); }
+
+    /* Form fields */
+    .k-walkin-field {
+      margin-bottom: 14px;
+    }
+    .k-walkin-field label {
+      display: block;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--ash);
+      margin-bottom: 8px;
+    }
+    .k-walkin-optional {
+      text-transform: none;
+      letter-spacing: 0;
+      font-size: 11px;
+      color: var(--ash);
+      opacity: 0.7;
+    }
+    .k-walkin-input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 9px;
+      border: 1px solid rgba(253,246,236,0.13);
+      background: rgba(253,246,236,0.04);
+      color: var(--cream);
+      font-size: 15px;
+      font-family: inherit;
+      transition: border-color 0.15s;
+    }
+    .k-walkin-input::placeholder { color: var(--ash); }
+    .k-walkin-input:focus { outline: none; border-color: var(--gold); }
+    .k-walkin-input.error { border-color: var(--s-urgent); }
+
+    /* Running total */
+    .k-walkin-total {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--gold);
+      text-align: right;
+      padding: 6px 0 2px;
+      min-height: 28px;
+    }
+
+    /* Validation nudge */
+    .k-walkin-nudge {
+      font-size: 12px;
+      color: var(--s-urgent);
+      min-height: 16px;
+      margin-top: -8px;
+      margin-bottom: 8px;
+    }
+
   </style>
 </head>
 <body>
@@ -796,6 +1004,7 @@
       </div>
       <div class="k-header-right">
         <div class="k-time" id="k-time">--:--</div>
+        <button class="k-new-order-btn" onclick="openWalkinModal()">➕ New Order</button>
         <button class="k-status-btn open" id="k-status-btn" onclick="openKitchenModal()">
           🟢 Open
         </button>
@@ -807,7 +1016,7 @@
       <div class="k-queue-count" id="k-queue-count"></div>
     </div>
 
-    <div class="k-orders" id="k-orders">
+    <div class="k-orders is-empty" id="k-orders">
       <div class="k-empty">
         <div class="k-empty-icon">🍕</div>
         <div class="k-empty-text">No active orders — standing by</div>
@@ -894,6 +1103,48 @@
       </div>
       <div class="k-modal-actions">
         <button class="k-modal-btn secondary" onclick="closeKitchenModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ============================================================
+       WALK-IN ORDER MODAL
+  ============================================================ -->
+  <div class="k-modal-overlay" id="walkin-modal">
+    <div class="k-modal k-modal-walkin">
+      <div class="k-modal-title">New Order</div>
+      <div class="k-modal-sub">Walk-in customer — tap items to add</div>
+
+      <!-- Item picker -->
+      <div class="k-walkin-items" id="walkin-items"></div>
+
+      <!-- Running total -->
+      <div class="k-walkin-total" id="walkin-total"></div>
+
+      <!-- Customer name (required) -->
+      <div class="k-walkin-field">
+        <label for="walkin-name">Customer name *</label>
+        <input type="text" class="k-walkin-input" id="walkin-name"
+               placeholder="e.g. Sarah, Blue jacket, Table 4"
+               autocomplete="off" autocorrect="off" spellcheck="false">
+      </div>
+      <div class="k-walkin-nudge" id="walkin-nudge"></div>
+
+      <!-- Phone (optional) -->
+      <div class="k-walkin-field">
+        <label for="walkin-phone">
+          Phone number
+          <span class="k-walkin-optional">— optional, for loyalty &amp; order updates</span>
+        </label>
+        <input type="tel" class="k-walkin-input" id="walkin-phone"
+               placeholder="07700 900000"
+               autocomplete="tel">
+      </div>
+
+      <div class="k-modal-actions">
+        <button class="k-modal-btn secondary" onclick="closeWalkinModal()">Cancel</button>
+        <button class="k-modal-btn primary" id="walkin-submit-btn" onclick="submitWalkinOrder()">Place Order →</button>
       </div>
     </div>
   </div>
