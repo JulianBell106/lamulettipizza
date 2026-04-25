@@ -1,5 +1,5 @@
 # Stalliq — Project Bible
-> Last updated: April 2026 — Session 10b Complete (Desktop UX Redesign done) + Session 11 Walk-in spec ready
+> Last updated: April 2026 — Session 10c Complete (Menu images, contrast sweep, mobile image support)
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -226,6 +226,7 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 9 | Google Sheets Menu Management | ✅ menuSheetUrl in config.js, CSV fetch, fallback, XSS defence, scroll reveal fix |
 | 10 | News/Locations feed + Offers | ✅ eventsSheetUrl + offersSheetUrl in config.js, both live from Google Sheets |
 | 10b | Desktop UX Redesign | ✅ Premium redesign: editorial menu, no strip bar, SVG icons, How It Works, noise texture, staggered reveals |
+| 10c | Menu images + contrast sweep | ✅ Food photos via Google Sheet image column, mobile image cards, all brown-on-brown text fixed |
 | 11 | Walk-in Manual Order Entry | Kitchen dashboard "New Order" button — vendor enters walk-up orders, optional phone number |
 | 12 | Demo polish | End-to-end demo reset function, rough edges removed, kitchen.js tidy |
 | 13 | Pitch deck update | Stalliq rebrand, kitchen co-pilot angle, roadmap slide with vision features |
@@ -548,6 +549,39 @@ Modal dismiss routes to Account page (not Home) so customer immediately sees the
 
 ---
 
+## 12d. Menu Food Photography + Contrast Sweep — ✅ COMPLETE (Session 10c)
+
+**Menu food images via Google Sheet:**
+
+Added optional `image` column to the menu sheet. Vendor or operator pastes a public image URL (ibb.co direct link format: `https://i.ibb.co/...`). App loads photo on next page load — no deploy needed.
+
+**Sheet column:** `image` (also accepts `img` or `photo` as header). Optional — missing column or blank cell falls back to numbered placeholder. Existing sheets need no changes.
+
+**Desktop card:** Full-width 180px food photo at top of card with gradient overlay at base. `object-fit: cover`. Graceful fallback: large italic item number (80px, 15% gold opacity) when no image URL present.
+
+**Mobile card:** When image present, card switches to stacked layout — photo full-width at top (140px), info below, controls at bottom. When no image, original side-by-side layout unchanged.
+
+**URL safety check:** Image URL validated to start with `http` before use in `src` — prevents malformed data from sheet reaching the DOM.
+
+**`parseMenuCSV()` update:** Gains `image` field. Column matched by header name (`image`, `img`, or `photo`) — flexible, order-independent. Item object now: `{ id, name, price, desc, diet, image, available }`.
+
+**Contrast sweep — all brown-on-brown text fixed:**
+
+Root cause: `--text-muted` is `rgba(253,246,236,0.45)` — warm cream at 45% opacity on warm dark backgrounds renders as brown, not grey. All readable body/description text must use `--text-secondary` (`rgba(253,246,236,0.75)`) or higher.
+
+| Element | Was | Now |
+|---------|-----|-----|
+| `.d-menu-header-note` | `--text-muted` | `--text-secondary` |
+| `.d-menu-note` | `--text-muted` | `--text-secondary` |
+| `.d-pizza-desc` | `--text-muted` | `--text-secondary` |
+| `.d-popup-loc` | `--text-muted` | `--text-secondary` |
+| `.d-socials-note` | `--text-muted` | `--text-secondary` |
+| `.m-card-desc` | `rgba(253,246,236,0.5)` | `rgba(253,246,236,0.75)` |
+
+**Rule going forward:** `--text-muted` is for truly secondary UI chrome only — dates, labels, hints, captions, placeholders. Any sentence a user needs to read is `--text-secondary` minimum.
+
+---
+
 ## 13. Geofence Feature — Spec
 
 1. Customer subscribes, sets location + radius (1/3/5 miles) + notification preference
@@ -698,6 +732,15 @@ Customer taps AI chat bubble → types or dictates order in natural language →
 - `renderDesktopValues()` made no-op — still exists so old callers don't break, but does nothing; mobile about page uses `CONFIG.values` via `renderMobileAbout()` as before
 - Desktop contact grid targets `id="d-contact-grid"` in new HTML — `renderDesktopContact()` falls back to class selector for backward compat
 - SVG_ICONS constant in `app.js` Section 10 — phone, email, web, social icons as inline SVG strings. Thin 1.6px stroke, consistent Lucide-style line weight.
+- Menu food photos: optional `image` column in Google Sheet — vendor pastes ibb.co direct link (`https://i.ibb.co/...`), app loads on next page load, no deploy
+- Image URL validated to start with `http` before use in `src` — basic safety check prevents malformed sheet data reaching DOM
+- Desktop menu card: photo at top (180px), gradient overlay at base, numbered placeholder when no image
+- Mobile menu card: stacked layout with photo when image present, original side-by-side when no image — no broken layouts either way
+- `parseMenuCSV()` gains `image` field — column optional, matched by header name (`image`, `img`, or `photo`)
+- Item object now includes `image: null` field — safe to add to existing `CONFIG.menu` items as fallback
+- `--text-muted` rule established: for UI chrome only (dates, labels, hints, placeholders). Any readable sentence uses `--text-secondary` (75% opacity) minimum
+- Brown-on-brown problem: `--text-muted` at 45% opacity warm cream on warm dark background renders as brown — established root cause, all instances fixed
+- Six contrast fixes applied in Session 10c: menu header note, menu dietary note, pizza description, event location, socials note, mobile card description
 
 ---
 
