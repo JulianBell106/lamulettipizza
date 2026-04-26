@@ -40,6 +40,7 @@
  *   30. Firebase — Submit order to Firestore
  *   31. Firebase — Kitchen status listener
  *   32. Firebase — Order status listener (confirmation modal)
+ *   32a. Audio — Ready beep (Session 13)
  *   33. Account page — Members area
  *   34. Order detail overlay
  * ============================================================================
@@ -88,7 +89,9 @@ function bootstrapPage() {
 /* ============================================================================
    3. SHARED STATE
    ============================================================================ */
-const basket = {};
+const basket      = {};
+const basketNotes = {}; // itemId → note text (Session 13 — per-item notes)
+
 let orderCount       = 0;
 let customerName     = null;   // cached after phone auth
 let pendingOrderFn   = null;   // called after auth completes
@@ -152,7 +155,10 @@ function basketTotalPrice() {
 function updateBasket(id, delta) {
   id = Number(id);
   basket[id] = Math.max(0, (basket[id] || 0) + delta);
-  if (basket[id] === 0) delete basket[id];
+  if (basket[id] === 0) {
+    delete basket[id];
+    delete basketNotes[id]; // clear note when item removed via qty controls
+  }
   renderDesktopMenu();
   renderMobileMenu();
   refreshDesktopBasket();
@@ -190,10 +196,62 @@ function buildOrderSummaryHTML(rowClass) {
 
 function clearBasket() {
   Object.keys(basket).forEach(k => delete basket[k]);
+  Object.keys(basketNotes).forEach(k => delete basketNotes[k]); // Session 13
   renderDesktopMenu();
   renderMobileMenu();
   refreshDesktopBasket();
   refreshMobileBadge();
+}
+
+/* ── Per-item notes helpers (Session 13) ───────────────────────────────────── */
+
+/**
+ * Saves note text for a basket item. Trims + caps at 200 chars.
+ * Called from oninput on both mobile and desktop note textareas.
+ * Updates toggle button labels on both surfaces after save.
+ */
+function saveNote(id, value) {
+  id = Number(id);
+  const trimmed = value.trim().substring(0, 200);
+  if (trimmed) {
+    basketNotes[id] = trimmed;
+  } else {
+    delete basketNotes[id];
+  }
+  // Keep toggle labels in sync across both surfaces
+  _syncNoteToggle(document.getElementById(`m-notes-toggle-${id}`), id);
+  _syncNoteToggle(document.getElementById(`d-notes-toggle-${id}`), id);
+}
+
+function _syncNoteToggle(toggleEl, id) {
+  if (!toggleEl) return;
+  const hasNote = !!basketNotes[Number(id)];
+  toggleEl.textContent = hasNote ? '📝 Note added' : '📝 Add note';
+  toggleEl.classList.toggle('has-note', hasNote);
+}
+
+/** Toggles the mobile note textarea for a basket item. */
+function mToggleNote(id) {
+  id = Number(id);
+  const input  = document.getElementById(`m-notes-${id}`);
+  const toggle = document.getElementById(`m-notes-toggle-${id}`);
+  if (!input) return;
+  const isHidden = input.style.display === 'none';
+  input.style.display = isHidden ? 'block' : 'none';
+  if (isHidden) input.focus();
+  _syncNoteToggle(toggle, id);
+}
+
+/** Toggles the desktop note textarea for a basket item. */
+function dToggleNote(id) {
+  id = Number(id);
+  const input  = document.getElementById(`d-notes-${id}`);
+  const toggle = document.getElementById(`d-notes-toggle-${id}`);
+  if (!input) return;
+  const isHidden = input.style.display === 'none';
+  input.style.display = isHidden ? 'block' : 'none';
+  if (isHidden) input.focus();
+  _syncNoteToggle(toggle, id);
 }
 
 
@@ -447,6 +505,7 @@ function renderEventsList(containerSel, cardCls, dateCls, dayCls, monthCls, name
 /* ============================================================================
    11. DESKTOP — BASKET
    esc() applied to item.name (sheet-sourced).
+   Session 13: adds per-item notes toggle + textarea.
    ============================================================================ */
 function refreshDesktopBasket() {
   const count = basketTotalQty();
@@ -470,8 +529,11 @@ function refreshDesktopBasket() {
   }
 
   body.innerHTML = ids.map(id => {
-    const item = menuData.find(m => m.id === id);
-    const qty  = basket[id];
+    const item        = menuData.find(m => m.id === id);
+    const qty         = basket[id];
+    const existNote   = basketNotes[id] || '';
+    const noteLabel   = existNote ? '📝 Note added' : '📝 Add note';
+    const noteCls     = existNote ? ' has-note' : '';
     return `
       <div class="d-bitem">
         <div class="d-bitem-name">${esc(item.name)}</div>
@@ -481,6 +543,15 @@ function refreshDesktopBasket() {
           <button class="d-qty-btn add" data-id="${id}" data-delta="1">+</button>
         </div>
         <div class="d-bitem-price">${CONFIG.business.currency}${(item.price * qty).toFixed(2)}</div>
+      </div>
+      <div class="d-bitem-notes-row">
+        <button class="d-bitem-notes-toggle${noteCls}" id="d-notes-toggle-${id}"
+                onclick="dToggleNote(${id})">${noteLabel}</button>
+        <textarea class="d-bitem-notes-input" id="d-notes-${id}"
+                  maxlength="200" rows="2"
+                  placeholder="e.g. no olives, well done"
+                  oninput="saveNote(${id}, this.value)"
+                  style="display:${existNote ? 'block' : 'none'}">${esc(existNote)}</textarea>
       </div>`;
   }).join('');
 
@@ -506,9 +577,11 @@ function dToggleAccount() {
 /* ============================================================================
    12. DESKTOP — ORDER CONFIRMATION
    Routes through authGateway → Firestore submission → live status listener.
+   Session 13: unlockAudio() called on user tap before authGateway.
    ============================================================================ */
 function dPlaceOrder() {
   if (kitchenStatus !== 'open') return;
+  unlockAudio(); // Session 13 — unlock audio context on user interaction
 
   authGateway(async () => {
     const btn = document.querySelector('#d-basket-footer .d-btn-primary');
@@ -654,6 +727,7 @@ function mQty(id, delta) { updateBasket(id, delta); }
 /* ============================================================================
    17. MOBILE — BASKET
    esc() applied to item.name (sheet-sourced).
+   Session 13: adds per-item notes toggle + textarea per basket line.
    ============================================================================ */
 function refreshMobileBadge() {
   const count = basketTotalQty();
@@ -676,16 +750,28 @@ function renderMobileBasket() {
   let total = 0;
   const listEl = document.getElementById('m-basket-list');
   listEl.innerHTML = ids.map(id => {
-    const item = menuData.find(m => m.id === id);
-    const qty  = basket[id];
-    const sub  = item.price * qty;
+    const item      = menuData.find(m => m.id === id);
+    const qty       = basket[id];
+    const sub       = item.price * qty;
     total += sub;
+    const existNote = basketNotes[id] || '';
+    const noteLabel = existNote ? '📝 Note added' : '📝 Add note';
+    const noteCls   = existNote ? ' has-note' : '';
     return `
       <div class="m-basket-item">
         <div class="m-bi-name">${esc(item.name)}</div>
         <div class="m-bi-qty">× ${qty}</div>
         <div class="m-bi-price">${CONFIG.business.currency}${sub.toFixed(2)}</div>
         <button class="m-bi-remove" onclick="mRemoveItem(${id})">×</button>
+      </div>
+      <div class="m-bi-notes-row">
+        <button class="m-bi-notes-toggle${noteCls}" id="m-notes-toggle-${id}"
+                onclick="mToggleNote(${id})">${noteLabel}</button>
+        <textarea class="m-bi-notes-input" id="m-notes-${id}"
+                  maxlength="200" rows="2"
+                  placeholder="e.g. no olives, well done"
+                  oninput="saveNote(${id}, this.value)"
+                  style="display:${existNote ? 'block' : 'none'}">${esc(existNote)}</textarea>
       </div>`;
   }).join('');
 
@@ -694,7 +780,9 @@ function renderMobileBasket() {
 }
 
 function mRemoveItem(id) {
-  delete basket[Number(id)];
+  id = Number(id);
+  delete basket[id];
+  delete basketNotes[id]; // Session 13 — clear note on remove
   refreshMobileBadge();
   refreshDesktopBasket();
   renderMobileBasket();
@@ -704,9 +792,11 @@ function mRemoveItem(id) {
 /* ============================================================================
    18. MOBILE — ORDER CONFIRMATION
    Routes through authGateway → Firestore submission → live status listener.
+   Session 13: unlockAudio() called on user tap before authGateway.
    ============================================================================ */
 function mPlaceOrder() {
   if (kitchenStatus !== 'open') return;
+  unlockAudio(); // Session 13 — unlock audio context on user interaction
 
   authGateway(async () => {
     const btn = document.querySelector('#page-basket .m-btn');
@@ -887,17 +977,7 @@ function splitCSVLines(csvText) {
 
 /* ----------------------------------------------------------------------------
    22a. MENU FETCH
-   Fetches vendor menu from published Google Sheet CSV.
-   Falls back to CONFIG.menu silently on any failure.
    ---------------------------------------------------------------------------- */
-
-/**
- * Parses a full CSV string into menu item objects.
- * Expects a header row followed by data rows.
- * Column order is flexible — matched by header name.
- * Required headers: id, name, price
- * Optional headers: description (or desc), diet, available (or avail)
- */
 function parseMenuCSV(csvText) {
   const lines = splitCSVLines(csvText);
 
@@ -951,11 +1031,6 @@ function parseMenuCSV(csvText) {
   return items;
 }
 
-/**
- * Attempts to load menu data from the published Google Sheet CSV.
- * Sets the module-level menuData variable on success.
- * @returns {Promise<boolean>} — true if sheet loaded, false if using fallback
- */
 async function fetchMenuFromSheet() {
   const url = CONFIG.menuSheetUrl;
 
@@ -982,13 +1057,7 @@ async function fetchMenuFromSheet() {
 
     menuData = parsed;
     console.log(`[Stalliq] Menu loaded from sheet: ${parsed.length} item(s).`);
-
-    // Re-run scroll reveal so newly rendered menu cards get the .visible class.
-    // initScrollReveal() in Section 23 runs before the sheet fetch resolves,
-    // so cards injected by the second renderDesktopMenu() call would otherwise
-    // miss the observer.
     initScrollReveal();
-
     return true;
 
   } catch (err) {
@@ -1000,28 +1069,7 @@ async function fetchMenuFromSheet() {
 
 /* ----------------------------------------------------------------------------
    22b. EVENTS FETCH
-   Fetches upcoming events/locations from a published Google Sheet CSV.
-   Falls back to CONFIG.events silently on any failure.
-
-   Sheet structure (header row required, column order flexible):
-     day | month | name | location | active
-
-   Column notes:
-     day      — number or string, e.g. 14
-     month    — string, e.g. MAY or May
-     name     — event name
-     location — venue or location string
-     active   — TRUE/FALSE (omit to default all rows to active)
-
-   Vendor workflow: edit sheet → Google autosaves → app picks up on next load.
    ---------------------------------------------------------------------------- */
-
-/**
- * Parses a CSV string into event objects.
- * Active=FALSE rows are excluded.
- * @param {string} csvText — raw CSV text
- * @returns {object[]|null} — array of event objects, or null on parse error
- */
 function parseEventsCSV(csvText) {
   const lines = splitCSVLines(csvText);
   if (lines.length < 1) return null;
@@ -1055,7 +1103,6 @@ function parseEventsCSV(csvText) {
 
     if (!day || !month || !name) continue;
 
-    // active: default true unless explicitly FALSE
     let active = true;
     if (col.active >= 0 && cols[col.active]) {
       const v = cols[col.active].trim().toUpperCase();
@@ -1069,12 +1116,6 @@ function parseEventsCSV(csvText) {
   return items;
 }
 
-/**
- * Attempts to load events data from the published Google Sheet CSV.
- * Sets the module-level eventsData variable on success.
- * An empty sheet (no active rows) is valid — shows "no upcoming events".
- * @returns {Promise<boolean>} — true if sheet loaded, false if using fallback
- */
 async function fetchEventsFromSheet() {
   const url = CONFIG.eventsSheetUrl;
 
@@ -1112,29 +1153,7 @@ async function fetchEventsFromSheet() {
 
 /* ----------------------------------------------------------------------------
    22c. OFFERS FETCH
-   Fetches offers from a published Google Sheet CSV.
-   Falls back to offersData defaults silently on any failure.
-
-   Sheet structure (header row required, column order flexible):
-     icon | title | description | badge | active
-
-   Column notes:
-     icon        — emoji, e.g. 🎉 (omit to default to 🎁)
-     title       — offer title (required)
-     description — offer detail text
-     badge       — badge label, e.g. "Coming soon" or "Live now" (omit to hide badge)
-     active      — TRUE/FALSE (omit to default all rows to active)
-
-   Active=FALSE rows are excluded from rendering.
-   Badge text is displayed as-is — no special styling based on content.
    ---------------------------------------------------------------------------- */
-
-/**
- * Parses a CSV string into offer objects.
- * Active=FALSE rows are excluded.
- * @param {string} csvText — raw CSV text
- * @returns {object[]|null} — array of offer objects, or null on parse error
- */
 function parseOffersCSV(csvText) {
   const lines = splitCSVLines(csvText);
   if (lines.length < 1) return null;
@@ -1167,7 +1186,6 @@ function parseOffersCSV(csvText) {
     const desc  = col.desc  >= 0 && cols[col.desc]  ? cols[col.desc].trim()  : '';
     const badge = col.badge >= 0 && cols[col.badge] ? cols[col.badge].trim() : '';
 
-    // active: default true unless explicitly FALSE
     let active = true;
     if (col.active >= 0 && cols[col.active]) {
       const v = cols[col.active].trim().toUpperCase();
@@ -1181,11 +1199,6 @@ function parseOffersCSV(csvText) {
   return items;
 }
 
-/**
- * Attempts to load offers data from the published Google Sheet CSV.
- * Sets the module-level offersData variable on success.
- * @returns {Promise<boolean>} — true if sheet loaded, false if using defaults
- */
 async function fetchOffersFromSheet() {
   const url = CONFIG.offersSheetUrl;
 
@@ -1223,11 +1236,6 @@ async function fetchOffersFromSheet() {
 
 /* ============================================================================
    23. INIT
-   DOMContentLoaded is async so we can await all sheet fetches before any
-   render call. All three module-level data vars (menuData, eventsData,
-   offersData) are guaranteed to be populated by the time render functions run.
-
-   Sheet fetches run concurrently via Promise.all for fastest load time.
    ============================================================================ */
 document.addEventListener('DOMContentLoaded', async function () {
   applyTheme();
@@ -1236,7 +1244,6 @@ document.addEventListener('DOMContentLoaded', async function () {
   // ── Seed all data vars with guaranteed fallbacks ─────────────────────────
   menuData   = CONFIG.menu;
   eventsData = CONFIG.events || [];
-  // offersData default: check CONFIG.offers first, then hardcoded demo cards
   offersData = (CONFIG.offers && CONFIG.offers.length > 0)
     ? CONFIG.offers
     : [
@@ -1254,17 +1261,16 @@ document.addEventListener('DOMContentLoaded', async function () {
   // Desktop renders
   renderDesktopNav();
   renderDesktopHero();
-  renderDesktopStrip();   // → credential line in hero
-  renderDesktopMenu();    // → editorial list
+  renderDesktopStrip();
+  renderDesktopMenu();
   renderDesktopStory();
-  // renderDesktopValues() omitted — How It Works hardcoded in HTML
-  renderDesktopContact(); // uses eventsData, SVG icons
+  renderDesktopContact();
 
   // ── Mobile renders ────────────────────────────────────────────────────────
   renderMobileHome();
   renderMobileMenu();
   renderMobileAbout();
-  renderMobileFindUs(); // uses eventsData
+  renderMobileFindUs();
 
   // ── Footer ────────────────────────────────────────────────────────────────
   const footerLogo = document.querySelector('.d-footer-logo');
@@ -1321,13 +1327,10 @@ function authClearErrors() {
 
 /* ============================================================================
    25. AUTH — GATEWAY
-   Called by mPlaceOrder() and dPlaceOrder() before submitting.
-   Checks auth state and routes to the right screen.
    ============================================================================ */
 function authGateway(orderFn) {
   pendingOrderFn = orderFn;
 
-  // Reset auth overlay to order-placement context
   const titleEl = document.getElementById('auth-title');
   const subEl   = document.getElementById('auth-sub-text');
   if (titleEl) titleEl.textContent = 'Confirm your order';
@@ -1479,8 +1482,6 @@ async function authSaveName() {
 
 /* ============================================================================
    29. FIREBASE — GET NEXT ORDER REF
-   Daily sequential counter via Firestore transaction.
-   Resets to #001 each day. Concurrency-safe.
    ============================================================================ */
 async function getNextOrderRef() {
   const today      = new Date().toISOString().split('T')[0];
@@ -1505,9 +1506,7 @@ async function getNextOrderRef() {
 
 /* ============================================================================
    30. FIREBASE — SUBMIT ORDER TO FIRESTORE
-   Returns { orderRef, orderId } — orderId is the Firestore document ID,
-   used by the order status listener in Section 32.
-   Item data written to Firestore uses raw menuData values (no esc() needed).
+   Session 13: item.notes populated from basketNotes[id].
    ============================================================================ */
 async function submitOrderToFirestore() {
   const user = auth.currentUser;
@@ -1524,7 +1523,7 @@ async function submitOrderToFirestore() {
       name:     item.name,
       price:    item.price,
       quantity: basket[id],
-      notes:    null
+      notes:    basketNotes[id] || null  // Session 13 — per-item notes
     };
   });
 
@@ -1554,8 +1553,6 @@ async function submitOrderToFirestore() {
 
 /* ============================================================================
    31. FIREBASE — KITCHEN STATUS LISTENER
-   Reads kitchenStatus from vendors/{vendorId} in real time.
-   Updates shared state and blocks/unblocks ordering across mobile + desktop.
    ============================================================================ */
 
 const KITCHEN_CLOSED_MESSAGES = {
@@ -1603,7 +1600,7 @@ function applyKitchenStatus(status) {
     mBtn.textContent = isOpen ? 'Place Order' : 'Kitchen Closed';
   }
 
-  // ── Desktop: closed banner — full width, top of page, above nav ──────────
+  // ── Desktop: closed banner ────────────────────────────────────────────────
   let dBanner = document.getElementById('d-kitchen-closed-banner');
   if (!isOpen) {
     if (!dBanner) {
@@ -1651,7 +1648,6 @@ function initKitchenStatusListener() {
     },
     err => {
       console.warn('Kitchen status listener error:', err);
-      // Fail open — do not block ordering if Firestore is unreachable
     }
   );
 }
@@ -1659,11 +1655,7 @@ function initKitchenStatusListener() {
 
 /* ============================================================================
    32. FIREBASE — ORDER STATUS LISTENER (confirmation modal)
-   After order placement, listens on the specific order document and updates
-   the customer's confirmation modal/overlay with live status.
-
-   This is a SINGLE listener for the active confirmation modal.
-   The Account page (Section 33) uses a separate map of listeners.
+   Session 13: fires ready beep when status transitions to 'ready'.
    ============================================================================ */
 
 let orderStatusUnsubscribe = null;
@@ -1782,6 +1774,13 @@ function startOrderStatusListener(orderId) {
       }
 
       if (status === 'ready') {
+        // ── Session 13: Ready beep — fires once on transition ─────────────
+        if (!orderCache[orderId]?.firedReadyBeep) {
+          playReadyBeep();
+          if (orderCache[orderId]) orderCache[orderId].firedReadyBeep = true;
+          else orderCache[orderId] = { firedReadyBeep: true };
+        }
+
         const mIcon  = document.querySelector('#m-order-confirm .m-confirm-icon');
         const mTitle = document.querySelector('#m-order-confirm .m-confirm-title');
         const mTime  = document.getElementById('m-confirm-time');
@@ -1857,13 +1856,67 @@ function stopOrderStatusListener() {
 
 
 /* ============================================================================
+   32a. AUDIO — READY BEEP (Session 13)
+   ============================================================================
+   Audio context is unlocked on the user's Place Order tap (mPlaceOrder /
+   dPlaceOrder call unlockAudio() before authGateway). The beep itself fires
+   later when the Firestore listener detects status === 'ready'.
+
+   Two beeps at 660 Hz, 300 ms apart — distinct from the kitchen alert (880 Hz).
+   Silent fail if Web Audio API unavailable or AudioContext creation is blocked.
+   ============================================================================ */
+
+let audioCtx = null;
+
+/**
+ * Creates (or resumes) the shared AudioContext on a user gesture.
+ * Must be called synchronously within a user interaction handler.
+ */
+function unlockAudio() {
+  try {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    } else if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+  } catch (_) {
+    // AudioContext not available — beep will attempt a new context at fire time
+  }
+}
+
+/**
+ * Plays two short beeps to notify the customer their order is ready.
+ * Uses the shared audioCtx if available, otherwise attempts a new context.
+ * Silently fails if audio is unavailable.
+ */
+function playReadyBeep() {
+  try {
+    const ctx  = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (!audioCtx) audioCtx = ctx;
+    const gain = ctx.createGain();
+    gain.connect(ctx.destination);
+    [0, 0.3].forEach(offset => {
+      const osc = ctx.createOscillator();
+      osc.connect(gain);
+      osc.frequency.value = 660; // slightly lower than kitchen alert (880 Hz)
+      gain.gain.setValueAtTime(0.35, ctx.currentTime + offset);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + offset + 0.28);
+      osc.start(ctx.currentTime + offset);
+      osc.stop(ctx.currentTime  + offset + 0.28);
+    });
+    console.log('[Stalliq] Ready beep fired.');
+  } catch (_) {
+    // Audio unavailable — silent fail, order status still updates visually
+  }
+}
+
+
+/* ============================================================================
    33. ACCOUNT PAGE — MEMBERS AREA
    ============================================================================
-   Supports both mobile (prefix 'm') and desktop (prefix 'd') panels.
-   buildAccountIds(prefix) maps the prefix to the correct element IDs.
-
-   renderAccountOffers() now reads from offersData (Section 22c).
-   offersData is seeded at init and replaced by sheet data if available.
+   Session 13: loadUserOrders marks already-ready orders with firedReadyBeep:true
+   so the beep guard in startAccountOrderListener correctly suppresses spurious
+   beeps on page load (only transition to ready should beep, not loaded state).
    ============================================================================ */
 
 const accountOrderListeners = {};
@@ -1933,11 +1986,6 @@ function renderStampCard(filled, total, ids) {
   if (prog) prog.textContent = `${filled} of ${total} stamps collected`;
 }
 
-/**
- * Renders offer cards from offersData.
- * offersData is populated at init from sheet (22c) or defaults.
- * esc() applied to all sheet-sourced fields: icon, title, description, badge.
- */
 function renderAccountOffers(ids) {
   const list = document.getElementById(ids.offersList);
   if (!list) return;
@@ -1984,6 +2032,8 @@ function loadUserOrders(uid, ids) {
       const orders = [];
       snapshot.forEach(doc => {
         const order = { id: doc.id, ...doc.data() };
+        // Session 13: pre-flag already-ready orders so beep only fires on transition
+        if (order.status === 'ready') order.firedReadyBeep = true;
         orders.push(order);
         orderCache[order.id] = order;
       });
@@ -2157,6 +2207,14 @@ function startAccountOrderListener(orderId) {
           </div>`;
       }
 
+      // Session 13: fire ready beep on transition to ready
+      if (status === 'ready') {
+        if (!orderCache[orderId]?.firedReadyBeep) {
+          playReadyBeep();
+          if (orderCache[orderId]) orderCache[orderId].firedReadyBeep = true;
+        }
+      }
+
       if (status === 'collected' || status === 'cancelled') {
         if (accountOrderListeners[orderId]) {
           accountOrderListeners[orderId]();
@@ -2219,8 +2277,7 @@ function accountSignOut(prefix = 'm') {
 
 /* ============================================================================
    34. ORDER DETAIL OVERLAY
-   Shared between mobile and desktop. Slide-up sheet on mobile,
-   centred modal on desktop (CSS handles the difference).
+   Session 13: per-item notes rendered below item name in detail sheet.
    ============================================================================ */
 
 function openOrderDetail(orderId) {
@@ -2270,13 +2327,18 @@ function renderOrderDetail(order) {
 
   const itemsEl = document.getElementById('od-items-list');
   if (itemsEl && order.items) {
+    // Session 13: per-item notes rendered below item name
     itemsEl.innerHTML = order.items.map(item => {
       const lineTotal = (item.price * item.quantity).toFixed(2);
+      const noteEl    = item.notes
+        ? `<div class="order-detail-item-note">📝 ${esc(item.notes)}</div>`
+        : '';
       return `
         <div class="order-detail-item">
           <div>
             <span class="order-detail-item-name">${esc(item.name)}</span>
             <span class="order-detail-item-qty">× ${item.quantity}</span>
+            ${noteEl}
           </div>
           <div class="order-detail-item-price">${CONFIG.business.currency}${lineTotal}</div>
         </div>`;
@@ -2319,12 +2381,15 @@ function reorderItems(orderId) {
   if (!order || !order.items) return;
 
   Object.keys(basket).forEach(k => delete basket[k]);
+  Object.keys(basketNotes).forEach(k => delete basketNotes[k]); // Session 13
 
   let added = 0;
   order.items.forEach(item => {
     const menuItem = menuData.find(m => m.id === item.id && m.available !== false);
     if (menuItem) {
       basket[menuItem.id] = item.quantity;
+      // Restore notes from original order on reorder
+      if (item.notes) basketNotes[menuItem.id] = item.notes;
       added++;
     }
   });
