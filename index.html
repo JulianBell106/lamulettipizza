@@ -1198,6 +1198,16 @@ html { scroll-behavior: smooth; }
 #d-findus-status .fs-text { font-size: 14px; }
 /* Find Us page bottom padding so last panel isn't flush with nav */
 #page-findus { padding-bottom: 24px; }
+/* Divider between primary find-us content and contact section */
+.m-findus-divider {
+  display: flex; align-items: center; gap: 12px;
+  padding: 20px 16px 8px; color: var(--text-muted);
+  font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700;
+}
+.m-findus-divider::before,
+.m-findus-divider::after {
+  content: ''; flex: 1; height: 1px; background: rgba(212,160,67,0.15);
+}
 </style>
 </head>
 <body>
@@ -1497,16 +1507,16 @@ html { scroll-behavior: smooth; }
   <div id="page-findus" class="page">
     <div class="m-eyebrow">Come find us</div>
     <div class="m-section-header">Find Us</div>
-    <div class="m-section-sub">Get in touch or find us at a pop-up</div>
+    <div class="m-section-sub">Live location · upcoming pop-ups · opening status</div>
     <div id="m-findus-status"></div>
     <div id="m-van-location" style="display:none; padding: 0 16px;"></div>
-    <div class="m-contact-section-label">Get in Touch</div>
-    <div class="m-contact-list"></div>
     <div class="m-popups-section">
       <div class="m-popup-label">Upcoming Pop-Ups</div>
       <div class="m-popup-list"></div>
       <div class="m-socials-note">Follow us on socials for the latest locations and times.</div>
     </div>
+    <div class="m-findus-divider"><span>Get in Touch</span></div>
+    <div class="m-contact-list"></div>
   </div>
 
   <div id="page-account" class="page">
