@@ -986,7 +986,7 @@ html { scroll-behavior: smooth; }
 .m-cl { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ash); margin-bottom: 2px; }
 .m-cv { font-size: 14px; font-weight: 600; color: var(--cream); }
 .m-ca { margin-left: auto; color: rgba(212,160,67,0.4); font-size: 16px; }
-.m-popups-section { padding: 20px 16px 0; }
+.m-popups-section { margin: 16px 16px 24px; padding: 20px 16px; background: rgba(212,160,67,0.04); border: 1px solid rgba(212,160,67,0.14); border-radius: 16px; }
 .m-popup-label { font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 12px; font-weight: 600; }
 .m-popup-list { display: flex; flex-direction: column; gap: 10px; }
 .m-popup-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(212,160,67,0.12); border-radius: 14px; padding: 14px 16px; display: flex; gap: 14px; align-items: center; }
@@ -1163,6 +1163,41 @@ html { scroll-behavior: smooth; }
   text-align: right; letter-spacing: 0.04em;
 }
 @media (min-width: 768px) { .van-map-iframe { height: 280px; } }
+
+/* ─── FIND US PAGE ENHANCEMENTS (Session 14) ─── */
+.van-location-tagline {
+  font-family: 'Cormorant Garamond', serif; font-size: 16px; font-style: italic;
+  font-weight: 300; color: var(--text-secondary); margin: 0 0 14px; line-height: 1.55;
+}
+/* Kitchen status pill — shared dot/text classes */
+.fs-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.fs-dot.open   { background: #27AE60; box-shadow: 0 0 6px rgba(39,174,96,0.45); }
+.fs-dot.closed { background: #C4271A; box-shadow: 0 0 6px rgba(196,39,26,0.4); }
+.fs-text { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+/* Mobile: status pill */
+#m-findus-status {
+  display: none; align-items: center; gap: 9px;
+  margin: 10px 16px 4px; padding: 11px 15px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 12px;
+}
+/* Mobile: contact section label */
+.m-contact-section-label {
+  font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--gold); font-weight: 700; padding: 18px 16px 10px;
+}
+/* Desktop: status pill */
+#d-findus-status {
+  display: none; align-items: center; gap: 10px;
+  margin-top: 16px; padding: 13px 18px;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--gold-rule);
+  border-radius: 12px;
+}
+#d-findus-status .fs-text { font-size: 14px; }
+/* Find Us page bottom padding so last panel isn't flush with nav */
+#page-findus { padding-bottom: 24px; }
 </style>
 </head>
 <body>
@@ -1290,6 +1325,7 @@ html { scroll-behavior: smooth; }
         <h2 class="d-title">Come <em>Find Us</em></h2>
         <p class="d-body">Book La Muletti for your next event, or follow us on socials to find your nearest pop-up.</p>
         <div class="d-contact-grid" id="d-contact-grid"></div>
+        <div id="d-findus-status"></div>
         <div id="d-van-location" style="display:none; margin-top: 24px;"></div>
       </div>
       <div class="d-popup-section reveal">
@@ -1462,7 +1498,9 @@ html { scroll-behavior: smooth; }
     <div class="m-eyebrow">Come find us</div>
     <div class="m-section-header">Find Us</div>
     <div class="m-section-sub">Get in touch or find us at a pop-up</div>
+    <div id="m-findus-status"></div>
     <div id="m-van-location" style="display:none; padding: 0 16px;"></div>
+    <div class="m-contact-section-label">Get in Touch</div>
     <div class="m-contact-list"></div>
     <div class="m-popups-section">
       <div class="m-popup-label">Upcoming Pop-Ups</div>

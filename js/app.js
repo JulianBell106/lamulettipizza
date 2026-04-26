@@ -1280,6 +1280,7 @@ function buildMapHTML(lat, lng, updatedAt) {
         <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#27AE60"/></svg>
         Live location
       </span>
+      <p class="van-location-tagline">We are operating in this location right now — come and find us!</p>
       <iframe
         class="van-map-iframe"
         src="${mapSrc}"
@@ -1348,6 +1349,30 @@ function _stopAgeTimer() {
     clearInterval(locationAgeInterval);
     locationAgeInterval = null;
   }
+}
+
+/**
+ * renderFindUsKitchenStatus — writes a live status pill to the Find Us page
+ * on both mobile (#m-findus-status) and desktop (#d-findus-status).
+ * Called from applyKitchenStatus so it stays in sync with the kitchen toggle.
+ * @param {string} status — 'open' | 'closed_busy' | 'closed_end' | 'closed_today'
+ */
+function renderFindUsKitchenStatus(status) {
+  const isOpen = status === 'open';
+  const LABELS = {
+    open:         "Open now — we're ready to serve you",
+    closed_busy:  "Really busy right now — back shortly",
+    closed_end:   "Closing up for tonight — see you next time",
+    closed_today: "Not trading today — see you soon"
+  };
+  const text      = LABELS[status] || (isOpen ? 'Open now' : 'Currently closed');
+  const dotClass  = isOpen ? 'open' : 'closed';
+  const html      = `<span class="fs-dot ${dotClass}"></span><span class="fs-text">${text}</span>`;
+
+  const mEl = document.getElementById('m-findus-status');
+  const dEl = document.getElementById('d-findus-status');
+  if (mEl) { mEl.innerHTML = html; mEl.style.display = 'flex'; }
+  if (dEl) { dEl.innerHTML = html; dEl.style.display = 'flex'; }
 }
 
 
@@ -1757,6 +1782,9 @@ function applyKitchenStatus(status) {
     dBtn.disabled    = !isOpen;
     dBtn.textContent = isOpen ? 'Place Order' : 'Kitchen Closed';
   }
+
+  // ── Find Us page kitchen status (Session 14) ──────────────────────────────
+  renderFindUsKitchenStatus(status);
 }
 
 function initKitchenStatusListener() {
