@@ -120,6 +120,10 @@ let eventsData = null;
  */
 let offersData = null;
 
+let vanLocationUnsubscribe = null; // real-time listener handle (Session 14)
+let vanLocationData        = null; // last received location doc (Session 14)
+let locationAgeInterval    = null; // setInterval id for "Updated X mins ago" (Session 14)
+
 
 /* ============================================================================
    4. UTILITY FUNCTIONS
@@ -1235,6 +1239,119 @@ async function fetchOffersFromSheet() {
 
 
 /* ============================================================================
+   20a. LIVE VAN LOCATION (Session 14)
+   ============================================================================ */
+
+/**
+ * listenVanLocation — real-time Firestore listener on vendors/{vendorId}/location/current.
+ * Calls renderMobileVanLocation() and renderDesktopVanLocation() on every change.
+ */
+function listenVanLocation() {
+  const { doc, onSnapshot } = window.firestoreApi;
+  const locationRef = doc(db, 'vendors', CONFIG.vendor.id, 'location', 'current');
+
+  vanLocationUnsubscribe = onSnapshot(locationRef, (snap) => {
+    vanLocationData = snap.exists() ? snap.data() : null;
+    renderMobileVanLocation();
+    renderDesktopVanLocation();
+  }, (err) => {
+    console.warn('[Stalliq] listenVanLocation error:', err.message);
+  });
+}
+
+/**
+ * buildMapHTML — returns the inner HTML for the van location widget.
+ * @param {number} lat
+ * @param {number} lng
+ * @param {object} updatedAt — Firestore Timestamp
+ * @returns {string} HTML string
+ */
+function buildMapHTML(lat, lng, updatedAt) {
+  const mapSrc = `https://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
+  const ageLabel = updatedAt
+    ? (() => {
+        const mins = Math.round((Date.now() - updatedAt.toMillis()) / 60000);
+        return mins < 1 ? 'Just updated' : `Updated ${mins} min${mins !== 1 ? 's' : ''} ago`;
+      })()
+    : '';
+  return `
+    <div class="van-map-wrap">
+      <span class="van-live-badge">
+        <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#27AE60"/></svg>
+        Live location
+      </span>
+      <iframe
+        class="van-map-iframe"
+        src="${mapSrc}"
+        allowfullscreen
+        loading="lazy"
+        referrerpolicy="no-referrer-when-downgrade"
+      ></iframe>
+      <div class="van-map-age" id="van-map-age-label">${ageLabel}</div>
+    </div>`;
+}
+
+/**
+ * renderMobileVanLocation — shows or hides #m-van-location based on vanLocationData.
+ */
+function renderMobileVanLocation() {
+  const el = document.getElementById('m-van-location');
+  if (!el) return;
+
+  if (vanLocationData && vanLocationData.active) {
+    el.innerHTML = buildMapHTML(vanLocationData.lat, vanLocationData.lng, vanLocationData.updatedAt);
+    el.style.display = 'block';
+    _startAgeTimer();
+  } else {
+    el.style.display = 'none';
+    el.innerHTML = '';
+    _stopAgeTimer();
+  }
+}
+
+/**
+ * renderDesktopVanLocation — shows or hides #d-van-location based on vanLocationData.
+ */
+function renderDesktopVanLocation() {
+  const el = document.getElementById('d-van-location');
+  if (!el) return;
+
+  if (vanLocationData && vanLocationData.active) {
+    el.innerHTML = buildMapHTML(vanLocationData.lat, vanLocationData.lng, vanLocationData.updatedAt);
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+    el.innerHTML = '';
+  }
+}
+
+/**
+ * _startAgeTimer — updates the "Updated X mins ago" label every 60 seconds.
+ * Stops itself if the label element is no longer in the DOM.
+ */
+function _startAgeTimer() {
+  _stopAgeTimer();
+  locationAgeInterval = setInterval(() => {
+    const label = document.getElementById('van-map-age-label');
+    if (!label) { _stopAgeTimer(); return; }
+    if (!vanLocationData || !vanLocationData.updatedAt) return;
+    const mins = Math.round((Date.now() - vanLocationData.updatedAt.toMillis()) / 60000);
+    label.textContent = mins < 1 ? 'Just updated' : `Updated ${mins} min${mins !== 1 ? 's' : ''} ago`;
+  }, 60000);
+}
+
+/**
+ * _stopAgeTimer — clears the age update interval.
+ */
+function _stopAgeTimer() {
+  if (locationAgeInterval) {
+    clearInterval(locationAgeInterval);
+    locationAgeInterval = null;
+  }
+}
+
+
+/* ============================================================================
    23. INIT
    ============================================================================ */
 document.addEventListener('DOMContentLoaded', async function () {
@@ -1288,6 +1405,9 @@ document.addEventListener('DOMContentLoaded', async function () {
 
   // Kitchen status — live Firestore listener (Section 31)
   initKitchenStatusListener();
+
+  // Van location — real-time listener (Section 20a)
+  listenVanLocation();
 });
 
 

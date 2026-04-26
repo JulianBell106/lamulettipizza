@@ -1146,6 +1146,23 @@ html { scroll-behavior: smooth; }
   #mobile-app { display: flex; }
   .d-basket-btn, .d-basket-panel, .d-order-overlay, .d-account-panel { display: none !important; }
 }
+
+/* ─── LIVE VAN LOCATION MAP (Session 14) ─── */
+.van-map-wrap { margin-bottom: 20px; }
+.van-live-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; color: #27AE60;
+  background: rgba(39,174,96,0.10); border: 1px solid rgba(39,174,96,0.25);
+  border-radius: 20px; padding: 5px 12px; margin-bottom: 10px;
+}
+.van-map-iframe {
+  width: 100%; height: 240px; border: none; border-radius: 14px; display: block;
+}
+.van-map-age {
+  font-size: 11px; color: var(--text-muted); margin-top: 8px;
+  text-align: right; letter-spacing: 0.04em;
+}
+@media (min-width: 768px) { .van-map-iframe { height: 280px; } }
 </style>
 </head>
 <body>
@@ -1273,6 +1290,7 @@ html { scroll-behavior: smooth; }
         <h2 class="d-title">Come <em>Find Us</em></h2>
         <p class="d-body">Book La Muletti for your next event, or follow us on socials to find your nearest pop-up.</p>
         <div class="d-contact-grid" id="d-contact-grid"></div>
+        <div id="d-van-location" style="display:none; margin-top: 24px;"></div>
       </div>
       <div class="d-popup-section reveal">
         <div class="d-popup-title">Upcoming Pop-Ups</div>
@@ -1444,6 +1462,7 @@ html { scroll-behavior: smooth; }
     <div class="m-eyebrow">Come find us</div>
     <div class="m-section-header">Find Us</div>
     <div class="m-section-sub">Get in touch or find us at a pop-up</div>
+    <div id="m-van-location" style="display:none; padding: 0 16px;"></div>
     <div class="m-contact-list"></div>
     <div class="m-popups-section">
       <div class="m-popup-label">Upcoming Pop-Ups</div>
