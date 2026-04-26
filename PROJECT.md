@@ -1,5 +1,6 @@
 # Stalliq — Project Bible
 > Last updated: April 2026 — Session 12 Complete (Colour & UX overhaul)
+> **Next sprint:** Sessions 13–15 — per-item notes + ready beep → live location broadcast → real phone auth go-live. Pitch deck update follows in Session 16.
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -190,19 +191,21 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 09 | Offers | ✅ Done | offersSheetUrl in config.js, CSV fetch, Account page Offers section (mobile + desktop), graceful fallback |
 | 10 | Walk-in Manual Order Entry | ✅ Done | "➕ New Order" on kitchen dashboard — vendor enters walk-up orders, drops into Pending column |
 | 11 | Colour & UX Overhaul | ✅ Done | True red token, dietary CSS badges, deeper menu section, card left accent — Session 12 |
-| 12 | SMS & WhatsApp Status Notifications | ⏳ Planned | Customer notified on order status changes — Twilio. Applies to app orders AND walk-ins with phone number |
-| 13 | Live Location Broadcast | ⏳ Planned | Van location shown live on customer app — foundation for geofence at scale |
-| 14 | Geofence Notifications | ⏳ Planned | Van enters subscriber's area → phone buzzes |
-| 15 | Flash Sales & Broadcasts | ⏳ Planned | Vendor launches deal in seconds, broadcasts to subscribers |
-| 16 | Loyalty Stamp Card | ⏳ Planned | Digital stamp card — no paper needed |
-| 17 | Flash Offers by Geolocation | ⏳ Planned | Customer in area gets notified of live deal |
-| 18 | Pre-order Time Slots | ⏳ Planned | Order now, collect at chosen time |
-| 19 | Vendor Self-Service | ⏳ Planned | Vendor manages own menu, events, location — full self-service portal |
-| 20 | MI & Reporting | ⏳ Planned | Daily order count, revenue totals, product breakdown — CSV or Looker Studio |
-| 21 | AI Order Assist | 🌟 Vision | Customer orders in natural language — type or dictate. AI parses into basket, normal checkout flow. |
+| 12 | Per-item Notes | 🔨 Next (Session 13) | Free-text notes per basket line ("no olives", "well done"). Data model already has `notes: null` per item — UI + Firestore write + kitchen card render + walk-in support |
+| 13 | Customer Ready Beep | 🔨 Next (Session 13) | Two beeps via Web Audio API on customer phone when status flips to `ready`. Audio context already unlocked from order placement. Mirrors kitchen-side beep pattern |
+| 14 | Live Location Broadcast | 🔨 Next (Session 14) | Kitchen toggle on/off. Van pings GPS to Firestore every 10 mins; customer app uses real-time listener (zero-lag) and shows position on Google Maps Embed. Foundation for geofence at scale |
+| 15 | Real Phone Auth Go-Live | 🔨 Next (Session 15) | Remove Firebase test numbers, add production domain to Authorised Domains, enable App Check (reCAPTCHA Enterprise), upgrade to Blaze plan, test on real handset. Lets Daniele place an order from his real phone at the meeting |
+| 16 | SMS & WhatsApp Status Notifications | ⏳ Planned | Customer notified on order status changes — Twilio. Applies to app orders AND walk-ins with phone number |
+| 17 | Geofence Notifications | ⏳ Planned | Van enters subscriber's area → phone buzzes |
+| 18 | Flash Sales & Broadcasts | ⏳ Planned | Vendor launches deal in seconds, broadcasts to subscribers |
+| 19 | Loyalty Stamp Card | ⏳ Planned | Digital stamp card — no paper needed |
+| 20 | Flash Offers by Geolocation | ⏳ Planned | Customer in area gets notified of live deal |
+| 21 | Pre-order Time Slots | ⏳ Planned | Order now, collect at chosen time |
+| 22 | Vendor Self-Service | ⏳ Planned | Vendor manages own menu, events, location — full self-service portal |
+| 23 | MI & Reporting | ⏳ Planned | Daily order count, revenue totals, product breakdown — CSV or Looker Studio |
+| 24 | AI Order Assist | 🌟 Vision | Customer orders in natural language — type or dictate. AI parses into basket, normal checkout flow. |
 
 **Feature backlog (future):**
-- Item notes (per-item text input in basket — data model already supports `notes: null`)
 - Corporate catering module
 - Pub partnership mode
 - Multi-vendor event mode
@@ -228,17 +231,23 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 10c | Menu images + contrast sweep | ✅ Food photos via Google Sheet image column, mobile image cards, all brown-on-brown text fixed |
 | 11 | Walk-in Manual Order Entry + Desktop CSS overhaul | ✅ Walk-in orders on kitchen dashboard; full index.html CSS rebuild |
 | 12 | Colour & UX overhaul | ✅ True red token, dietary badges, deeper menu section, card accent — index.html only |
-| 13 | Pitch deck update | Stalliq rebrand, kitchen co-pilot angle, roadmap slide with vision features |
+| 13 | Per-item notes + Ready beep | Notes UI on basket lines, kitchen card + detail render, walk-in support; two-beep alert when status flips to `ready` |
+| 14 | Live location broadcast | Kitchen toggle, GPS push to Firestore every 10 mins, real-time listener on customer side, Google Maps Embed on Find Us |
+| 15 | Real phone auth go-live | App Check (reCAPTCHA Enterprise), production domain on Authorised Domains, Blaze plan upgrade, real-handset test |
+| 16 | Pitch deck update | Stalliq rebrand, kitchen co-pilot angle, roadmap slide with vision features |
 
 **What gets demoed live at the meeting:**
 - **Premium desktop site shown first on laptop — sets the brand tone before any ordering demo**
-- Customer places order on phone → kitchen receives it instantly
+- Customer places order on phone (real phone number, real SMS code) → kitchen receives it instantly
+- **Customer adds per-item notes ("no olives", "well done") → kitchen sees notes on the order card**
 - Kitchen accepts, sets wait time → customer sees status update live
 - Customer dismisses modal → lands on Account page showing live order
 - Customer can place multiple orders (forgot something) → both visible in Account
-- Tap any order card → full detail view (items, prices, status, timestamp)
+- Tap any order card → full detail view (items, notes, prices, status, timestamp)
 - **Vendor takes walk-up order on kitchen tablet → drops into Pending column instantly → same flow as app order**
 - **Walk-up customer gives phone number → seeds database for future SMS notifications**
+- **Kitchen marks order ready → customer phone beeps twice + Account page status flips**
+- **Find Us page shows van's live position on a Google Map (when broadcast is on) — kitchen toggles on/off in one tap**
 - Account page shows loyalty stamps and offers — hints at the roadmap
 - Vendor edits menu in Google Sheet → customer app reflects it within minutes
 - Find Us page shows upcoming events from Google Sheet — vendor updates in seconds
@@ -479,6 +488,42 @@ Used in both the mobile diet legend and the desktop menu note. `app.js` uses `.m
 
 ---
 
+## 14a. Live Location Broadcast — Spec (Session 14)
+
+**Why first:** Foundation piece. Once van GPS is flowing into Firestore, the geofence feature (Section 15) becomes a Cloud Function on top of the same data — no new device work needed.
+
+**Kitchen side (`kitchen.html`):**
+- Toggle button in kitchen header — "📍 Broadcast: ON / OFF"
+- When ON: browser Geolocation API fires every 10 minutes via `setInterval`, writes to `vendors/{vendorId}/location/current`
+- When OFF: clears `setInterval`, writes `{ active: false }` to same doc
+- Toggle state persisted in Firestore so it survives page reloads on the kitchen tablet
+- iOS caveat applies: dedicated Android device in van for production. iOS Safari kills background JS when screen sleeps.
+
+**Customer side (`index.html` / `app.js`):**
+- Real-time listener on `vendors/{vendorId}/location/current` — **not polling**. Firestore listeners are cheaper, zero-lag, and avoid the 11-min staleness window
+- Find Us page shows Google Maps Embed iframe when broadcast is `active: true`
+- Falls back to existing events sheet view when broadcast is `active: false` or doc doesn't exist
+- "Live now" badge with last-update timestamp ("Updated 3 mins ago")
+
+**Firestore structure:**
+```
+vendors/{vendorId}/location/current
+  active: boolean
+  lat: number
+  lng: number
+  updatedAt: timestamp
+  accuracy: number   ← from Geolocation API, useful for debugging
+```
+
+**Maps choice — Embed API, not JS API:**
+- Maps Embed API: free, simple iframe, no API key billing required for basic embed, ships fast
+- Maps JavaScript API: nicer marker, smooth updates, but needs API key with billing enabled and more code
+- **Decision:** ship Embed for the demo. Upgrade to JS API later if marker quality matters.
+
+**Battery / data:** 10-min interval is the floor. Anything more frequent and a 12-hour service drains a phone battery. Vendor will keep the broadcast Android device on charge in the van.
+
+---
+
 ## 15. Geofence Feature — Spec
 
 1. Customer subscribes, sets location + radius (1/3/5 miles) + notification preference
@@ -505,7 +550,7 @@ Customer taps AI chat bubble → types or dictates order in natural language →
 
 **Why it works:** Menu is small and fixed. "Two Margheritas and a Bella Pepperoni" is a solved problem for an LLM.
 **Why it matters:** No Just Eat, no Deliveroo, no Flipdish offers this at £19/month. It's a demo moment.
-**Roadmap position:** Feature 21 — post loyalty and self-service.
+**Roadmap position:** Feature 24 — post loyalty and self-service.
 
 ---
 
@@ -546,7 +591,7 @@ Customer taps AI chat bubble → types or dictates order in natural language →
 - Wait time options configurable per vendor in `CONFIG.ordering.waitOptions`
 - Secondary text colour must use `rgba(255,255,255,0.X)` not cream-based opacity (brown-on-brown problem)
 - CSS for both `index.html` and `kitchen.html` is embedded in their respective `<style>` blocks — not in external files
-- Item notes field (`notes: null`) already in order data model — UI deferred to post-pitch backlog
+- Item notes field (`notes: null`) already in order data model — UI shipping in Session 13 (per-item notes promoted to pre-pitch sprint)
 - Menu management: Google Sheets CSV approach — vendor edits sheet, app updates within minutes, no deploy
 - `CONFIG.menuSheetUrl` must be inside the CONFIG object
 - `esc()` utility — HTML-encodes sheet-sourced strings before innerHTML; Firestore writes use raw values
@@ -591,19 +636,46 @@ The app promotes good decisions at exactly the moments when a vendor is most lik
 
 ---
 
-## 21. Next Session — Session 13: Pitch Deck Update
+## 21. Next Session — Session 13: Per-item Notes + Ready Beep
 
-**Goal:** Update the pitch deck to reflect Stalliq branding and the current product.
+**Goal:** Ship two small, demo-critical features in one session.
 
-**What to cover:**
-- Rename/rebrand from the v2 deck to Stalliq
-- Update slide 11 with real Endoo contact details
-- Add QR code to demo site on appropriate slide
-- Add kitchen management co-pilot angle
-- Add roadmap slide: SMS/WhatsApp, live location, geofence, loyalty, AI Order Assist
-- Replace any placeholder content with real La Muletti screenshots or descriptions
+### Part A — Per-item Notes
+- Tap-to-expand text input on each basket line
+- Saved with the order (`item.notes`) — data model already supports `notes: null`
+- Render notes on kitchen kanban card
+- Render notes in kitchen detail drill-down modal
+- Render notes in customer's Account page order detail
+- Walk-in order modal: notes input per item too — single source of truth
+- 200-char limit, sanitised via `esc()` before any DOM render
 
-**File:** `vendorapp-pitch-v2.pptx` — paste the raw GitHub URL at session start so Claude can fetch it.
+### Part B — Customer Ready Beep
+- Web Audio API two-beep pattern (mirrors kitchen beep in `kitchen.js`)
+- Fires when the live status listener sees `status === 'ready'`
+- Audio context already unlocked from order placement tap — no extra UX needed
+- Plays once per order on transition to ready (track `firedReadyBeep` per order in `orderCache`)
+- No-op on already-ready orders loaded into Account page on first load (only fire on transition)
+
+**Files touched:**
+- `index.html` — basket UI for notes input, audio beep code
+- `js/app.js` — notes data flow, status listener beep trigger
+- `js/kitchen.js` — render notes on cards and detail modal
+- `kitchen.html` — walk-in modal: notes input per line
+
+---
+
+## 21a. Three-Session Pre-Pitch Sprint
+
+| Session | Focus | Delta for Daniele |
+|---------|-------|-------------------|
+| 13 | Per-item notes + Ready beep | Customisation per item; phone beeps when order is ready |
+| 14 | Live location broadcast + Maps embed | Find Us page shows live van pin when broadcasting |
+| 15 | Real phone auth go-live | Daniele can place an order from his real phone in front of you |
+| 16 | Pitch deck update | Stalliq rebrand, kitchen co-pilot angle, roadmap slide with vision features |
+
+**SMS status notifications stay on the roadmap (Feature 16) — promised in deck, not demoed.** Reason: Twilio account, opt-out handling (UK STOP keyword legal requirement), throttling — full session minimum, not worth the risk before the meeting. The ready beep covers the "your order is ready" moment for anyone with the app open; Twilio comes post-pitch.
+
+**Pitch deck file (Session 16):** `vendorapp-pitch-v2.pptx` — paste the raw GitHub URL at session start so Claude can fetch it.
 
 ---
 
@@ -647,6 +719,8 @@ The app promotes good decisions at exactly the moments when a vendor is most lik
 | 2 | **Firestore security rules** | `allow read: if request.auth != null && resource.data.customerId == request.auth.uid;` |
 | 3 | **Remove `noindex, nofollow`** | Remove from `index.html` before going live on the customer's real domain. |
 | 4 | **Firebase Phone Auth — real domain** | Add production domain to Firebase Auth → Settings → Authorised Domains. |
+| 4a | **Firebase App Check (reCAPTCHA Enterprise)** | Required to stop SMS abuse. Without App Check, Firebase will throttle/block SMS sends after first burst. Enable in Firebase Console → App Check. |
+| 4b | **Firebase Blaze plan** | Real Phone Auth SMS is not free — ~£0.04–£0.06 per UK SMS via Firebase. Upgrade `stalliq` project from Spark to Blaze before going live. |
 | 5 | **Remove Firebase test numbers** | Firebase Console → Authentication → Sign-in method → Phone → Test numbers. |
 | 6 | **CONFIG.vendor.id** | Confirm correct vendor ID. Never hardcode as a string literal. |
 | 7 | **CONFIG.domains** | Update to include the customer's live domain. |
