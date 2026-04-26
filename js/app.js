@@ -1247,11 +1247,11 @@ async function fetchOffersFromSheet() {
  * Calls renderMobileVanLocation() and renderDesktopVanLocation() on every change.
  */
 function listenVanLocation() {
-  const { doc, onSnapshot } = window.firestoreApi;
-  const locationRef = doc(db, 'vendors', CONFIG.vendor.id, 'location', 'current');
+  const locationRef = db.collection('vendors').doc(CONFIG.vendor.id)
+                        .collection('location').doc('current');
 
-  vanLocationUnsubscribe = onSnapshot(locationRef, (snap) => {
-    vanLocationData = snap.exists() ? snap.data() : null;
+  vanLocationUnsubscribe = locationRef.onSnapshot((snap) => {
+    vanLocationData = snap.exists ? snap.data() : null;
     renderMobileVanLocation();
     renderDesktopVanLocation();
   }, (err) => {
