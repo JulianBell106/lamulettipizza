@@ -380,7 +380,7 @@ html { scroll-behavior: smooth; }
 .d-menu-inner {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 56px 60px;
+  padding: 56px 60px 100px;
 }
 .d-menu-header {
   display: flex;
@@ -795,14 +795,35 @@ html { scroll-behavior: smooth; }
 .m-hero img { width: 100%; height: 100%; object-fit: cover; }
 .m-hero-overlay {
   position: absolute; inset: 0;
-  background: linear-gradient(to bottom, rgba(26,10,0,0.3) 0%, rgba(26,10,0,0.85) 100%);
+  background: linear-gradient(to bottom, rgba(26,10,0,0.5) 0%, rgba(26,10,0,0.88) 100%);
   display: flex; flex-direction: column; align-items: center;
   justify-content: flex-end; padding: 24px; text-align: center;
 }
-.m-hero-title { font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 700; color: var(--cream); line-height: 1.1; margin-bottom: 6px; }
+.m-hero-title { font-family: 'Playfair Display', serif; font-size: 36px; font-weight: 700; color: var(--cream); line-height: 1.1; margin-bottom: 6px; }
 .m-hero-sub { font-size: 13px; color: var(--gold); letter-spacing: 0.12em; text-transform: uppercase; }
 .m-section-header { padding: 20px 16px 10px; font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; color: var(--cream); }
 .m-section-sub { padding: 0 16px 16px; font-size: 13px; color: rgba(253,246,236,0.55); }
+
+/* ─── MOBILE EYEBROW — matches desktop gold eyebrow pattern ─── */
+.m-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-weight: 700;
+  padding: 24px 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.m-eyebrow::after {
+  content: '';
+  width: 28px;
+  height: 1px;
+  background: var(--gold);
+  opacity: 0.45;
+}
+
 .m-pills { display: flex; flex-direction: column; gap: 0; padding: 20px 16px; }
 .m-pill { display: flex; align-items: center; gap: 14px; padding: 16px 0; border-bottom: 1px solid rgba(212,160,67,0.15); }
 .m-pill:last-child { border-bottom: none; }
@@ -810,7 +831,7 @@ html { scroll-behavior: smooth; }
 .m-pill-text strong { display: block; font-size: 15px; font-weight: 600; color: var(--cream); margin-bottom: 2px; }
 .m-pill-text span { font-size: 13px; color: rgba(253,246,236,0.55); }
 .m-btn {
-  display: block; margin: 8px 16px 20px;
+  display: block; margin: 16px 16px 20px;
   background: linear-gradient(135deg, var(--fire), #8B1810);
   color: var(--cream); border: none; border-radius: 14px; padding: 16px;
   font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600;
@@ -823,14 +844,14 @@ html { scroll-behavior: smooth; }
 .m-menu-card.has-image .m-card-info { padding: 14px 14px 10px; }
 .m-menu-card.has-image .m-card-controls { padding: 0 14px 14px; justify-content: flex-end; }
 
-/* Dietary legend — CSS badge pills, consistent cross-device */
+/* Dietary legend */
 .diet-legend { display: flex; gap: 8px; padding: 0 16px 16px; flex-wrap: wrap; align-items: center; }
 
 .m-menu-list { padding: 0 16px; display: flex; flex-direction: column; gap: 12px; }
 .m-menu-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(212,160,67,0.15); border-radius: 16px; padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .m-card-info { flex: 1; min-width: 0; }
 .m-card-name { font-size: 15px; font-weight: 600; color: var(--cream); margin-bottom: 3px; }
-.m-card-desc { font-size: 12px; color: rgba(253,246,236,0.75); line-height: 1.4; margin-bottom: 6px; }
+.m-card-desc { font-family: 'Cormorant Garamond', serif; font-size: 15px; font-style: italic; font-weight: 300; color: rgba(253,246,236,0.75); line-height: 1.45; margin-bottom: 6px; }
 .m-card-price { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 700; color: var(--gold); }
 .m-card-diet { font-size: 11px; color: rgba(253,246,236,0.55); margin-left: 6px; }
 .m-card-controls { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
@@ -840,15 +861,15 @@ html { scroll-behavior: smooth; }
 .m-basket-empty { text-align: center; padding: 60px 24px; color: rgba(253,246,236,0.4); }
 .m-basket-empty .ei { font-size: 48px; margin-bottom: 12px; }
 .m-basket-list { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
-.m-basket-item { background: rgba(255,255,255,0.04); border: 1px solid rgba(212,160,67,0.12); border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.m-basket-item { background: rgba(255,255,255,0.04); border: 1px solid rgba(212,160,67,0.20); border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .m-bi-name { font-size: 14px; font-weight: 600; color: var(--cream); flex: 1; }
 .m-bi-qty { font-size: 13px; color: var(--ash); }
 .m-bi-price { font-family: 'Playfair Display', serif; font-size: 15px; color: var(--gold); font-weight: 700; }
 .m-bi-remove { background: none; border: none; color: rgba(253,246,236,0.3); cursor: pointer; font-size: 18px; padding: 0 4px; }
-.m-basket-total { margin: 16px 16px 0; background: rgba(212,160,67,0.08); border: 1px solid rgba(212,160,67,0.25); border-radius: 14px; padding: 16px; display: flex; justify-content: space-between; align-items: center; }
+.m-basket-total { margin: 16px 16px 0; background: rgba(212,160,67,0.08); border: 1px solid rgba(212,160,67,0.25); border-radius: 14px; padding: 20px; display: flex; justify-content: space-between; align-items: center; }
 .m-total-label { font-size: 14px; color: rgba(253,246,236,0.7); }
 .m-total-amount { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; color: var(--gold); }
-.m-payment-note { margin: 12px 16px 0; font-size: 13px; color: rgba(253,246,236,0.55); text-align: center; line-height: 1.5; }
+.m-payment-note { margin: 12px 16px 0; font-family: 'Cormorant Garamond', serif; font-size: 16px; font-style: italic; font-weight: 300; color: rgba(253,246,236,0.65); text-align: center; line-height: 1.5; }
 #m-order-err { color: #ff8080; font-size: 13px; text-align: center; padding: 0 16px; margin-top: 8px; min-height: 18px; }
 .m-about-bar { padding: 20px 16px 16px; text-align: center; border-bottom: 1px solid rgba(212,160,67,0.12); }
 .m-about-bar p { font-size: 13px; color: rgba(253,246,236,0.55); line-height: 1.6; margin-top: 4px; }
@@ -858,19 +879,14 @@ html { scroll-behavior: smooth; }
 .m-cartoon img { width: 100%; height: auto; display: block; }
 .m-founder-cards { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
 .m-founder-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(212,160,67,0.12); border-radius: 14px; padding: 16px; display: flex; gap: 14px; align-items: flex-start; }
-.m-founder-avatar { width: 48px; height: 48px; border-radius: 12px; background: rgba(212,160,67,0.15); display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+.m-founder-avatar { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, rgba(212,160,67,0.25), rgba(212,160,67,0.08)); border: 1px solid rgba(212,160,67,0.40); display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: var(--gold); flex-shrink: 0; letter-spacing: 0.02em; }
 .m-founder-name { font-size: 15px; font-weight: 700; color: var(--cream); margin-bottom: 2px; }
 .m-founder-role { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
 .m-founder-bio { font-size: 13px; color: rgba(253,246,236,0.6); line-height: 1.5; }
 .m-story-section { padding: 0 16px 20px; }
 .m-story-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 700; color: var(--cream); margin-bottom: 10px; }
-.m-story-body { font-size: 14px; color: rgba(253,246,236,0.65); line-height: 1.75; }
+.m-story-body { font-family: 'Cormorant Garamond', serif; font-size: 17px; font-weight: 300; color: rgba(253,246,236,0.70); line-height: 1.75; }
 .m-story-body p + p { margin-top: 12px; }
-.m-values-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px 20px; }
-.m-value-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(212,160,67,0.12); border-radius: 12px; padding: 14px 12px; text-align: center; }
-.m-value-icon { font-size: 24px; margin-bottom: 6px; }
-.m-value-name { font-size: 12px; font-weight: 700; color: var(--cream); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 3px; }
-.m-value-desc { font-size: 11px; color: rgba(253,246,236,0.55); line-height: 1.4; }
 .m-contact-list { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
 .m-contact-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(212,160,67,0.12); border-radius: 14px; padding: 16px; display: flex; align-items: center; gap: 14px; text-decoration: none; }
 .m-ci { width: 44px; height: 44px; border-radius: 12px; background: rgba(212,160,67,0.12); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
@@ -886,7 +902,7 @@ html { scroll-behavior: smooth; }
 .m-popup-month { font-size: 11px; text-transform: uppercase; color: rgba(212,160,67,0.6); letter-spacing: 0.08em; }
 .m-popup-ename { font-size: 14px; font-weight: 600; color: var(--cream); margin-bottom: 3px; }
 .m-popup-loc { font-size: 12px; color: rgba(253,246,236,0.5); }
-.m-socials-note { margin: 16px 16px 0; background: rgba(212,160,67,0.06); border: 1px solid rgba(212,160,67,0.15); border-radius: 12px; padding: 14px 16px; font-size: 13px; color: rgba(253,246,236,0.55); text-align: center; line-height: 1.5; }
+.m-socials-note { margin: 16px 16px 0; background: rgba(212,160,67,0.06); border: 1px solid rgba(212,160,67,0.15); border-radius: 12px; padding: 14px 16px; font-family: 'Cormorant Garamond', serif; font-size: 17px; font-style: italic; font-weight: 300; color: rgba(253,246,236,0.65); text-align: center; line-height: 1.6; }
 #m-order-confirm { display: none; position: fixed; inset: 0; background: rgba(26,10,0,0.97); z-index: 200; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px; text-align: center; }
 #m-order-confirm.show { display: flex; }
 .m-confirm-icon { font-size: 64px; margin-bottom: 16px; }
@@ -905,7 +921,7 @@ html { scroll-behavior: smooth; }
 .m-acct-logout-title { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 700; color: var(--cream); margin-bottom: 10px; }
 .m-acct-logout-sub { font-size: 14px; color: rgba(255,255,255,0.55); line-height: 1.7; margin-bottom: 28px; max-width: 260px; }
 .m-acct-welcome { padding: 20px 16px 4px; font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 700; color: var(--cream); }
-.m-acct-section-label { padding: 16px 16px 8px; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold); font-weight: 600; }
+.m-acct-section-label { padding: 16px 16px 8px; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold); font-weight: 700; }
 .m-current-order-card { margin: 0 16px 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(212,160,67,0.25); border-radius: 16px; padding: 16px; }
 .m-stamp-card { margin: 0 16px 8px; background: rgba(255,255,255,0.04); border: 1px solid rgba(212,160,67,0.2); border-radius: 16px; padding: 18px 16px; position: relative; overflow: hidden; }
 .m-stamp-card::before { content: '🍕'; position: absolute; right: 14px; top: 10px; font-size: 52px; opacity: 0.07; pointer-events: none; }
@@ -1275,6 +1291,7 @@ html { scroll-behavior: smooth; }
   </div>
 
   <div id="page-menu" class="page">
+    <div class="m-eyebrow">Fresh to order</div>
     <div class="m-section-header">Our Menu</div>
     <div class="m-section-sub">All pizzas fresh to order · Pay on collection</div>
     <div class="diet-legend">
@@ -1318,18 +1335,18 @@ html { scroll-behavior: smooth; }
       <div class="m-story-title">Our Story</div>
       <div class="m-story-body"></div>
     </div>
-    <div class="m-values-grid"></div>
     <button class="m-btn" onclick="mShowPage('menu')">🍕 Try Our Pizzas</button>
   </div>
 
   <div id="page-findus" class="page">
+    <div class="m-eyebrow">Come find us</div>
     <div class="m-section-header">Find Us</div>
     <div class="m-section-sub">Get in touch or find us at a pop-up</div>
     <div class="m-contact-list"></div>
     <div class="m-popups-section">
       <div class="m-popup-label">Upcoming Pop-Ups</div>
       <div class="m-popup-list"></div>
-      <div class="m-socials-note">Follow us on socials for the latest locations and times!</div>
+      <div class="m-socials-note">Follow us on socials for the latest locations and times.</div>
     </div>
   </div>
 
