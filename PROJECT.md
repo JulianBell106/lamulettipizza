@@ -1,6 +1,6 @@
 # Stalliq — Project Bible
-> Last updated: April 2026 — Session 14 Partial (kitchen.js + kitchen.html deployed; app.js + index.html still to do)
-> **Next sprint:** Finish Session 14 — app.js Section 20a + index.html map divs/CSS → then Session 15 (real phone auth go-live).
+> Last updated: April 2026 — Session 14 COMPLETE ✅
+> **Next sprint:** Session 15 — Real phone auth go-live + multi-staff kitchen PIN management (same session).
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -185,8 +185,8 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 11 | Colour & UX Overhaul | ✅ Done | True red token, dietary CSS badges, deeper menu section, card left accent — Session 12 |
 | 12 | Per-item Notes | ✅ Done | "Add customisation" toggle on basket lines (mobile + desktop). Notes in Firestore, kanban card, detail modal, customer order detail, walk-in modal. Session 13 |
 | 13 | Customer Ready Beep | ✅ Done | Two beeps via Web Audio API (660 Hz) when status → ready. unlockAudio() on Place Order tap. firedReadyBeep guard prevents spurious beeps on load. Session 13 |
-| 14 | Live Location Broadcast | 🔨 In progress (Session 14) | kitchen.js + kitchen.html DONE ✅. app.js Section 20a + index.html map divs/CSS still to do. |
-| 15 | Real Phone Auth Go-Live | ⏳ Next (Session 15) | Remove Firebase test numbers, add production domain, enable App Check, upgrade to Blaze plan |
+| 14 | Live Location Broadcast | ✅ Done | Full stack complete. Kitchen broadcasts GPS; customer Find Us page shows live map, kitchen status, tagline. Find Us page redesigned (mobile + desktop). Kitchen legibility pass. |
+| 15 | Real Phone Auth + Multi-Staff PIN | ⏳ Next (Session 15) | Phone auth go-live + multi-staff kitchen PIN management — same session. See Section 25. |
 | 16 | SMS & WhatsApp Status Notifications | ⏳ Planned | Customer notified on order status changes — Twilio |
 | 17 | Geofence Notifications | ⏳ Planned | Van enters subscriber's area → phone buzzes |
 | 18 | Flash Sales & Broadcasts | ⏳ Planned | Vendor launches deal in seconds, broadcasts to subscribers |
@@ -198,7 +198,7 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 24 | AI Order Assist | 🌟 Vision | Customer orders in natural language — type or dictate |
 
 **Feature backlog (future):**
-- Empty basket button — `index.html` only, wires to existing `clearBasket()`. Tag onto session 14 finish or session 15 if time allows.
+- Empty basket button — `index.html` only, wires to existing `clearBasket()`. Tag onto any session with spare time.
 
 ---
 
@@ -207,8 +207,8 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | Session | Focus | Status |
 |---------|-------|--------|
 | 13 | Per-item notes + Ready beep | ✅ Done |
-| 14 | Live location broadcast | 🔨 kitchen.js + kitchen.html done. app.js + index.html still needed |
-| 15 | Real phone auth go-live | ⏳ |
+| 14 | Live location broadcast + Find Us redesign + kitchen legibility | ✅ Done |
+| 15 | Real phone auth go-live + multi-staff kitchen PIN | ⏳ |
 | 16 | Pitch deck update | ⏳ |
 
 **What gets demoed live at the meeting:**
@@ -242,14 +242,21 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 ```
 vendors/{vendorId}/
   kitchenStatus: "open" | "closed_busy" | "closed_end" | "closed_today"
+  ownerPhone:    string  (E.164 — used for PIN reset verification, Session 15)
   counters/daily → { date, count }
 
-  location/current → (Session 14 — new)
+  location/current → (Session 14)
     active:    boolean
     lat:       number
     lng:       number
     accuracy:  number
     updatedAt: timestamp
+
+  staff/{staffId} → (Session 15 — multi-staff PIN)
+    name:      string
+    pinHash:   string  (SHA-256 hex of PIN — never store plaintext)
+    active:    boolean
+    createdAt: timestamp
 
 orders/{orderId}/
   vendorId, orderRef, source, customerId, customerName, customerPhone,
@@ -278,55 +285,59 @@ users/{uid}/
 - `stopLocationBroadcast()` — clears interval, writes `{ active: false }`
 - Button states: default = ash/muted; `.active` = green (`--s-ready`)
 
-**Customer side** (`js/app.js` + `index.html`) — ⏳ STILL TO DO:
-- `listenVanLocation()` — real-time listener on `vendors/{vendorId}/location/current`
-- `renderMobileVanLocation()` — shows/hides map in `#m-van-location` div
-- `renderDesktopVanLocation()` — shows/hides map in `#d-van-location` div
-- `buildMapHTML(lat, lng, updatedAt)` — Google Maps Embed iframe + live badge + age label
-- `_startAgeTimer()` / `_stopAgeTimer()` — updates "Updated X mins ago" every 60s
-- Called in DOMContentLoaded init: `listenVanLocation()`
-- State vars: `vanLocationUnsubscribe`, `vanLocationData`, `locationAgeInterval`
+**Customer side** (`js/app.js` + `index.html`) — ✅ COMPLETE:
+- `listenVanLocation()` — real-time listener on `vendors/{vendorId}/location/current` using compat SDK (`db.collection().doc().onSnapshot()`)
+- `renderMobileVanLocation()` / `renderDesktopVanLocation()` — shows/hides map in `#m-van-location` / `#d-van-location`
+- `buildMapHTML(lat, lng, updatedAt)` — live badge, italic tagline ("We are operating in this location right now — come and find us!"), Google Maps Embed iframe, age label
+- `_startAgeTimer()` / `_stopAgeTimer()` — updates "Updated X mins ago" every 60s; self-cleans if element leaves DOM
+- `renderFindUsKitchenStatus(status)` — writes live status pill to `#m-findus-status` and `#d-findus-status`; called from `applyKitchenStatus` so it stays live without page reload
+- State vars added to Section 3: `vanLocationUnsubscribe`, `vanLocationData`, `locationAgeInterval`
+- Init: `listenVanLocation()` called in DOMContentLoaded after `initKitchenStatusListener()`
 
-**HTML divs needed in `index.html`:**
-- Mobile: `<div id="m-van-location" style="display:none; padding: 0 16px;"></div>` — insert after `.m-section-sub` in `#page-findus`, before `.m-contact-list`
-- Desktop: `<div id="d-van-location" style="display:none; margin-top: 24px;"></div>` — insert after `#d-contact-grid` inside the left column of `.d-contact-inner`
-
-**CSS needed in `index.html` `<style>` block:**
-```css
-/* ─── LIVE VAN LOCATION MAP (Session 14) ─── */
-.van-map-wrap { margin-bottom: 20px; }
-.van-live-badge {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 12px; font-weight: 600; color: #27AE60;
-  background: rgba(39,174,96,0.10); border: 1px solid rgba(39,174,96,0.25);
-  border-radius: 20px; padding: 5px 12px; margin-bottom: 10px;
-}
-.van-map-iframe {
-  width: 100%; height: 240px; border: none; border-radius: 14px; display: block;
-}
-.van-map-age {
-  font-size: 11px; color: var(--text-muted); margin-top: 8px;
-  text-align: right; letter-spacing: 0.04em;
-}
-@media (min-width: 768px) { .van-map-iframe { height: 280px; } }
-```
-
-**Maps choice:** Google Maps Embed API — free, no API key billing for basic embed.
+**⚠️ Compat SDK gotcha (learned this session):** All Firestore calls in app.js use the compat pattern — `db.collection('x').doc('y').onSnapshot(...)` — NOT the modular `{ doc, onSnapshot }` destructuring. The two SDKs are not interchangeable.
 
 ---
 
-## 14b. Session 14 Completion Plan (next session)
+## 14b. Find Us Page Redesign (Session 14) ✅
 
-The next session should be focused and chunked to avoid timeouts. Exact plan:
+**Problem:** Contact cards (phone/email/website/Facebook) were mixed in with live location and pop-ups, making the page cluttered and burying the most important info.
 
-**Step 1 — app.js: add Section 20a only**
-Paste the current `app.js` raw URL. Claude adds three state vars to Section 3 and inserts Section 20a (the six location functions: `listenVanLocation`, `buildMapHTML`, `renderMobileVanLocation`, `renderDesktopVanLocation`, `_startAgeTimer`, `_stopAgeTimer`) plus one line in Section 23 init. Output ONLY the changed sections as `str_replace`-style diffs so Julian can apply them, OR output app.js in two halves if needed.
+**Mobile solution — priority reorder:**
+Page order is now: kitchen status pill → live location map (when active) → Upcoming Pop-Ups panel → "Get in Touch" divider → contact cards. Contact is visible but clearly secondary. Sub-heading updated to "Live location · upcoming pop-ups · opening status".
 
-**Step 2 — index.html: targeted CSS + two div insertions only**
-Add CSS block, insert `#m-van-location` div, insert `#d-van-location` div. Three surgical changes. Output the three str_replace blocks only — do NOT output the full 900-line file.
+**Desktop solution — split into two sections:**
+- Top two-column grid: left = "Live updates" (kitchen status + van map); right = Upcoming Pop-Ups. Eyebrow changed from "Get in touch" to "Live updates".
+- Below a gold rule: "Get in Touch" full-width section with 2×2 contact card grid.
 
-**Step 3 — test**
-Julian deploys and tests: toggle broadcast on kitchen tablet → Find Us page on phone should show live map.
+**CSS classes added (all in `index.html` `<style>`):**
+- `.van-location-tagline` — italic Cormorant under live badge
+- `#m-findus-status` / `#d-findus-status` — kitchen status pill containers
+- `.fs-dot` / `.fs-text` — shared dot + text classes for status pill (`.open` = green glow, `.closed` = red)
+- `.m-findus-divider` — ruled divider with centred "Get in Touch" label
+- `.m-contact-section-label` — gold uppercase label above contact cards (mobile)
+- `.m-popups-section` — upgraded to gold-tinted panel with border + radius
+- `.d-getintouch-wrap` — desktop Get in Touch sub-section below the two-column grid
+- `#m-van-location { margin-top: 12px }` — breathing room between status pill and map
+- `.page { padding-bottom: 80px }` was already correct — removed accidental override that was truncating mobile scroll
+
+---
+
+## 14c. Kitchen Dashboard Legibility Pass (Session 14) ✅
+
+All changes in `kitchen.html` CSS only. Target: readable in a busy kitchen in poor light.
+
+| Element | Before | After |
+|---|---|---|
+| Clock (`.k-time`) | 13px, `--ash` brown | 20px bold, 95% white |
+| "KITCHEN DASHBOARD" sub | 10px, `--ash` | 10px, 40% white |
+| "LIVE ORDERS" label | 11px, `--ash` | 13px bold, 85% white |
+| Active count | 12px, `--ash` | 14px bold, pure white |
+| Column titles (PENDING etc) | 11px | 14px bold (status colours retained) |
+| Column count badges | 11px, `--ash` | 13px bold, 90% white |
+| New Order button | 12px | 14px bold (gold retained) |
+| Broadcast button | 12px, `--ash` | 14px bold, 85% white (green when active) |
+| Customer name on card | 14px, cream | 16px bold, pure white |
+| Elapsed time on card | 12px, `--ash` | 14px, 70% white (warning/urgent colours untouched) |
 
 ---
 
@@ -368,6 +379,13 @@ Julian deploys and tests: toggle broadcast on kitchen tablet → Find Us page on
 - `listenBroadcastState()` keeps button and interval in sync if another device toggles state
 - `buildMapHTML()` URL format: `https://maps.google.com/maps?q={lat},{lng}&z=15&output=embed`
 - Age timer: 60-second setInterval; stops when map hidden; cleans up if element removed from DOM
+- app.js Firestore pattern: always use compat SDK (`db.collection().doc().onSnapshot()`), never modular destructuring
+- Find Us page: contact details are secondary — location/status/pop-ups get first focus on both mobile and desktop
+- Kitchen status is surfaced on the Find Us page (not just the home/basket pages) via `renderFindUsKitchenStatus()` called from `applyKitchenStatus()`
+- Multi-staff kitchen PIN: different identities, same access level — no role tiers needed at this stage
+- PIN storage: SHA-256 hashed in Firestore — never store plaintext PINs
+- PIN reset: self-serve via Firebase Phone Auth (SMS code to registered owner phone) — no Julian involvement needed at scale
+- PIN security: lockout after 5 failed attempts for 15 minutes; App Check (Session 15) covers the reset flow
 - Empty basket button: `index.html` only, wires to existing `clearBasket()` — tag onto any session with spare time
 
 ---
@@ -378,14 +396,16 @@ Independent food vendors are brilliant at their craft but are not trained kitche
 
 ---
 
-## 21. Next Session — Finish Session 14: Customer-side location (app.js + index.html)
+## 21. Next Session — Session 15: Real Auth + Multi-Staff PIN
 
-**Goal:** app.js gets Section 20a. index.html gets CSS + two divs. Van location shows on Find Us page.
+**Goals:**
+1. Real Firebase Phone Auth go-live (remove test numbers, production domain, App Check, Blaze plan)
+2. Multi-staff kitchen PIN management — see Section 25 for full spec
 
-**Approach:** Targeted str_replace diffs, NOT full file output. Three changes total.
+**Approach:** Chunk into two halves. Auth first (config changes + testing), then PIN management (kitchen.html + kitchen.js + Firestore).
 
 **Session startup:**
-> "New session — read the live PROJECT.md from GitHub: https://raw.githubusercontent.com/JulianBell106/lamulettipizza/refs/heads/main/PROJECT.md — today we're finishing Session 14: adding the customer-side location listener to app.js and the map divs/CSS to index.html. Use str_replace diffs only — do not output full files."
+> "New session — read the live PROJECT.md from GitHub: https://raw.githubusercontent.com/JulianBell106/lamulettipizza/refs/heads/main/PROJECT.md — today we're doing Session 15: real Firebase Phone Auth go-live and multi-staff kitchen PIN management. See Sections 23 and 25 for the full spec."
 
 ---
 
@@ -417,12 +437,78 @@ Independent food vendors are brilliant at their craft but are not trained kitche
 | 5 | Remove Firebase test numbers | ⏳ Session 15 |
 | 6 | CONFIG.vendor.id confirmed | ⏳ |
 | 7 | CONFIG.domains updated | ⏳ |
-| 8 | Kitchen PIN changed from 1234 | ⏳ |
+| 8 | Kitchen PIN system replaced with multi-staff PIN management | ⏳ Session 15 |
 | 9 | noindex on kitchen.html | ✅ Present |
 | 10 | Google Sheet — protect header row | ⏳ |
 | 11 | Google Sheet — vendor 2FA | ⏳ |
 | 12 | Allergen disclaimer in onboarding doc | ⏳ |
 | 13 | Events + offers sheet URLs in CONFIG | ✅ |
+
+---
+
+## 25. Multi-Staff Kitchen PIN — Spec (Session 15)
+
+**Decision:** Different identities, same access level. All staff PINs unlock the full kitchen dashboard. No role tiers at this stage.
+
+**Firestore location:** `vendors/{vendorId}/staff/{staffId}` → `{ name, pinHash, active, createdAt }`
+
+**PIN storage:** SHA-256 hex hash of the raw PIN — never store plaintext. Hash is computed client-side before writing and before comparison.
+
+---
+
+### Login flow (replaces current single-PIN screen)
+
+1. PIN entry screen unchanged visually — staff enter their 4-digit PIN
+2. On submit: hash the entered PIN → query `staff` collection for a document where `pinHash` matches AND `active == true`
+3. If match found: grant access, show brief "Welcome, [name]" toast, proceed to dashboard
+4. If no match: increment failed attempt counter (stored in `sessionStorage`); show error
+5. After 5 failed attempts: lock screen for 15 minutes, show countdown timer
+
+---
+
+### Staff management panel (new — inside kitchen dashboard)
+
+- Accessible via a ⚙️ settings icon in the kitchen header (visible once logged in)
+- Lists all active staff members by name
+- Actions per staff member: **Rename**, **Change PIN**, **Deactivate** (soft delete — sets `active: false`)
+- **Add new staff member**: enter name + choose 4-digit PIN → writes new document to Firestore
+- No "delete" — always deactivate. Keeps audit trail.
+- The management panel itself requires re-entering the logged-in staff member's own PIN before making changes (prevents casual tampering on an unlocked tablet)
+
+---
+
+### Forgotten PIN — self-serve reset flow
+
+**For staff:** The logged-in owner resets it from the management panel. No self-serve needed — mirrors every real workplace.
+
+**For owner (if all PINs forgotten / locked out):**
+1. "Forgot all PINs?" link on the lock screen
+2. Enter the vendor's registered phone number
+3. Firebase Phone Auth sends SMS code (same infrastructure as customer auth)
+4. Enter code → verified → set a new PIN for yourself → logged in
+5. The owner's phone number is stored at `vendors/{vendorId}/ownerPhone` (written during onboarding/setup)
+
+---
+
+### Security posture
+
+| Threat | Mitigation |
+|--------|-----------|
+| Brute force PIN | 5-attempt lockout → 15-minute freeze |
+| Stolen/guessed PIN | Deactivate that staff member immediately from management panel |
+| SMS reset abuse | Firebase Phone Auth has built-in rate limiting per number; App Check (Session 15) blocks automated abuse |
+| SIM swap | Out of threat model for this product — effort/reward ratio essentially zero for a food vendor |
+| Plaintext PIN exposure | PINs are SHA-256 hashed before write — Firestore never holds plaintext |
+
+---
+
+### Implementation plan (Session 15)
+
+- `kitchen.js`: replace `checkPin()` with `checkPinMultiStaff()` — hashes input, queries staff collection
+- `kitchen.js`: add `renderStaffManagement()`, `addStaff()`, `deactivateStaff()`, `changeStaffPin()`, `resetOwnerPin()`
+- `kitchen.html`: add settings panel HTML + CSS; add "Forgot PIN?" link + reset flow screens
+- Firestore: seed initial staff document for Daniele during session (name + hashed PIN)
+- `vendors/{vendorId}/ownerPhone` written manually in Firestore for La Muletti during session
 
 ---
 
