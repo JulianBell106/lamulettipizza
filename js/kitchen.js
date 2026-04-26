@@ -7,6 +7,7 @@
  *   3.  Clock
  *   4.  PIN screen
  *   5.  Kitchen status
+ *   5a. Location broadcast (Session 14)
  *   6.  Firestore orders listener
  *   7.  Render orders
  *   8.  Order card HTML
@@ -32,6 +33,10 @@ let pendingReadyId    = null;     // orderId waiting for ready confirmation
 let selectedWaitMins  = null;     // chosen wait time value
 let elapsedTimers     = {};       // setInterval handles keyed by orderId
 let ordersUnsubscribe = null;
+
+// Location broadcast state (Session 14)
+let broadcastActive     = false;
+let broadcastIntervalId = null;
 
 // Walk-in modal state
 let walkinQty   = {};  // { menuItemId: qty }
@@ -143,10 +148,10 @@ function renderKitchenStatusBtn() {
   const btn = document.getElementById('k-status-btn');
   if (!btn) return;
   const map = {
-    open:         { label: '🟢 Open',         cls: 'open'   },
-    closed_busy:  { label: '🟡 Busy',          cls: 'closed' },
-    closed_end:   { label: '🔴 Closing',        cls: 'closed' },
-    closed_today: { label: '⚫ Not Trading',    cls: 'closed' },
+    open:         { label: '🟢 Open',       cls: 'open'   },
+    closed_busy:  { label: '🟡 Busy',        cls: 'closed' },
+    closed_end:   { label: '🔴 Closing',      cls: 'closed' },
+    closed_today: { label: '⚫ Not Trading',  cls: 'closed' },
   };
   const s = map[kitchenStatus] || map.open;
   btn.textContent = s.label;
@@ -165,6 +170,153 @@ async function setKitchenStatus(status) {
 
 function openKitchenModal()  { document.getElementById('kitchen-modal').classList.add('show'); }
 function closeKitchenModal() { document.getElementById('kitchen-modal').classList.remove('show'); }
+
+
+/* ============================================================================
+   5a. LOCATION BROADCAST (Session 14)
+   ============================================================================
+   Kitchen toggle — van GPS pushed to Firestore every 10 minutes when active.
+   State persisted in Firestore so it survives page reloads on the kitchen
+   tablet. listenBroadcastState() keeps the button in sync if another device
+   changes the state.
+
+   Firestore path: vendors/{vendorId}/location/current
+     active:    boolean
+     lat:       number
+     lng:       number
+     accuracy:  number  (metres, from Geolocation API)
+     updatedAt: timestamp
+
+   iOS caveat: iOS Safari kills background JS when the screen sleeps.
+   Use a dedicated Android device in the van for production.
+   ============================================================================ */
+
+const BROADCAST_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+
+/** Syncs the broadcast toggle button label and colour with broadcastActive. */
+function renderBroadcastBtn() {
+  const btn = document.getElementById('k-broadcast-btn');
+  if (!btn) return;
+  if (broadcastActive) {
+    btn.textContent = '📍 Live: ON';
+    btn.className   = 'k-broadcast-btn active';
+  } else {
+    btn.textContent = '📍 Broadcast';
+    btn.className   = 'k-broadcast-btn';
+  }
+}
+
+/**
+ * Real-time listener on vendors/{vendorId}/location/current.
+ * Keeps broadcastActive in sync and manages the ping interval automatically
+ * if another device toggles the broadcast state.
+ */
+function listenBroadcastState() {
+  const locRef = db.collection('vendors').doc(CONFIG.vendor.id)
+                   .collection('location').doc('current');
+
+  locRef.onSnapshot(snap => {
+    const data      = snap.exists ? snap.data() : null;
+    broadcastActive = !!(data && data.active);
+    renderBroadcastBtn();
+
+    if (broadcastActive && !broadcastIntervalId) {
+      _startLocationPing();
+    } else if (!broadcastActive && broadcastIntervalId) {
+      clearInterval(broadcastIntervalId);
+      broadcastIntervalId = null;
+    }
+  }, err => console.error('[Stalliq] Broadcast state listener:', err));
+}
+
+/** Broadcast button tap handler — toggles on or off. */
+async function toggleBroadcast() {
+  if (broadcastActive) {
+    await stopLocationBroadcast();
+  } else {
+    await startLocationBroadcast();
+  }
+}
+
+/**
+ * Turns broadcast on:
+ *   1. Checks geolocation availability
+ *   2. Pushes current position immediately (sets active:true in Firestore)
+ *   3. Starts 10-minute repeating ping interval
+ */
+async function startLocationBroadcast() {
+  if (!navigator.geolocation) {
+    alert('Location is not available on this device.');
+    return;
+  }
+  await pushLocation();    // immediate first push
+  _startLocationPing();   // then every 10 mins
+}
+
+/** Internal: creates/resets the repeating ping setInterval. */
+function _startLocationPing() {
+  if (broadcastIntervalId) clearInterval(broadcastIntervalId);
+  broadcastIntervalId = setInterval(pushLocation, BROADCAST_INTERVAL_MS);
+  console.log('[Stalliq] Location ping interval started (10-min cadence).');
+}
+
+/**
+ * Gets the device's current GPS position and writes it to Firestore.
+ * Returns a Promise that resolves when the write completes (or on any error).
+ */
+function pushLocation() {
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          await db.collection('vendors').doc(CONFIG.vendor.id)
+                  .collection('location').doc('current')
+                  .set({
+                    active:    true,
+                    lat:       pos.coords.latitude,
+                    lng:       pos.coords.longitude,
+                    accuracy:  pos.coords.accuracy,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                  });
+          console.log(
+            `[Stalliq] Location pushed: ` +
+            `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)} ` +
+            `(±${Math.round(pos.coords.accuracy)}m)`
+          );
+        } catch (err) {
+          console.error('[Stalliq] Location push error:', err);
+        }
+        resolve();
+      },
+      (err) => {
+        console.error('[Stalliq] Geolocation error:', err.message);
+        resolve(); // don't block on GPS failure — just log
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+    );
+  });
+}
+
+/**
+ * Turns broadcast off:
+ *   1. Clears the ping interval
+ *   2. Writes active:false to Firestore so the customer app removes the map
+ */
+async function stopLocationBroadcast() {
+  if (broadcastIntervalId) {
+    clearInterval(broadcastIntervalId);
+    broadcastIntervalId = null;
+    console.log('[Stalliq] Location ping interval stopped.');
+  }
+  try {
+    await db.collection('vendors').doc(CONFIG.vendor.id)
+            .collection('location').doc('current')
+            .set({ active: false }, { merge: true });
+    console.log('[Stalliq] Broadcast set inactive in Firestore.');
+  } catch (err) {
+    console.error('[Stalliq] Stop broadcast error:', err);
+  }
+}
 
 
 /* ============================================================================
@@ -270,7 +422,6 @@ function orderCardHTML(order) {
     ready:     'Ready to Collect',
   };
 
-  // Session 13: render per-item note on the card if present
   const itemsHTML = (order.items || []).map(item => {
     const noteEl = item.notes
       ? `<li class="k-card-item-note">📝 ${item.notes}</li>`
@@ -499,7 +650,6 @@ function openDetailModal(orderId) {
     ? `<a href="tel:${phone}" class="k-detail-phone">${phone} 📞</a>`
     : `<span class="k-detail-phone muted">No phone on record</span>`;
 
-  // Session 13: per-item notes rendered in detail modal
   const itemsHTML = (order.items || []).map(item => {
     const noteEl = item.notes
       ? `<div class="k-detail-item-note">📝 ${item.notes}</div>`
@@ -660,6 +810,7 @@ function initKanbanDrag() {
 function startDashboard() {
   startClock();
   listenKitchenStatus();
+  listenBroadcastState(); // Session 14 — live location broadcast
   listenOrders();
   initKanbanDrag();
 }
@@ -673,8 +824,6 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ============================================================================
    16. WALK-IN ORDER MODAL
    Session 13: per-item notes (walkinNotes{}) added alongside walkinQty{}.
-   Notes are always-visible inputs below each item row — no toggle needed
-   on the kitchen tablet. 200-char limit, written to Firestore on submit.
    ============================================================================ */
 
 async function getNextOrderRef() {
@@ -696,7 +845,7 @@ async function getNextOrderRef() {
 
 function openWalkinModal() {
   walkinQty   = {};
-  walkinNotes = {}; // Session 13
+  walkinNotes = {};
 
   const nameInput  = document.getElementById('walkin-name');
   const phoneInput = document.getElementById('walkin-phone');
@@ -719,11 +868,6 @@ function closeWalkinModal() {
   document.getElementById('walkin-modal').classList.remove('show');
 }
 
-/**
- * Renders the item picker with qty controls and a notes input per row.
- * Notes inputs are always visible (no toggle) — kitchen staff work fast.
- * Session 13: each row gains a .k-walkin-item-note input.
- */
 function renderWalkinItems() {
   const menu     = (CONFIG.menu || []).filter(item => item.available !== false);
   const currency = CONFIG.business.currency || '£';
@@ -759,11 +903,8 @@ function adjustWalkinQty(itemId, delta) {
   const current = walkinQty[itemId] || 0;
   const next    = Math.max(0, current + delta);
 
-  if (next === 0) {
-    delete walkinQty[itemId];
-  } else {
-    walkinQty[itemId] = next;
-  }
+  if (next === 0) delete walkinQty[itemId];
+  else walkinQty[itemId] = next;
 
   const qtyEl = document.getElementById(`walkin-qty-${itemId}`);
   if (qtyEl) qtyEl.textContent = next;
@@ -774,17 +915,10 @@ function adjustWalkinQty(itemId, delta) {
   updateWalkinTotal();
 }
 
-/**
- * Saves the note for a walk-in item. Called oninput on the note field.
- * Trims and caps at 200 chars. Clears entry when empty.
- */
 function saveWalkinNote(itemId, value) {
   const trimmed = value.trim().substring(0, 200);
-  if (trimmed) {
-    walkinNotes[itemId] = trimmed;
-  } else {
-    delete walkinNotes[itemId];
-  }
+  if (trimmed) walkinNotes[itemId] = trimmed;
+  else delete walkinNotes[itemId];
 }
 
 function updateWalkinTotal() {
@@ -830,7 +964,6 @@ async function submitWalkinOrder() {
   if (nudge) nudge.textContent = '';
 
   const menu  = CONFIG.menu || [];
-  // Session 13: include walkinNotes[id] on each item
   const items = Object.entries(walkinQty).map(([id, qty]) => {
     const item = menu.find(m => String(m.id) === String(id));
     return {

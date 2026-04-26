@@ -173,6 +173,25 @@
     }
     .k-new-order-btn:active { opacity: 0.75; background: rgba(212,160,67,0.18); }
 
+    /* ── Broadcast toggle button (Session 14) ── */
+    .k-broadcast-btn {
+      padding: 7px 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(253,246,236,0.15);
+      background: rgba(253,246,236,0.05);
+      color: var(--ash);
+      font-size: 12px; font-weight: 600; letter-spacing: 0.2px;
+      transition: opacity 0.15s, background 0.15s, color 0.15s, border-color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+      white-space: nowrap;
+    }
+    .k-broadcast-btn:active { opacity: 0.75; }
+    .k-broadcast-btn.active {
+      background: rgba(39,174,96,0.12);
+      color: var(--s-ready);
+      border-color: rgba(39,174,96,0.30);
+    }
+
     .k-status-btn {
       padding: 7px 12px;
       border-radius: 20px;
@@ -387,7 +406,7 @@
       letter-spacing: 0.1px;
     }
     .k-btn:active { transform: scale(0.97); opacity: 0.85; }
-    .k-btn-accept     { background: var(--gold);               color: var(--dark);      border-color: var(--gold); }
+    .k-btn-accept     { background: var(--gold);               color: var(--dark);       border-color: var(--gold); }
     .k-btn-preparing  { background: rgba(74,144,217,0.1);      color: var(--s-accepted); border-color: rgba(74,144,217,0.3); }
     .k-btn-ready      { background: rgba(200,65,11,0.1);       color: var(--fire);       border-color: rgba(200,65,11,0.3); }
     .k-btn-collected  { background: rgba(39,174,96,0.1);       color: var(--s-ready);    border-color: rgba(39,174,96,0.3); }
@@ -555,7 +574,6 @@
 
     .k-walkin-items { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
 
-    /* Session 13: item row is now a column — top flex row + note input below */
     .k-walkin-item {
       display: flex;
       flex-direction: column;
@@ -571,7 +589,6 @@
       border-color: rgba(212,160,67,0.3);
     }
 
-    /* Top row: name/price on left, qty controls on right */
     .k-walkin-item-top {
       display: flex;
       align-items: center;
@@ -603,7 +620,6 @@
     }
     .k-walkin-item.selected .k-walkin-qty-val { color: var(--gold); }
 
-    /* Session 13 — per-item note input in walk-in modal */
     .k-walkin-note-input {
       width: 100%;
       padding: 9px 12px;
@@ -622,7 +638,6 @@
       background: rgba(212,160,67,0.05);
     }
 
-    /* Form fields */
     .k-walkin-field { margin-bottom: 14px; }
     .k-walkin-field label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--ash); margin-bottom: 8px; }
     .k-walkin-optional { text-transform: none; letter-spacing: 0; font-size: 11px; color: var(--ash); opacity: 0.7; }
@@ -690,6 +705,8 @@
       <div class="k-header-right">
         <div class="k-time" id="k-time">--:--</div>
         <button class="k-new-order-btn" onclick="openWalkinModal()">➕ New Order</button>
+        <!-- Session 14 — live location broadcast toggle -->
+        <button class="k-broadcast-btn" id="k-broadcast-btn" onclick="toggleBroadcast()">📍 Broadcast</button>
         <button class="k-status-btn open" id="k-status-btn" onclick="openKitchenModal()">
           🟢 Open
         </button>
@@ -801,13 +818,9 @@
       <div class="k-modal-title">New Order</div>
       <div class="k-modal-sub">Walk-in customer — tap items to add</div>
 
-      <!-- Item picker (rendered by kitchen.js) -->
       <div class="k-walkin-items" id="walkin-items"></div>
-
-      <!-- Running total -->
       <div class="k-walkin-total" id="walkin-total"></div>
 
-      <!-- Customer name (required) -->
       <div class="k-walkin-field">
         <label for="walkin-name">Customer name *</label>
         <input type="text" class="k-walkin-input" id="walkin-name"
@@ -816,7 +829,6 @@
       </div>
       <div class="k-walkin-nudge" id="walkin-nudge"></div>
 
-      <!-- Phone (optional) -->
       <div class="k-walkin-field">
         <label for="walkin-phone">
           Phone number
@@ -840,11 +852,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-  <!-- Same config + firebase init as customer app -->
   <script src="js/config.js"></script>
   <script src="js/firebase.js"></script>
-
-  <!-- Kitchen-specific logic -->
   <script src="js/kitchen.js"></script>
 
 </body>
