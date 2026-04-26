@@ -548,9 +548,9 @@ function refreshDesktopBasket() {
         <button class="d-bitem-notes-toggle${noteCls}" id="d-notes-toggle-${id}"
                 onclick="dToggleNote(${id})">${noteLabel}</button>
         <textarea class="d-bitem-notes-input" id="d-notes-${id}"
-                  maxlength="200" rows="2"
+                  maxlength="200" rows="1"
                   placeholder="e.g. no olives, well done"
-                  oninput="saveNote(${id}, this.value)"
+                  oninput="saveNote(${id},this.value);this.style.height='auto';this.style.height=this.scrollHeight+'px'"
                   style="display:${existNote ? 'block' : 'none'}">${esc(existNote)}</textarea>
       </div>`;
   }).join('');
@@ -768,9 +768,9 @@ function renderMobileBasket() {
         <button class="m-bi-notes-toggle${noteCls}" id="m-notes-toggle-${id}"
                 onclick="mToggleNote(${id})">${noteLabel}</button>
         <textarea class="m-bi-notes-input" id="m-notes-${id}"
-                  maxlength="200" rows="2"
+                  maxlength="200" rows="1"
                   placeholder="e.g. no olives, well done"
-                  oninput="saveNote(${id}, this.value)"
+                  oninput="saveNote(${id},this.value);this.style.height='auto';this.style.height=this.scrollHeight+'px'"
                   style="display:${existNote ? 'block' : 'none'}">${esc(existNote)}</textarea>
       </div>`;
   }).join('');
