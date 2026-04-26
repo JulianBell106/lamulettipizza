@@ -156,9 +156,9 @@
     }
     .k-logo { font-family: 'Playfair Display', serif; font-size: 17px; color: var(--cream); }
     .k-logo span { color: var(--gold); }
-    .k-header-sub { font-size: 10px; color: var(--ash); text-transform: uppercase; letter-spacing: 2px; margin-top: 2px; }
+    .k-header-sub { font-size: 10px; color: rgba(255,255,255,0.40); text-transform: uppercase; letter-spacing: 2px; margin-top: 2px; }
     .k-header-right { display: flex; align-items: center; gap: 8px; }
-    .k-time { font-size: 13px; color: var(--ash); font-variant-numeric: tabular-nums; }
+    .k-time { font-size: 20px; font-weight: 700; color: rgba(255,255,255,0.95); font-variant-numeric: tabular-nums; }
 
     .k-new-order-btn {
       padding: 7px 12px;
@@ -213,8 +213,8 @@
       display: flex; align-items: center; justify-content: space-between;
       padding: 10px 16px 6px;
     }
-    .k-queue-label { font-size: 11px; text-transform: uppercase; letter-spacing: 2.5px; color: var(--ash); }
-    .k-queue-count { font-size: 12px; color: var(--ash); }
+    .k-queue-label { font-size: 13px; text-transform: uppercase; letter-spacing: 2.5px; font-weight: 700; color: rgba(255,255,255,0.85); }
+    .k-queue-count { font-size: 14px; font-weight: 700; color: #FFFFFF; }
 
     /* ============================================================
        KANBAN BOARD
@@ -272,18 +272,18 @@
     .k-col-preparing .k-col-header { border-left-color: var(--s-preparing); }
     .k-col-ready     .k-col-header { border-left-color: var(--s-ready); }
 
-    .k-col-title { font-size: 11px; text-transform: uppercase; letter-spacing: 2.5px; font-weight: 600; }
+    .k-col-title { font-size: 14px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; }
     .k-col-pending   .k-col-title { color: var(--s-pending); }
     .k-col-accepted  .k-col-title { color: var(--s-accepted); }
     .k-col-preparing .k-col-title { color: var(--s-preparing); }
     .k-col-ready     .k-col-title { color: var(--s-ready); }
 
     .k-col-count {
-      font-size: 11px; font-weight: 600;
-      background: rgba(253,246,236,0.07);
-      color: var(--ash);
-      padding: 2px 9px; border-radius: 10px;
-      min-width: 26px; text-align: center;
+      font-size: 13px; font-weight: 700;
+      background: rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.90);
+      padding: 3px 10px; border-radius: 10px;
+      min-width: 28px; text-align: center;
     }
 
     .k-col-cards {
@@ -351,8 +351,8 @@
     .status-ready     .k-card-ref { color: var(--s-ready); }
 
     .k-card-meta { text-align: right; }
-    .k-card-name { font-size: 14px; font-weight: 600; color: var(--cream); }
-    .k-card-elapsed { font-size: 12px; color: var(--ash); margin-top: 3px; font-variant-numeric: tabular-nums; }
+    .k-card-name { font-size: 16px; font-weight: 700; color: #FFFFFF; }
+    .k-card-elapsed { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.70); margin-top: 3px; font-variant-numeric: tabular-nums; }
     .k-card-elapsed.warning { color: var(--s-warning); }
     .k-card-elapsed.urgent  { color: var(--s-urgent); font-weight: 600; }
 
