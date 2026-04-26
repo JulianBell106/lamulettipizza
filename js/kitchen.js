@@ -34,12 +34,12 @@ let elapsedTimers     = {};       // setInterval handles keyed by orderId
 let ordersUnsubscribe = null;
 
 // Walk-in modal state
-let walkinQty         = {};       // { menuItemId: qty }
+let walkinQty   = {};  // { menuItemId: qty }
+let walkinNotes = {};  // { menuItemId: noteText } — Session 13
 
 
 /* ============================================================================
    2. THEME + PAGE IDENTITY
-   Applies CONFIG colours as CSS variables and sets vendor name in UI.
    ============================================================================ */
 function applyKitchenTheme() {
   const t = CONFIG.theme;
@@ -56,7 +56,6 @@ function applyKitchenTheme() {
 function initPageIdentity() {
   document.title = `Kitchen · ${CONFIG.business.nameShort}`;
 
-  // Vendor name in PIN screen and dashboard header — last word in gold
   ['pin-logo', 'k-logo'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -69,7 +68,6 @@ function initPageIdentity() {
 
 /* ============================================================================
    3. CLOCK
-   Updates the time display in the header every 10 seconds.
    ============================================================================ */
 function startClock() {
   function tick() {
@@ -86,8 +84,6 @@ function startClock() {
 
 /* ============================================================================
    4. PIN SCREEN
-   4-digit PIN read from CONFIG.kitchen.pin.
-   Auto-submits on 4th digit. Shakes and clears on wrong entry.
    ============================================================================ */
 let pinEntry = '';
 
@@ -116,17 +112,16 @@ function checkPin() {
   if (pinEntry === correctPin) {
     document.getElementById('pin-overlay').classList.add('hidden');
     const dashboard = document.getElementById('k-dashboard');
-    if (dashboard) dashboard.style.display = 'flex'; // flex for column layout
+    if (dashboard) dashboard.style.display = 'flex';
     startDashboard();
   } else {
     document.getElementById('pin-error').textContent = 'Incorrect PIN — try again';
     pinEntry = '';
     renderPinDots();
-    // Shake the dots
     const dots = document.querySelector('.pin-dots');
     if (dots) {
       dots.classList.remove('shake');
-      void dots.offsetWidth; // force reflow
+      void dots.offsetWidth;
       dots.classList.add('shake');
     }
   }
@@ -135,8 +130,6 @@ function checkPin() {
 
 /* ============================================================================
    5. KITCHEN STATUS
-   Listens to vendors/{vendorId}.kitchenStatus in Firestore.
-   Writing to Firestore triggers the listener on all open dashboard instances.
    ============================================================================ */
 function listenKitchenStatus() {
   db.collection('vendors').doc(CONFIG.vendor.id)
@@ -176,9 +169,6 @@ function closeKitchenModal() { document.getElementById('kitchen-modal').classLis
 
 /* ============================================================================
    6. FIRESTORE ORDERS LISTENER
-   Listens to all active orders for this vendor in real time.
-   Sorted client-side to avoid requiring a Firestore composite index.
-   Plays a sound alert when a new pending order arrives.
    ============================================================================ */
 function listenOrders() {
   if (ordersUnsubscribe) ordersUnsubscribe();
@@ -208,8 +198,6 @@ function listenOrders() {
 
 /* ============================================================================
    7. RENDER ORDERS — KANBAN
-   Four columns: Pending | Accepted | Preparing | Ready
-   Each column sorted chronologically. Timers restart after every re-render.
    ============================================================================ */
 function renderOrders() {
   const container = document.getElementById('k-orders');
@@ -217,7 +205,6 @@ function renderOrders() {
 
   const orders = Object.values(currentOrders);
 
-  // Active count (excludes ready)
   const active  = orders.filter(o => o.status !== 'ready').length;
   const countEl = document.getElementById('k-queue-count');
   if (countEl) countEl.textContent = active > 0 ? `${active} active` : '';
@@ -262,7 +249,6 @@ function renderOrders() {
       </div>`;
   }).join('');
 
-  // Restart elapsed timers for all non-ready orders
   orders.forEach(order => {
     if (order.status !== 'ready') startElapsedTimer(order.id);
   });
@@ -271,6 +257,7 @@ function renderOrders() {
 
 /* ============================================================================
    8. ORDER CARD HTML
+   Session 13: notes shown on kanban card per item where present.
    ============================================================================ */
 function orderCardHTML(order) {
   const currency    = CONFIG.business.currency    || '£';
@@ -283,16 +270,21 @@ function orderCardHTML(order) {
     ready:     'Ready to Collect',
   };
 
-  const itemsHTML = (order.items || []).map(item =>
-    `<li class="k-card-item">
-       <span>${item.name}</span>
-       <span class="k-card-item-qty">× ${item.quantity}</span>
-     </li>`
-  ).join('');
+  // Session 13: render per-item note on the card if present
+  const itemsHTML = (order.items || []).map(item => {
+    const noteEl = item.notes
+      ? `<li class="k-card-item-note">📝 ${item.notes}</li>`
+      : '';
+    return `
+      <li class="k-card-item">
+        <span>${item.name}</span>
+        <span class="k-card-item-qty">× ${item.quantity}</span>
+      </li>
+      ${noteEl}`;
+  }).join('');
 
   const waitLabel = order.waitMins ? `${order.waitMins} min wait` : '';
 
-  // Walk-in badge
   const sourceBadge = order.source === 'walkin'
     ? `<span class="k-card-source-badge">Walk-in</span>`
     : '';
@@ -347,7 +339,6 @@ function openWaitModal(orderId) {
   const refEl = document.getElementById('wait-modal-ref');
   if (refEl) refEl.textContent = order ? order.orderRef : '';
 
-  // Build wait option buttons from config
   const opts   = CONFIG.ordering.waitOptions || [10, 15, 20, 25];
   const optsEl = document.getElementById('wait-options');
   if (optsEl) {
@@ -358,13 +349,11 @@ function openWaitModal(orderId) {
     ).join('');
   }
 
-  // Custom wait row
   const customRow   = document.getElementById('custom-wait-row');
   const customInput = document.getElementById('custom-wait-input');
-  if (customRow)  customRow.style.display  = CONFIG.ordering.allowCustomWait !== false ? 'flex' : 'none';
+  if (customRow)   customRow.style.display  = CONFIG.ordering.allowCustomWait !== false ? 'flex' : 'none';
   if (customInput) customInput.value = '';
 
-  // Reset confirm button
   const confirmBtn = document.getElementById('wait-confirm-btn');
   if (confirmBtn) { confirmBtn.textContent = 'Accept Order →'; confirmBtn.disabled = false; }
 
@@ -373,10 +362,8 @@ function openWaitModal(orderId) {
 
 function selectWait(mins, btn) {
   selectedWaitMins = mins;
-  // Clear any custom value
   const customInput = document.getElementById('custom-wait-input');
   if (customInput) customInput.value = '';
-  // Highlight selected button
   document.querySelectorAll('.k-wait-opt').forEach(b => b.classList.remove('selected'));
   if (btn) btn.classList.add('selected');
 }
@@ -390,10 +377,8 @@ function closeWaitModal() {
 
 /* ============================================================================
    10. ACCEPT ORDER
-   Reads selected wait time (preset or custom), writes to Firestore.
    ============================================================================ */
 async function confirmAccept() {
-  // Prefer custom input if filled
   const customInput = document.getElementById('custom-wait-input');
   if (customInput && customInput.value) {
     const val = parseInt(customInput.value, 10);
@@ -401,10 +386,9 @@ async function confirmAccept() {
   }
 
   if (!selectedWaitMins) {
-    // Flash options to indicate a selection is required
     const optsEl = document.getElementById('wait-options');
     if (optsEl) {
-      optsEl.style.outline = '2px solid var(--fire)';
+      optsEl.style.outline      = '2px solid var(--fire)';
       optsEl.style.borderRadius = '8px';
       setTimeout(() => { optsEl.style.outline = ''; }, 700);
     }
@@ -430,8 +414,6 @@ async function confirmAccept() {
 
 /* ============================================================================
    11. STATUS PROGRESSION
-   advanceStatus — single tap, no confirm (accepted → preparing).
-   markCollected — removes order from active queue.
    ============================================================================ */
 async function advanceStatus(orderId, newStatus) {
   try {
@@ -458,9 +440,9 @@ async function markCollected(orderId) {
 
 /* ============================================================================
    12. READY CONFIRM MODAL + ORDER DETAIL MODAL
+   Session 13: detail modal renders per-item notes.
    ============================================================================ */
 
-/* Ready confirm */
 function openReadyModal(orderId) {
   pendingReadyId = orderId;
   const order = currentOrders[orderId];
@@ -489,7 +471,6 @@ async function confirmReady() {
   }
 }
 
-/* Order detail drill-down */
 function openDetailModal(orderId) {
   const order = currentOrders[orderId];
   if (!order) return;
@@ -505,7 +486,6 @@ function openDetailModal(orderId) {
     collected: 'Collected',
   };
 
-  // Format placed time
   const placed  = order.createdAt?.toDate?.();
   const timeStr = placed
     ? placed.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
@@ -514,13 +494,12 @@ function openDetailModal(orderId) {
     ? placed.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
     : '';
 
-  // Phone — format for display and tel: link
   const phone   = order.customerPhone || null;
   const phoneEl = phone
     ? `<a href="tel:${phone}" class="k-detail-phone">${phone} 📞</a>`
     : `<span class="k-detail-phone muted">No phone on record</span>`;
 
-  // Items
+  // Session 13: per-item notes rendered in detail modal
   const itemsHTML = (order.items || []).map(item => {
     const noteEl = item.notes
       ? `<div class="k-detail-item-note">📝 ${item.notes}</div>`
@@ -536,12 +515,10 @@ function openDetailModal(orderId) {
       </div>`;
   }).join('');
 
-  // Wait time
   const waitEl = order.waitMins
     ? `<div class="k-detail-row"><span>Wait set</span><strong>${order.waitMins} mins</strong></div>`
     : '';
 
-  // Source row (walk-in only)
   const sourceEl = order.source === 'walkin'
     ? `<div class="k-detail-row"><span>Source</span><strong>Walk-in</strong></div>`
     : '';
@@ -601,7 +578,6 @@ function startElapsedTimer(orderId) {
     const secs   = Math.floor((diffMs % 60000) / 1000);
     el.textContent = `${mins}:${String(secs).padStart(2, '0')}`;
 
-    // Colour escalation
     el.className = 'k-card-elapsed';
     if (mins >= 20)      el.classList.add('urgent');
     else if (mins >= 10) el.classList.add('warning');
@@ -621,7 +597,6 @@ function playOrderAlert() {
     const ctx  = new (window.AudioContext || window.webkitAudioContext)();
     const gain = ctx.createGain();
     gain.connect(ctx.destination);
-    // Two short beeps
     [0, 0.25].forEach(offset => {
       const osc = ctx.createOscillator();
       osc.connect(gain);
@@ -631,20 +606,12 @@ function playOrderAlert() {
       osc.start(ctx.currentTime + offset);
       osc.stop(ctx.currentTime + offset + 0.2);
     });
-  } catch (_) {
-    // Audio not available — silent fail
-  }
+  } catch (_) {}
 }
 
 
 /* ============================================================================
    14. KANBAN DRAG SCROLL
-   Uses Pointer Events API — works on mouse, Windows touch screens,
-   stylus, iOS, and Android in a single unified handler.
-
-   Uses a distance threshold to distinguish a tap from a drag.
-   Taps pass through to child onclick handlers (card detail, buttons).
-   Drags scroll the kanban board.
    ============================================================================ */
 function initKanbanDrag() {
   const el = document.getElementById('k-orders');
@@ -655,7 +622,7 @@ function initKanbanDrag() {
   let startX     = 0;
   let scrollLeft = 0;
 
-  const DRAG_THRESHOLD = 6; // px — below this is a tap, above is a drag
+  const DRAG_THRESHOLD = 6;
 
   el.addEventListener('pointerdown', e => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
@@ -664,7 +631,6 @@ function initKanbanDrag() {
     startX     = e.clientX;
     scrollLeft = el.scrollLeft;
     el.classList.add('dragging');
-    // NOTE: no setPointerCapture — that blocks child click events
   });
 
   el.addEventListener('pointerup',     () => { isDragging = false; el.classList.remove('dragging'); });
@@ -674,18 +640,17 @@ function initKanbanDrag() {
     if (!isDragging) return;
     const dx = e.clientX - startX;
     if (Math.abs(dx) > DRAG_THRESHOLD) {
-      hasDragged = true;
+      hasDragged    = true;
       el.scrollLeft = scrollLeft - dx;
     }
   });
 
-  // Block the click event if the pointer actually moved (was a drag, not a tap)
   el.addEventListener('click', e => {
     if (hasDragged) {
       e.stopPropagation();
       hasDragged = false;
     }
-  }, true); // capture phase — fires before child onclick handlers
+  }, true);
 }
 
 
@@ -707,14 +672,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /* ============================================================================
    16. WALK-IN ORDER MODAL
-   Vendor enters a walk-up customer's order manually.
-   Creates a Firestore order doc with source:'walkin', customerId:null.
-   Uses the same daily sequential order ref counter as app orders.
+   Session 13: per-item notes (walkinNotes{}) added alongside walkinQty{}.
+   Notes are always-visible inputs below each item row — no toggle needed
+   on the kitchen tablet. 200-char limit, written to Firestore on submit.
    ============================================================================ */
 
-/* --- Order ref counter (mirrors getNextOrderRef in app.js) --- */
 async function getNextOrderRef() {
-  const today      = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const today      = new Date().toISOString().slice(0, 10);
   const counterRef = db.collection('vendors').doc(CONFIG.vendor.id)
                        .collection('counters').doc('daily');
   let orderNumber  = 1;
@@ -730,9 +694,10 @@ async function getNextOrderRef() {
   return `#${String(orderNumber).padStart(3, '0')}`;
 }
 
-/* --- Open / close --- */
 function openWalkinModal() {
-  walkinQty = {};
+  walkinQty   = {};
+  walkinNotes = {}; // Session 13
+
   const nameInput  = document.getElementById('walkin-name');
   const phoneInput = document.getElementById('walkin-phone');
   const nudge      = document.getElementById('walkin-nudge');
@@ -747,8 +712,6 @@ function openWalkinModal() {
   if (btn) { btn.textContent = 'Place Order →'; btn.disabled = false; }
 
   document.getElementById('walkin-modal').classList.add('show');
-
-  // Focus name field after a short delay (modal animation)
   setTimeout(() => { if (nameInput) nameInput.focus(); }, 300);
 }
 
@@ -756,11 +719,15 @@ function closeWalkinModal() {
   document.getElementById('walkin-modal').classList.remove('show');
 }
 
-/* --- Item picker --- */
+/**
+ * Renders the item picker with qty controls and a notes input per row.
+ * Notes inputs are always visible (no toggle) — kitchen staff work fast.
+ * Session 13: each row gains a .k-walkin-item-note input.
+ */
 function renderWalkinItems() {
-  const menu = (CONFIG.menu || []).filter(item => item.available !== false);
+  const menu     = (CONFIG.menu || []).filter(item => item.available !== false);
   const currency = CONFIG.business.currency || '£';
-  const el = document.getElementById('walkin-items');
+  const el       = document.getElementById('walkin-items');
   if (!el) return;
 
   if (menu.length === 0) {
@@ -770,15 +737,21 @@ function renderWalkinItems() {
 
   el.innerHTML = menu.map(item => `
     <div class="k-walkin-item" id="walkin-row-${item.id}">
-      <div class="k-walkin-item-info">
-        <div class="k-walkin-item-name">${item.name}</div>
-        <div class="k-walkin-item-price">${currency}${Number(item.price).toFixed(2)}</div>
+      <div class="k-walkin-item-top">
+        <div class="k-walkin-item-info">
+          <div class="k-walkin-item-name">${item.name}</div>
+          <div class="k-walkin-item-price">${currency}${Number(item.price).toFixed(2)}</div>
+        </div>
+        <div class="k-walkin-qty-controls">
+          <button class="k-walkin-qty-btn" onclick="adjustWalkinQty('${item.id}', -1)">−</button>
+          <span class="k-walkin-qty-val" id="walkin-qty-${item.id}">0</span>
+          <button class="k-walkin-qty-btn" onclick="adjustWalkinQty('${item.id}', 1)">+</button>
+        </div>
       </div>
-      <div class="k-walkin-qty-controls">
-        <button class="k-walkin-qty-btn" onclick="adjustWalkinQty('${item.id}', -1)">−</button>
-        <span class="k-walkin-qty-val" id="walkin-qty-${item.id}">0</span>
-        <button class="k-walkin-qty-btn" onclick="adjustWalkinQty('${item.id}', 1)">+</button>
-      </div>
+      <input class="k-walkin-note-input" id="walkin-note-${item.id}"
+             type="text" maxlength="200"
+             placeholder="Customisation / special request (optional)"
+             oninput="saveWalkinNote('${item.id}', this.value)">
     </div>`).join('');
 }
 
@@ -795,11 +768,23 @@ function adjustWalkinQty(itemId, delta) {
   const qtyEl = document.getElementById(`walkin-qty-${itemId}`);
   if (qtyEl) qtyEl.textContent = next;
 
-  // Highlight row when item is selected
   const rowEl = document.getElementById(`walkin-row-${itemId}`);
   if (rowEl) rowEl.classList.toggle('selected', next > 0);
 
   updateWalkinTotal();
+}
+
+/**
+ * Saves the note for a walk-in item. Called oninput on the note field.
+ * Trims and caps at 200 chars. Clears entry when empty.
+ */
+function saveWalkinNote(itemId, value) {
+  const trimmed = value.trim().substring(0, 200);
+  if (trimmed) {
+    walkinNotes[itemId] = trimmed;
+  } else {
+    delete walkinNotes[itemId];
+  }
 }
 
 function updateWalkinTotal() {
@@ -816,26 +801,22 @@ function updateWalkinTotal() {
   if (el) el.textContent = total > 0 ? `Total: ${currency}${total.toFixed(2)}` : '';
 }
 
-/* --- Submit --- */
 async function submitWalkinOrder() {
   const nameInput = document.getElementById('walkin-name');
   const nudge     = document.getElementById('walkin-nudge');
   const name      = (nameInput?.value || '').trim();
 
-  // Validate: at least one item
   if (Object.keys(walkinQty).length === 0) {
     if (nudge) nudge.textContent = 'Please add at least one item.';
-    // Flash items section
     const itemsEl = document.getElementById('walkin-items');
     if (itemsEl) {
-      itemsEl.style.outline = '2px solid var(--s-urgent)';
+      itemsEl.style.outline      = '2px solid var(--s-urgent)';
       itemsEl.style.borderRadius = '10px';
       setTimeout(() => { itemsEl.style.outline = ''; }, 800);
     }
     return;
   }
 
-  // Validate: customer name required
   if (!name) {
     if (nudge) nudge.textContent = 'Customer name is required.';
     if (nameInput) {
@@ -848,17 +829,16 @@ async function submitWalkinOrder() {
 
   if (nudge) nudge.textContent = '';
 
-  // Build items array from walkinQty
-  const menu     = CONFIG.menu || [];
-  const currency = CONFIG.business.currency || '£';
-  const items    = Object.entries(walkinQty).map(([id, qty]) => {
+  const menu  = CONFIG.menu || [];
+  // Session 13: include walkinNotes[id] on each item
+  const items = Object.entries(walkinQty).map(([id, qty]) => {
     const item = menu.find(m => String(m.id) === String(id));
     return {
       id:       item.id,
       name:     item.name,
       price:    Number(item.price),
       quantity: qty,
-      notes:    null,
+      notes:    walkinNotes[id] || null,
     };
   });
 

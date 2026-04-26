@@ -42,7 +42,7 @@
 
     html, body {
       height: 100%;
-      overflow: hidden; /* page never scrolls — kanban handles its own scroll */
+      overflow: hidden;
     }
 
     body {
@@ -86,13 +86,9 @@
       margin-top: -20px;
     }
 
-    .pin-dots {
-      display: flex;
-      gap: 18px;
-    }
+    .pin-dots { display: flex; gap: 18px; }
     .pin-dot {
-      width: 14px;
-      height: 14px;
+      width: 14px; height: 14px;
       border-radius: 50%;
       border: 2px solid var(--ash);
       transition: background 0.12s, border-color 0.12s, transform 0.12s;
@@ -103,12 +99,7 @@
       transform: scale(1.1);
     }
 
-    .pin-error {
-      font-size: 13px;
-      color: var(--s-urgent);
-      min-height: 18px;
-      text-align: center;
-    }
+    .pin-error { font-size: 13px; color: var(--s-urgent); min-height: 18px; text-align: center; }
 
     .pin-keypad {
       display: grid;
@@ -116,24 +107,17 @@
       gap: 12px;
     }
     .pin-key {
-      width: 72px;
-      height: 72px;
+      width: 72px; height: 72px;
       border-radius: 50%;
       border: 1px solid rgba(253,246,236,0.12);
       background: rgba(253,246,236,0.04);
       color: var(--cream);
-      font-size: 22px;
-      font-weight: 500;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      font-size: 22px; font-weight: 500;
+      display: flex; align-items: center; justify-content: center;
       transition: background 0.1s, transform 0.1s;
       -webkit-tap-highlight-color: transparent;
     }
-    .pin-key:active {
-      background: rgba(212,160,67,0.18);
-      transform: scale(0.94);
-    }
+    .pin-key:active { background: rgba(212,160,67,0.18); transform: scale(0.94); }
     .pin-key.zero  { grid-column: 2; }
     .pin-key.back  { border-color: transparent; background: transparent; color: var(--ash); }
 
@@ -147,13 +131,13 @@
     .pin-dots.shake { animation: shake 0.4s ease; }
 
     /* ============================================================
-       DASHBOARD LAYOUT — full height, no page scroll
+       DASHBOARD LAYOUT
     ============================================================ */
     #k-dashboard {
       display: flex;
       flex-direction: column;
       height: 100vh;
-      height: 100dvh; /* dynamic viewport height — handles mobile browser chrome */
+      height: 100dvh;
       overflow: hidden;
     }
 
@@ -170,106 +154,60 @@
       background: var(--char);
       border-bottom: 1px solid rgba(212,160,67,0.12);
     }
-
-    .k-logo {
-      font-family: 'Playfair Display', serif;
-      font-size: 17px;
-      color: var(--cream);
-    }
+    .k-logo { font-family: 'Playfair Display', serif; font-size: 17px; color: var(--cream); }
     .k-logo span { color: var(--gold); }
+    .k-header-sub { font-size: 10px; color: var(--ash); text-transform: uppercase; letter-spacing: 2px; margin-top: 2px; }
+    .k-header-right { display: flex; align-items: center; gap: 8px; }
+    .k-time { font-size: 13px; color: var(--ash); font-variant-numeric: tabular-nums; }
 
-    .k-header-sub {
-      font-size: 10px;
-      color: var(--ash);
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      margin-top: 2px;
-    }
-
-    .k-header-right {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .k-time {
-      font-size: 13px;
-      color: var(--ash);
-      font-variant-numeric: tabular-nums;
-    }
-
-    /* New Order button */
     .k-new-order-btn {
       padding: 7px 12px;
       border-radius: 20px;
       border: 1px solid rgba(212,160,67,0.35);
       background: rgba(212,160,67,0.10);
       color: var(--gold);
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.2px;
+      font-size: 12px; font-weight: 600; letter-spacing: 0.2px;
       transition: opacity 0.15s, background 0.15s;
       -webkit-tap-highlight-color: transparent;
       white-space: nowrap;
     }
     .k-new-order-btn:active { opacity: 0.75; background: rgba(212,160,67,0.18); }
 
-    /* Kitchen status button */
     .k-status-btn {
       padding: 7px 12px;
       border-radius: 20px;
       border: 1px solid transparent;
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.2px;
+      font-size: 12px; font-weight: 600; letter-spacing: 0.2px;
       transition: opacity 0.15s;
       -webkit-tap-highlight-color: transparent;
       white-space: nowrap;
     }
     .k-status-btn:active { opacity: 0.75; }
-    .k-status-btn.open {
-      background: rgba(39,174,96,0.12);
-      color: var(--s-ready);
-      border-color: rgba(39,174,96,0.25);
-    }
-    .k-status-btn.closed {
-      background: rgba(231,76,60,0.12);
-      color: var(--s-urgent);
-      border-color: rgba(231,76,60,0.25);
-    }
+    .k-status-btn.open   { background: rgba(39,174,96,0.12);  color: var(--s-ready);  border-color: rgba(39,174,96,0.25); }
+    .k-status-btn.closed { background: rgba(231,76,60,0.12);  color: var(--s-urgent); border-color: rgba(231,76,60,0.25); }
 
     /* ============================================================
        QUEUE BAR
     ============================================================ */
     .k-queue-bar {
       flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      display: flex; align-items: center; justify-content: space-between;
       padding: 10px 16px 6px;
     }
-    .k-queue-label {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 2.5px;
-      color: var(--ash);
-    }
-    .k-queue-count {
-      font-size: 12px;
-      color: var(--ash);
-    }
+    .k-queue-label { font-size: 11px; text-transform: uppercase; letter-spacing: 2.5px; color: var(--ash); }
+    .k-queue-count { font-size: 12px; color: var(--ash); }
 
     /* ============================================================
-       KANBAN BOARD — horizontal scroll, columns scroll vertically
+       KANBAN BOARD
     ============================================================ */
     .k-orders {
-      flex: 1;               /* fills remaining viewport height */
+      flex: 1;
       display: flex;
       gap: 12px;
       padding: 8px 16px 0;
       overflow-x: auto;
       overflow-y: hidden;
-      align-items: stretch;  /* columns fill full height */
+      align-items: stretch;
       touch-action: pan-x;
       cursor: grab;
       user-select: none;
@@ -281,19 +219,12 @@
     .k-orders::-webkit-scrollbar-track { background: transparent; }
     .k-orders::-webkit-scrollbar-thumb { background: rgba(212,160,67,0.2); border-radius: 2px; }
     .k-orders.dragging { cursor: grabbing; }
+    .k-orders.is-empty { align-items: center; justify-content: center; }
 
-    /* Empty state — centre the message when no orders */
-    .k-orders.is-empty {
-      align-items: center;
-      justify-content: center;
-    }
-
-    /* Snap columns into view on mobile */
     @media (max-width: 768px) {
       .k-orders { scroll-snap-type: x mandatory; }
     }
 
-    /* Column — fixed width, flex column, clips overflow so cards scroll inside */
     .k-col {
       flex: 0 0 272px;
       min-width: 272px;
@@ -301,20 +232,16 @@
       flex-direction: column;
       gap: 0;
       scroll-snap-align: start;
-      overflow: hidden;         /* cards scroll inside, column itself doesn't */
+      overflow: hidden;
       padding-bottom: 16px;
     }
-
-    /* On wide screens let columns grow to fill space */
     @media (min-width: 1200px) {
       .k-col { flex: 1; min-width: 240px; }
     }
 
     .k-col-header {
-      flex-shrink: 0;           /* never compress the column header */
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: space-between;
       padding: 10px 14px 10px 12px;
       border-radius: 10px 10px 0 0;
       background: rgba(0,0,0,0.18);
@@ -326,36 +253,25 @@
     .k-col-preparing .k-col-header { border-left-color: var(--s-preparing); }
     .k-col-ready     .k-col-header { border-left-color: var(--s-ready); }
 
-    .k-col-title {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 2.5px;
-      font-weight: 600;
-    }
+    .k-col-title { font-size: 11px; text-transform: uppercase; letter-spacing: 2.5px; font-weight: 600; }
     .k-col-pending   .k-col-title { color: var(--s-pending); }
     .k-col-accepted  .k-col-title { color: var(--s-accepted); }
     .k-col-preparing .k-col-title { color: var(--s-preparing); }
     .k-col-ready     .k-col-title { color: var(--s-ready); }
 
     .k-col-count {
-      font-size: 11px;
-      font-weight: 600;
+      font-size: 11px; font-weight: 600;
       background: rgba(253,246,236,0.07);
       color: var(--ash);
-      padding: 2px 9px;
-      border-radius: 10px;
-      min-width: 26px;
-      text-align: center;
+      padding: 2px 9px; border-radius: 10px;
+      min-width: 26px; text-align: center;
     }
 
-    /* Cards — scrollable inside column */
     .k-col-cards {
       flex: 1;
-      display: flex;
-      flex-direction: column;
+      display: flex; flex-direction: column;
       gap: 12px;
-      overflow-y: auto;
-      overflow-x: hidden;
+      overflow-y: auto; overflow-x: hidden;
       padding: 0 2px 8px;
       scrollbar-width: thin;
       scrollbar-color: rgba(212,160,67,0.15) transparent;
@@ -364,22 +280,13 @@
     .k-col-cards::-webkit-scrollbar-track { background: transparent; }
     .k-col-cards::-webkit-scrollbar-thumb { background: rgba(212,160,67,0.2); border-radius: 2px; }
 
-    /* Per-column empty state */
     .k-col-empty {
-      padding: 28px 14px;
-      text-align: center;
-      font-size: 13px;
-      color: rgba(139,99,71,0.45);
-      border: 1px dashed rgba(253,246,236,0.07);
-      border-radius: 10px;
+      padding: 28px 14px; text-align: center;
+      font-size: 13px; color: rgba(139,99,71,0.45);
+      border: 1px dashed rgba(253,246,236,0.07); border-radius: 10px;
     }
 
-    /* Global empty (no orders at all) */
-    .k-empty {
-      padding: 80px 24px;
-      text-align: center;
-      color: var(--ash);
-    }
+    .k-empty { padding: 80px 24px; text-align: center; color: var(--ash); }
     .k-empty-icon { font-size: 44px; margin-bottom: 14px; }
     .k-empty-text { font-size: 15px; }
 
@@ -392,118 +299,78 @@
       border: 1px solid rgba(253,246,236,0.07);
       overflow: hidden;
       transition: border-color 0.2s;
-      flex-shrink: 0; /* cards don't compress */
+      flex-shrink: 0;
     }
     .k-card.status-pending   { border-color: rgba(212,160,67,0.45); }
     .k-card.status-accepted  { border-color: rgba(74,144,217,0.4); }
     .k-card.status-preparing { border-color: rgba(200,65,11,0.5); }
     .k-card.status-ready     { border-color: rgba(39,174,96,0.5); }
 
-    /* Coloured top accent stripe per status */
-    .k-card::before {
-      content: '';
-      display: block;
-      height: 3px;
-    }
+    .k-card::before { content: ''; display: block; height: 3px; }
     .k-card.status-pending::before   { background: var(--s-pending); }
     .k-card.status-accepted::before  { background: var(--s-accepted); }
     .k-card.status-preparing::before { background: var(--s-preparing); }
     .k-card.status-ready::before     { background: var(--s-ready); }
 
-    /* Walk-in badge on card */
     .k-card-source-badge {
       display: inline-block;
-      font-size: 9px;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      font-weight: 600;
+      font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;
       color: var(--ash);
-      background: rgba(253,246,236,0.06);
-      border: 1px solid rgba(253,246,236,0.1);
-      border-radius: 4px;
-      padding: 2px 6px;
-      margin-left: 6px;
-      vertical-align: middle;
-      line-height: 1.6;
+      background: rgba(253,246,236,0.06); border: 1px solid rgba(253,246,236,0.1);
+      border-radius: 4px; padding: 2px 6px;
+      margin-left: 6px; vertical-align: middle; line-height: 1.6;
     }
 
     .k-card-header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
+      display: flex; align-items: flex-start; justify-content: space-between;
       padding: 14px 16px 10px;
     }
-
-    .k-card-ref {
-      font-family: 'Playfair Display', serif;
-      font-size: 32px;
-      font-weight: 700;
-      line-height: 1;
-    }
+    .k-card-ref { font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 700; line-height: 1; }
     .status-pending   .k-card-ref { color: var(--s-pending); }
     .status-accepted  .k-card-ref { color: var(--s-accepted); }
     .status-preparing .k-card-ref { color: var(--s-preparing); }
     .status-ready     .k-card-ref { color: var(--s-ready); }
 
     .k-card-meta { text-align: right; }
-    .k-card-name {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--cream);
-    }
-    .k-card-elapsed {
-      font-size: 12px;
-      color: var(--ash);
-      margin-top: 3px;
-      font-variant-numeric: tabular-nums;
-    }
+    .k-card-name { font-size: 14px; font-weight: 600; color: var(--cream); }
+    .k-card-elapsed { font-size: 12px; color: var(--ash); margin-top: 3px; font-variant-numeric: tabular-nums; }
     .k-card-elapsed.warning { color: var(--s-warning); }
     .k-card-elapsed.urgent  { color: var(--s-urgent); font-weight: 600; }
 
-    .k-card-body {
-      padding: 0 16px 10px;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
-    }
+    .k-card-body { padding: 0 16px 10px; border-bottom: 1px solid rgba(255,255,255,0.06); }
     .k-card-items { list-style: none; }
     .k-card-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 14px;
-      padding: 4px 0;
-      color: #FFFFFF;
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 14px; padding: 4px 0; color: #FFFFFF;
       border-bottom: 1px solid rgba(255,255,255,0.06);
     }
     .k-card-item:last-child { border-bottom: none; }
-    .k-card-item-qty {
-      color: rgba(255,255,255,0.6);
-      font-size: 13px;
-      font-weight: 500;
+    .k-card-item-qty { color: rgba(255,255,255,0.6); font-size: 13px; font-weight: 500; }
+
+    /* Session 13 — per-item note line on kanban card */
+    .k-card-item-note {
+      list-style: none;
+      font-size: 11px;
+      color: var(--gold);
+      padding: 2px 0 5px;
+      opacity: 0.85;
+      font-style: italic;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
     }
-    .k-card-total {
-      font-size: 12px;
-      color: rgba(255,255,255,0.55);
-      margin-top: 8px;
-    }
+    .k-card-item-note:last-child { border-bottom: none; }
+
+    .k-card-total { font-size: 12px; color: rgba(255,255,255,0.55); margin-top: 8px; }
 
     .k-card-status-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      display: flex; align-items: center; justify-content: space-between;
       padding: 8px 16px;
       background: rgba(0,0,0,0.12);
     }
-    .k-card-status-badge {
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      font-weight: 600;
-    }
+    .k-card-status-badge { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; }
     .status-pending   .k-card-status-badge { color: var(--s-pending); }
     .status-accepted  .k-card-status-badge { color: var(--s-accepted); }
     .status-preparing .k-card-status-badge { color: var(--s-preparing); }
     .status-ready     .k-card-status-badge { color: var(--s-ready); }
-
     .k-card-wait { font-size: 12px; color: rgba(255,255,255,0.55); }
 
     .k-card-footer { padding: 12px 14px 14px; }
@@ -512,63 +379,36 @@
        ACTION BUTTONS (card)
     ============================================================ */
     .k-btn {
-      width: 100%;
-      padding: 13px 12px;
-      border-radius: 9px;
-      border: 1px solid transparent;
-      font-size: 14px;
-      font-weight: 600;
+      width: 100%; padding: 13px 12px;
+      border-radius: 9px; border: 1px solid transparent;
+      font-size: 14px; font-weight: 600;
       transition: opacity 0.12s, transform 0.1s;
       -webkit-tap-highlight-color: transparent;
       letter-spacing: 0.1px;
     }
     .k-btn:active { transform: scale(0.97); opacity: 0.85; }
-
-    .k-btn-accept {
-      background: var(--gold);
-      color: var(--dark);
-      border-color: var(--gold);
-    }
-    .k-btn-preparing {
-      background: rgba(74,144,217,0.1);
-      color: var(--s-accepted);
-      border-color: rgba(74,144,217,0.3);
-    }
-    .k-btn-ready {
-      background: rgba(200,65,11,0.1);
-      color: var(--fire);
-      border-color: rgba(200,65,11,0.3);
-    }
-    .k-btn-collected {
-      background: rgba(39,174,96,0.1);
-      color: var(--s-ready);
-      border-color: rgba(39,174,96,0.3);
-    }
+    .k-btn-accept     { background: var(--gold);               color: var(--dark);      border-color: var(--gold); }
+    .k-btn-preparing  { background: rgba(74,144,217,0.1);      color: var(--s-accepted); border-color: rgba(74,144,217,0.3); }
+    .k-btn-ready      { background: rgba(200,65,11,0.1);       color: var(--fire);       border-color: rgba(200,65,11,0.3); }
+    .k-btn-collected  { background: rgba(39,174,96,0.1);       color: var(--s-ready);    border-color: rgba(39,174,96,0.3); }
 
     /* ============================================================
        MODALS — SHARED
     ============================================================ */
     .k-modal-overlay {
-      position: fixed;
-      inset: 0;
+      position: fixed; inset: 0;
       background: rgba(0,0,0,0.72);
       z-index: 500;
-      display: none;
-      align-items: flex-end;
-      justify-content: center;
+      display: none; align-items: flex-end; justify-content: center;
     }
     .k-modal-overlay.show { display: flex; }
-
-    @media (min-width: 560px) {
-      .k-modal-overlay { align-items: center; }
-    }
+    @media (min-width: 560px) { .k-modal-overlay { align-items: center; } }
 
     .k-modal {
       background: var(--char);
       border-radius: 20px 20px 0 0;
       padding: 24px 20px;
-      width: 100%;
-      max-width: 480px;
+      width: 100%; max-width: 480px;
       border: 1px solid rgba(253,246,236,0.08);
       border-bottom: none;
     }
@@ -576,42 +416,21 @@
       .k-modal { border-radius: 16px; border-bottom: 1px solid rgba(253,246,236,0.08); margin: 0 16px; }
     }
 
-    .k-modal-title {
-      font-family: 'Playfair Display', serif;
-      font-size: 20px;
-      margin-bottom: 4px;
-    }
-    .k-modal-sub {
-      font-size: 13px;
-      color: var(--ash);
-      margin-bottom: 20px;
-      line-height: 1.5;
-    }
+    .k-modal-title { font-family: 'Playfair Display', serif; font-size: 20px; margin-bottom: 4px; }
+    .k-modal-sub   { font-size: 13px; color: var(--ash); margin-bottom: 20px; line-height: 1.5; }
 
-    /* Modal action row */
-    .k-modal-actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 18px;
-    }
+    .k-modal-actions { display: flex; gap: 10px; margin-top: 18px; }
     .k-modal-btn {
-      flex: 1;
-      padding: 14px;
-      border-radius: 10px;
-      border: none;
-      font-size: 14px;
-      font-weight: 600;
+      flex: 1; padding: 14px;
+      border-radius: 10px; border: none;
+      font-size: 14px; font-weight: 600;
       transition: opacity 0.12s, transform 0.1s;
       -webkit-tap-highlight-color: transparent;
     }
-    .k-modal-btn:active { opacity: 0.8; transform: scale(0.98); }
+    .k-modal-btn:active   { opacity: 0.8; transform: scale(0.98); }
     .k-modal-btn:disabled { opacity: 0.5; }
-    .k-modal-btn.primary  { background: var(--gold); color: var(--dark); }
-    .k-modal-btn.secondary {
-      background: rgba(253,246,236,0.07);
-      color: var(--ash);
-      border: 1px solid rgba(253,246,236,0.1);
-    }
+    .k-modal-btn.primary   { background: var(--gold); color: var(--dark); }
+    .k-modal-btn.secondary { background: rgba(253,246,236,0.07); color: var(--ash); border: 1px solid rgba(253,246,236,0.1); }
 
     /* ============================================================
        WAIT TIME MODAL
@@ -619,51 +438,27 @@
     .k-wait-options {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
-      gap: 10px;
-      margin-bottom: 14px;
+      gap: 10px; margin-bottom: 14px;
     }
     .k-wait-opt {
-      padding: 13px 6px;
-      border-radius: 10px;
+      padding: 13px 6px; border-radius: 10px;
       border: 1px solid rgba(253,246,236,0.13);
       background: rgba(253,246,236,0.04);
-      color: var(--cream);
-      font-size: 18px;
-      font-weight: 600;
-      text-align: center;
-      line-height: 1.1;
+      color: var(--cream); font-size: 18px; font-weight: 600;
+      text-align: center; line-height: 1.1;
       transition: background 0.12s, border-color 0.12s, color 0.12s;
       -webkit-tap-highlight-color: transparent;
     }
-    .k-wait-opt span {
-      display: block;
-      font-size: 10px;
-      font-weight: 400;
-      color: var(--ash);
-      margin-top: 3px;
-    }
-    .k-wait-opt:active, .k-wait-opt.selected {
-      background: rgba(212,160,67,0.15);
-      border-color: var(--gold);
-      color: var(--gold);
-    }
+    .k-wait-opt span { display: block; font-size: 10px; font-weight: 400; color: var(--ash); margin-top: 3px; }
+    .k-wait-opt:active, .k-wait-opt.selected { background: rgba(212,160,67,0.15); border-color: var(--gold); color: var(--gold); }
     .k-wait-opt.selected span { color: rgba(212,160,67,0.6); }
 
-    .k-custom-wait {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 4px;
-    }
+    .k-custom-wait { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
     .k-custom-input {
-      flex: 1;
-      padding: 12px 14px;
-      border-radius: 9px;
-      border: 1px solid rgba(253,246,236,0.13);
-      background: rgba(253,246,236,0.04);
-      color: var(--cream);
-      font-size: 15px;
-      font-family: inherit;
+      flex: 1; padding: 12px 14px;
+      border-radius: 9px; border: 1px solid rgba(253,246,236,0.13);
+      background: rgba(253,246,236,0.04); color: var(--cream);
+      font-size: 15px; font-family: inherit;
     }
     .k-custom-input::placeholder { color: var(--ash); }
     .k-custom-input:focus { outline: none; border-color: var(--gold); }
@@ -673,43 +468,25 @@
        KITCHEN STATUS MODAL
     ============================================================ */
     .k-close-options { display: flex; flex-direction: column; gap: 10px; }
-
     .k-close-opt {
-      padding: 15px 16px;
-      border-radius: 10px;
+      padding: 15px 16px; border-radius: 10px;
       border: 1px solid rgba(253,246,236,0.08);
       background: rgba(253,246,236,0.03);
-      text-align: left;
-      transition: background 0.12s;
+      text-align: left; transition: background 0.12s;
       -webkit-tap-highlight-color: transparent;
     }
     .k-close-opt:active { background: rgba(253,246,236,0.08); }
-    .k-close-opt-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--cream);
-      margin-bottom: 2px;
-    }
-    .k-close-opt-desc { font-size: 12px; color: var(--ash); line-height: 1.4; }
-    .k-close-opt.opt-open  { border-color: rgba(39,174,96,0.25); }
+    .k-close-opt-title { font-size: 14px; font-weight: 600; color: var(--cream); margin-bottom: 2px; }
+    .k-close-opt-desc  { font-size: 12px; color: var(--ash); line-height: 1.4; }
+    .k-close-opt.opt-open { border-color: rgba(39,174,96,0.25); }
     .k-close-opt.opt-open .k-close-opt-title { color: var(--s-ready); }
 
     /* ============================================================
        CARD TAP HINT
     ============================================================ */
-    .k-card-tappable {
-      cursor: pointer;
-      transition: background 0.15s;
-    }
+    .k-card-tappable { cursor: pointer; transition: background 0.15s; }
     .k-card-tappable:active { background: rgba(253,246,236,0.03); }
-
-    .k-card-drill-hint {
-      font-size: 10px;
-      color: rgba(255,255,255,0.35);
-      text-align: right;
-      margin-top: 8px;
-      letter-spacing: 0.5px;
-    }
+    .k-card-drill-hint { font-size: 10px; color: rgba(255,255,255,0.35); text-align: right; margin-top: 8px; letter-spacing: 0.5px; }
 
     /* ============================================================
        ORDER DETAIL MODAL
@@ -717,107 +494,54 @@
     .k-modal-detail { max-height: 85vh; overflow-y: auto; }
 
     .k-detail-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 20px;
-      padding-bottom: 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px; padding-bottom: 16px;
       border-bottom: 1px solid rgba(253,246,236,0.08);
     }
-    .k-detail-ref {
-      font-family: 'Playfair Display', serif;
-      font-size: 36px;
-      font-weight: 700;
-      line-height: 1;
-    }
+    .k-detail-ref { font-family: 'Playfair Display', serif; font-size: 36px; font-weight: 700; line-height: 1; }
     .k-detail-ref.status-pending   { color: var(--s-pending); }
     .k-detail-ref.status-accepted  { color: var(--s-accepted); }
     .k-detail-ref.status-preparing { color: var(--s-preparing); }
     .k-detail-ref.status-ready     { color: var(--s-ready); }
 
-    .k-detail-status {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      font-weight: 600;
-    }
+    .k-detail-status { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; }
     .k-detail-status.status-pending   { color: var(--s-pending); }
     .k-detail-status.status-accepted  { color: var(--s-accepted); }
     .k-detail-status.status-preparing { color: var(--s-preparing); }
     .k-detail-status.status-ready     { color: var(--s-ready); }
 
-    .k-detail-section {
-      margin-bottom: 18px;
-      padding-bottom: 18px;
-      border-bottom: 1px solid rgba(253,246,236,0.06);
-    }
+    .k-detail-section { margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid rgba(253,246,236,0.06); }
     .k-detail-section:last-child { border-bottom: none; margin-bottom: 0; }
 
-    .k-detail-label {
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      color: var(--ash);
-      margin-bottom: 6px;
-    }
-    .k-detail-value {
-      font-size: 15px;
-      color: var(--cream);
-      margin-bottom: 3px;
-    }
+    .k-detail-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--ash); margin-bottom: 6px; }
+    .k-detail-value { font-size: 15px; color: var(--cream); margin-bottom: 3px; }
 
-    .k-detail-phone {
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--gold);
-      text-decoration: none;
-    }
+    .k-detail-phone { font-size: 16px; font-weight: 600; color: var(--gold); text-decoration: none; }
     .k-detail-phone:active { opacity: 0.7; }
     .k-detail-phone.muted  { color: var(--ash); font-weight: 400; font-size: 14px; }
 
     .k-detail-items { display: flex; flex-direction: column; gap: 10px; }
     .k-detail-item {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 8px;
-      padding: 8px 0;
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 8px; padding: 8px 0;
       border-bottom: 1px solid rgba(253,246,236,0.05);
     }
     .k-detail-item:last-child { border-bottom: none; }
-    .k-detail-item > div { flex: 1; }
+    .k-detail-item > div    { flex: 1; }
     .k-detail-item-name  { font-size: 14px; color: var(--cream); }
-    .k-detail-item-note  { font-size: 12px; color: var(--gold); margin-top: 3px; }
+    .k-detail-item-note  { font-size: 12px; color: var(--gold); margin-top: 3px; font-style: italic; }
     .k-detail-item-qty   { font-size: 13px; color: var(--ash); white-space: nowrap; }
     .k-detail-item-price { font-size: 14px; font-weight: 600; color: var(--cream); white-space: nowrap; }
 
     .k-detail-totals { background: rgba(0,0,0,0.12); border-radius: 8px; padding: 12px 14px; }
-    .k-detail-row {
-      display: flex;
-      justify-content: space-between;
-      font-size: 13px;
-      padding: 4px 0;
-      color: rgba(253,246,236,0.7);
-    }
+    .k-detail-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; color: rgba(253,246,236,0.7); }
     .k-detail-row strong { color: var(--cream); }
 
     /* ============================================================
        READY CONFIRM MODAL
     ============================================================ */
-    .k-confirm-ref {
-      font-family: 'Playfair Display', serif;
-      font-size: 42px;
-      color: var(--s-ready);
-      text-align: center;
-      margin: 16px 0 8px;
-      line-height: 1;
-    }
-    .k-confirm-msg {
-      text-align: center;
-      font-size: 13px;
-      color: var(--ash);
-      line-height: 1.5;
-    }
+    .k-confirm-ref { font-family: 'Playfair Display', serif; font-size: 42px; color: var(--s-ready); text-align: center; margin: 16px 0 8px; line-height: 1; }
+    .k-confirm-msg { text-align: center; font-size: 13px; color: var(--ash); line-height: 1.5; }
 
     /* ============================================================
        WALK-IN ORDER MODAL
@@ -829,18 +553,13 @@
       padding-bottom: 20px;
     }
 
-    /* Item picker list */
-    .k-walkin-items {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-bottom: 20px;
-    }
+    .k-walkin-items { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
 
+    /* Session 13: item row is now a column — top flex row + note input below */
     .k-walkin-item {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
+      flex-direction: column;
+      gap: 8px;
       padding: 12px 14px;
       border-radius: 10px;
       border: 1px solid rgba(253,246,236,0.07);
@@ -852,108 +571,74 @@
       border-color: rgba(212,160,67,0.3);
     }
 
-    .k-walkin-item-info { flex: 1; }
-    .k-walkin-item-name {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--cream);
-      line-height: 1.2;
-    }
-    .k-walkin-item-price {
-      font-size: 12px;
-      color: var(--ash);
-      margin-top: 2px;
-    }
-
-    .k-walkin-qty-controls {
+    /* Top row: name/price on left, qty controls on right */
+    .k-walkin-item-top {
       display: flex;
       align-items: center;
-      gap: 14px;
+      justify-content: space-between;
+      gap: 12px;
     }
+
+    .k-walkin-item-info { flex: 1; }
+    .k-walkin-item-name  { font-size: 14px; font-weight: 500; color: var(--cream); line-height: 1.2; }
+    .k-walkin-item-price { font-size: 12px; color: var(--ash); margin-top: 2px; }
+
+    .k-walkin-qty-controls { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
 
     .k-walkin-qty-btn {
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
+      width: 34px; height: 34px; border-radius: 50%;
       border: 1px solid rgba(253,246,236,0.15);
       background: rgba(253,246,236,0.07);
-      color: var(--cream);
-      font-size: 20px;
-      line-height: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      color: var(--cream); font-size: 20px; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
       transition: background 0.1s, border-color 0.1s, transform 0.1s;
       -webkit-tap-highlight-color: transparent;
     }
-    .k-walkin-qty-btn:active {
-      background: rgba(212,160,67,0.2);
-      border-color: var(--gold);
-      transform: scale(0.92);
-    }
+    .k-walkin-qty-btn:active { background: rgba(212,160,67,0.2); border-color: var(--gold); transform: scale(0.92); }
 
     .k-walkin-qty-val {
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--cream);
-      min-width: 22px;
-      text-align: center;
+      font-size: 16px; font-weight: 600; color: var(--cream);
+      min-width: 22px; text-align: center;
       font-variant-numeric: tabular-nums;
     }
     .k-walkin-item.selected .k-walkin-qty-val { color: var(--gold); }
 
-    /* Form fields */
-    .k-walkin-field {
-      margin-bottom: 14px;
-    }
-    .k-walkin-field label {
-      display: block;
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      color: var(--ash);
-      margin-bottom: 8px;
-    }
-    .k-walkin-optional {
-      text-transform: none;
-      letter-spacing: 0;
-      font-size: 11px;
-      color: var(--ash);
-      opacity: 0.7;
-    }
-    .k-walkin-input {
+    /* Session 13 — per-item note input in walk-in modal */
+    .k-walkin-note-input {
       width: 100%;
-      padding: 12px 14px;
-      border-radius: 9px;
-      border: 1px solid rgba(253,246,236,0.13);
+      padding: 9px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(253,246,236,0.10);
       background: rgba(253,246,236,0.04);
       color: var(--cream);
-      font-size: 15px;
+      font-size: 13px;
       font-family: inherit;
+      transition: border-color 0.15s;
+    }
+    .k-walkin-note-input::placeholder { color: rgba(255,255,255,0.3); font-size: 12px; }
+    .k-walkin-note-input:focus { outline: none; border-color: var(--gold); }
+    .k-walkin-item.selected .k-walkin-note-input {
+      border-color: rgba(212,160,67,0.22);
+      background: rgba(212,160,67,0.05);
+    }
+
+    /* Form fields */
+    .k-walkin-field { margin-bottom: 14px; }
+    .k-walkin-field label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--ash); margin-bottom: 8px; }
+    .k-walkin-optional { text-transform: none; letter-spacing: 0; font-size: 11px; color: var(--ash); opacity: 0.7; }
+    .k-walkin-input {
+      width: 100%; padding: 12px 14px;
+      border-radius: 9px; border: 1px solid rgba(253,246,236,0.13);
+      background: rgba(253,246,236,0.04); color: var(--cream);
+      font-size: 15px; font-family: inherit;
       transition: border-color 0.15s;
     }
     .k-walkin-input::placeholder { color: var(--ash); }
     .k-walkin-input:focus { outline: none; border-color: var(--gold); }
     .k-walkin-input.error { border-color: var(--s-urgent); }
 
-    /* Running total */
-    .k-walkin-total {
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--gold);
-      text-align: right;
-      padding: 6px 0 2px;
-      min-height: 28px;
-    }
-
-    /* Validation nudge */
-    .k-walkin-nudge {
-      font-size: 12px;
-      color: var(--s-urgent);
-      min-height: 16px;
-      margin-top: -8px;
-      margin-bottom: 8px;
-    }
+    .k-walkin-total { font-size: 16px; font-weight: 600; color: var(--gold); text-align: right; padding: 6px 0 2px; min-height: 28px; }
+    .k-walkin-nudge { font-size: 12px; color: var(--s-urgent); min-height: 16px; margin-top: -8px; margin-bottom: 8px; }
 
   </style>
 </head>
@@ -1116,7 +801,7 @@
       <div class="k-modal-title">New Order</div>
       <div class="k-modal-sub">Walk-in customer — tap items to add</div>
 
-      <!-- Item picker -->
+      <!-- Item picker (rendered by kitchen.js) -->
       <div class="k-walkin-items" id="walkin-items"></div>
 
       <!-- Running total -->
