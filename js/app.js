@@ -226,7 +226,7 @@ function saveNote(id, value) {
 function _syncNoteToggle(toggleEl, id) {
   if (!toggleEl) return;
   const hasNote = !!basketNotes[Number(id)];
-  toggleEl.textContent = hasNote ? '📝 Note added' : '📝 Add note';
+  toggleEl.textContent = hasNote ? 'Customisation added' : 'Add customisation';
   toggleEl.classList.toggle('has-note', hasNote);
 }
 
@@ -532,7 +532,7 @@ function refreshDesktopBasket() {
     const item        = menuData.find(m => m.id === id);
     const qty         = basket[id];
     const existNote   = basketNotes[id] || '';
-    const noteLabel   = existNote ? '📝 Note added' : '📝 Add note';
+    const noteLabel   = existNote ? 'Customisation added' : 'Add customisation';
     const noteCls     = existNote ? ' has-note' : '';
     return `
       <div class="d-bitem">
@@ -755,7 +755,7 @@ function renderMobileBasket() {
     const sub       = item.price * qty;
     total += sub;
     const existNote = basketNotes[id] || '';
-    const noteLabel = existNote ? '📝 Note added' : '📝 Add note';
+    const noteLabel = existNote ? 'Customisation added' : 'Add customisation';
     const noteCls   = existNote ? ' has-note' : '';
     return `
       <div class="m-basket-item">
