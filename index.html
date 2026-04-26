@@ -372,7 +372,6 @@ html { scroll-behavior: smooth; }
 }
 
 /* ─── MENU SECTION ─── */
-/* Deeper than the hero dark — creates clear section break without leaving the dark palette */
 #d-menu {
   background: linear-gradient(180deg, #1C0906 0%, #0E0401 100%);
 }
@@ -690,10 +689,54 @@ html { scroll-behavior: smooth; }
 .d-basket-panel-body { flex: 1; overflow-y: auto; padding: 20px 28px; }
 .d-basket-panel-empty { text-align: center; padding: 60px 0; color: var(--text-muted); font-size: 14px; line-height: 1.7; }
 .d-basket-panel-empty div { font-size: 44px; margin-bottom: 14px; opacity: 0.5; }
-.d-bitem { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--gold-rule); }
+.d-bitem { display: flex; align-items: center; gap: 12px; padding: 14px 0 6px; border-bottom: none; }
 .d-bitem-name { flex: 1; font-size: 14px; font-weight: 600; color: var(--cream); }
 .d-bitem-controls { display: flex; align-items: center; gap: 8px; }
 .d-bitem-price { font-family: 'Playfair Display', serif; font-size: 15px; color: var(--gold); font-weight: 700; min-width: 52px; text-align: right; }
+
+/* ── Per-item notes — desktop basket (Session 13) ── */
+.d-bitem-notes-row {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--gold-rule);
+  margin-bottom: 2px;
+}
+.d-bitem-notes-toggle {
+  background: none;
+  border: none;
+  color: rgba(253,246,236,0.4);
+  font-size: 12px;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+  transition: color 0.15s;
+  line-height: 1.4;
+}
+.d-bitem-notes-toggle:hover,
+.d-bitem-notes-toggle.has-note { color: var(--gold); }
+.d-bitem-notes-input {
+  width: 100%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(212,160,67,0.28);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--cream);
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  resize: none;
+  overflow: hidden;
+  outline: none;
+  line-height: 1.5;
+  min-height: 38px;
+  transition: border-color 0.2s;
+}
+.d-bitem-notes-input:focus { border-color: var(--gold); }
+.d-bitem-notes-input::placeholder { color: rgba(253,246,236,0.3); }
+
 .d-basket-panel-footer { padding: 20px 28px 28px; border-top: 1px solid var(--gold-rule); }
 .d-basket-total-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .d-basket-total-label { font-size: 13px; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; }
@@ -804,7 +847,7 @@ html { scroll-behavior: smooth; }
 .m-section-header { padding: 20px 16px 10px; font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; color: var(--cream); }
 .m-section-sub { padding: 0 16px 16px; font-size: 13px; color: rgba(253,246,236,0.55); }
 
-/* ─── MOBILE EYEBROW — matches desktop gold eyebrow pattern ─── */
+/* ─── MOBILE EYEBROW ─── */
 .m-eyebrow {
   font-size: 10px;
   letter-spacing: 0.22em;
@@ -860,13 +903,61 @@ html { scroll-behavior: smooth; }
 .qty-display { font-size: 15px; font-weight: 600; color: var(--cream); min-width: 20px; text-align: center; }
 .m-basket-empty { text-align: center; padding: 60px 24px; color: rgba(253,246,236,0.4); }
 .m-basket-empty .ei { font-size: 48px; margin-bottom: 12px; }
-.m-basket-list { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
-.m-basket-item { background: rgba(255,255,255,0.04); border: 1px solid rgba(212,160,67,0.20); border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.m-basket-list { padding: 0 16px; display: flex; flex-direction: column; gap: 0; }
+.m-basket-item { background: rgba(255,255,255,0.04); border: 1px solid rgba(212,160,67,0.20); border-bottom: none; border-radius: 14px 14px 0 0; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .m-bi-name { font-size: 14px; font-weight: 600; color: var(--cream); flex: 1; }
 .m-bi-qty { font-size: 13px; color: var(--ash); }
 .m-bi-price { font-family: 'Playfair Display', serif; font-size: 15px; color: var(--gold); font-weight: 700; }
 .m-bi-remove { background: none; border: none; color: rgba(253,246,236,0.3); cursor: pointer; font-size: 18px; padding: 0 4px; }
-.m-basket-total { margin: 16px 16px 0; background: rgba(212,160,67,0.08); border: 1px solid rgba(212,160,67,0.25); border-radius: 14px; padding: 20px; display: flex; justify-content: space-between; align-items: center; }
+
+/* ── Per-item notes — mobile basket (Session 13) ── */
+.m-bi-notes-row {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 16px 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(212,160,67,0.20);
+  border-top: none;
+  border-radius: 0 0 14px 14px;
+  margin-bottom: 10px;
+}
+.m-bi-notes-toggle {
+  background: none;
+  border: none;
+  color: rgba(253,246,236,0.4);
+  font-size: 12px;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+  transition: color 0.15s;
+  line-height: 1.4;
+}
+.m-bi-notes-toggle:hover,
+.m-bi-notes-toggle.has-note { color: var(--gold); }
+.m-bi-notes-input {
+  width: 100%;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(212,160,67,0.3);
+  border-radius: 10px;
+  padding: 11px 13px;
+  color: var(--cream);
+  font-size: 15px;
+  font-family: 'DM Sans', sans-serif;
+  resize: none;
+  overflow: hidden;
+  outline: none;
+  line-height: 1.5;
+  min-height: 42px;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+}
+.m-bi-notes-input:focus { border-color: var(--gold); }
+.m-bi-notes-input::placeholder { color: rgba(253,246,236,0.3); }
+
+.m-basket-total { margin: 0 16px 0; background: rgba(212,160,67,0.08); border: 1px solid rgba(212,160,67,0.25); border-radius: 14px; padding: 20px; display: flex; justify-content: space-between; align-items: center; }
 .m-total-label { font-size: 14px; color: rgba(253,246,236,0.7); }
 .m-total-amount { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; color: var(--gold); }
 .m-payment-note { margin: 12px 16px 0; font-family: 'Cormorant Garamond', serif; font-size: 16px; font-style: italic; font-weight: 300; color: rgba(253,246,236,0.65); text-align: center; line-height: 1.5; }
@@ -1022,11 +1113,20 @@ html { scroll-behavior: smooth; }
 .order-detail-status-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 600; }
 .order-detail-items { padding: 16px 24px 0; }
 .order-detail-items-label { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold); font-weight: 600; margin-bottom: 10px; }
-.order-detail-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(212,160,67,0.08); font-size: 14px; }
+.order-detail-item { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid rgba(212,160,67,0.08); font-size: 14px; gap: 8px; }
 .order-detail-item:last-child { border-bottom: none; }
+.order-detail-item > div { flex: 1; }
 .order-detail-item-name { color: var(--cream); font-weight: 500; }
 .order-detail-item-qty { color: rgba(255,255,255,0.45); font-size: 13px; margin-left: 6px; }
-.order-detail-item-price { font-family: 'Playfair Display', serif; font-size: 15px; color: var(--gold); font-weight: 700; }
+/* Session 13 — per-item note in customer order detail */
+.order-detail-item-note {
+  font-size: 12px;
+  color: var(--gold);
+  margin-top: 4px;
+  font-style: italic;
+  opacity: 0.85;
+}
+.order-detail-item-price { font-family: 'Playfair Display', serif; font-size: 15px; color: var(--gold); font-weight: 700; white-space: nowrap; }
 .order-detail-totals { margin: 12px 24px 0; background: rgba(212,160,67,0.06); border: 1px solid rgba(212,160,67,0.15); border-radius: 14px; padding: 14px 16px; }
 .order-detail-total-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 14px; color: rgba(255,255,255,0.65); }
 .order-detail-total-row.main { border-top: 1px solid rgba(212,160,67,0.15); margin-top: 8px; padding-top: 10px; font-size: 16px; color: var(--cream); font-weight: 600; }
