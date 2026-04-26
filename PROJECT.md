@@ -1,6 +1,6 @@
 # Stalliq — Project Bible
-> Last updated: April 2026 — Session 12 Complete (Colour & UX overhaul)
-> **Next sprint:** Sessions 13–15 — per-item notes + ready beep → live location broadcast → real phone auth go-live. Pitch deck update follows in Session 16.
+> Last updated: April 2026 — Session 13 Complete (Per-item notes + Customer ready beep)
+> **Next sprint:** Sessions 14–16 — live location broadcast → real phone auth go-live → pitch deck update.
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -146,7 +146,7 @@ Firebase SDK (CDN compat v10.12.2) → js/config.js → js/firebase.js → js/ap
 - Fonts: Playfair Display, DM Sans, Cormorant Garamond
 
 **Contrast rule:**
-Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm cream at low opacity on warm dark backgrounds renders as brown-on-brown. White-based opacity renders as readable neutral grey.
+Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm cream at low opacity on warm dark backgrounds renders as brown-on-brown. White-based opacity renders as readable neutral grey. This applies to ALL interactive muted text — toggle buttons, hints, placeholders.
 
 **Contrast values (current):**
 - `--text-primary`:   `rgba(253,246,236,0.95)`
@@ -191,8 +191,8 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 09 | Offers | ✅ Done | offersSheetUrl in config.js, CSV fetch, Account page Offers section (mobile + desktop), graceful fallback |
 | 10 | Walk-in Manual Order Entry | ✅ Done | "➕ New Order" on kitchen dashboard — vendor enters walk-up orders, drops into Pending column |
 | 11 | Colour & UX Overhaul | ✅ Done | True red token, dietary CSS badges, deeper menu section, card left accent — Session 12 |
-| 12 | Per-item Notes | 🔨 Next (Session 13) | Free-text notes per basket line ("no olives", "well done"). Data model already has `notes: null` per item — UI + Firestore write + kitchen card render + walk-in support |
-| 13 | Customer Ready Beep | 🔨 Next (Session 13) | Two beeps via Web Audio API on customer phone when status flips to `ready`. Audio context already unlocked from order placement. Mirrors kitchen-side beep pattern |
+| 12 | Per-item Notes | ✅ Done | "Add customisation" toggle on basket lines (mobile + desktop). Notes in Firestore, kanban card, detail modal, customer order detail, walk-in modal. Session 13 |
+| 13 | Customer Ready Beep | ✅ Done | Two beeps via Web Audio API (660 Hz) when status → ready. unlockAudio() on Place Order tap. firedReadyBeep guard prevents spurious beeps on load. Session 13 |
 | 14 | Live Location Broadcast | 🔨 Next (Session 14) | Kitchen toggle on/off. Van pings GPS to Firestore every 10 mins; customer app uses real-time listener (zero-lag) and shows position on Google Maps Embed. Foundation for geofence at scale |
 | 15 | Real Phone Auth Go-Live | 🔨 Next (Session 15) | Remove Firebase test numbers, add production domain to Authorised Domains, enable App Check (reCAPTCHA Enterprise), upgrade to Blaze plan, test on real handset. Lets Daniele place an order from his real phone at the meeting |
 | 16 | SMS & WhatsApp Status Notifications | ⏳ Planned | Customer notified on order status changes — Twilio. Applies to app orders AND walk-ins with phone number |
@@ -206,6 +206,7 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 24 | AI Order Assist | 🌟 Vision | Customer orders in natural language — type or dictate. AI parses into basket, normal checkout flow. |
 
 **Feature backlog (future):**
+- Empty basket button on basket page / desktop basket panel — visible when basket has items, single tap clears all. `clearBasket()` already exists; just needs wiring to a button. 20-minute job, tag onto start of Session 14 or 15 if either runs short. Files: `index.html` only.
 - Corporate catering module
 - Pub partnership mode
 - Multi-vendor event mode
@@ -231,7 +232,7 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 10c | Menu images + contrast sweep | ✅ Food photos via Google Sheet image column, mobile image cards, all brown-on-brown text fixed |
 | 11 | Walk-in Manual Order Entry + Desktop CSS overhaul | ✅ Walk-in orders on kitchen dashboard; full index.html CSS rebuild |
 | 12 | Colour & UX overhaul | ✅ True red token, dietary badges, deeper menu section, card accent — index.html only |
-| 13 | Per-item notes + Ready beep | Notes UI on basket lines, kitchen card + detail render, walk-in support; two-beep alert when status flips to `ready` |
+| 13 | Per-item notes + Ready beep | ✅ "Add customisation" on basket lines; notes in Firestore + kitchen card + detail + walk-in; two-beep alert when status → ready |
 | 14 | Live location broadcast | Kitchen toggle, GPS push to Firestore every 10 mins, real-time listener on customer side, Google Maps Embed on Find Us |
 | 15 | Real phone auth go-live | App Check (reCAPTCHA Enterprise), production domain on Authorised Domains, Blaze plan upgrade, real-handset test |
 | 16 | Pitch deck update | Stalliq rebrand, kitchen co-pilot angle, roadmap slide with vision features |
@@ -239,14 +240,14 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 **What gets demoed live at the meeting:**
 - **Premium desktop site shown first on laptop — sets the brand tone before any ordering demo**
 - Customer places order on phone (real phone number, real SMS code) → kitchen receives it instantly
-- **Customer adds per-item notes ("no olives", "well done") → kitchen sees notes on the order card**
+- **Customer adds customisation per item ("no olives", "well done") → kitchen sees notes on the order card and in detail drill-down**
 - Kitchen accepts, sets wait time → customer sees status update live
+- **Kitchen marks order ready → customer phone beeps twice + Account page status flips**
 - Customer dismisses modal → lands on Account page showing live order
 - Customer can place multiple orders (forgot something) → both visible in Account
 - Tap any order card → full detail view (items, notes, prices, status, timestamp)
-- **Vendor takes walk-up order on kitchen tablet → drops into Pending column instantly → same flow as app order**
+- **Vendor takes walk-up order on kitchen tablet → drops into Pending column instantly → same flow as app order, including per-item notes**
 - **Walk-up customer gives phone number → seeds database for future SMS notifications**
-- **Kitchen marks order ready → customer phone beeps twice + Account page status flips**
 - **Find Us page shows van's live position on a Google Map (when broadcast is on) — kitchen toggles on/off in one tap**
 - Account page shows loyalty stamps and offers — hints at the roadmap
 - Vendor edits menu in Google Sheet → customer app reflects it within minutes
@@ -296,8 +297,8 @@ vendors/{vendorId}/
 
 orders/{orderId}/
   vendorId, orderRef, source, customerId, customerName, customerPhone,
-  items, orderTotal, payment, status, waitMins,
-  expiresAt, createdAt, updatedAt
+  items[{ id, name, price, quantity, notes }], orderTotal, payment,
+  status, waitMins, expiresAt, createdAt, updatedAt
 
 users/{uid}/
   firstName, phone (verified), createdAt
@@ -323,7 +324,7 @@ The Account page queries orders by `(customerId + createdAt desc)`. Already crea
 ## 10a. Order Submission — ✅ COMPLETE
 
 **Customer journey:**
-1. Basket review → customer reviews items + total
+1. Basket review → customer reviews items + total + optional per-item customisation notes
 2. Auth check → already logged in? Skip to step 5
 3. Enter mobile number → receive SMS code → verified (Firebase Phone Auth)
 4. Enter first name → stored against uid for all future orders
@@ -365,24 +366,27 @@ The Account page queries orders by `(customerId + createdAt desc)`. Already crea
 - Horizontal drag/scroll between columns (Pointer Events API)
 - Vertical scroll within each column when cards overflow
 - Order cards — ref, customer name, items, elapsed time, status badge, action button
+- **Per-item customisation notes on kanban card** (italic gold, Session 13)
 - Walk-in badge on cards (`source: 'walkin'`)
 - Accept order + wait time modal — options from `CONFIG.ordering.waitOptions`
 - Status tap-through: `accepted → preparing` (single tap), `preparing → ready` (confirm modal)
 - Collected (removes from queue)
 - Kitchen close toggle — 4-option modal in header, writes to Firestore immediately
-- Order detail drill-down — tap card body to open full detail modal
-- Sound alert on new pending order (two beeps via Web Audio API)
+- Order detail drill-down — tap card body to open full detail modal, **notes shown per item** (Session 13)
+- Sound alert on new pending order (two beeps via Web Audio API, 880 Hz)
 - Elapsed time counter per card — turns amber at 10 mins, red at 20 mins
 - ➕ New Order button — walk-in order entry (see Section 10d)
 - `CONFIG.business.currency` and `CONFIG.ordering.paymentNote` used throughout (no hardcoded £ or 'cash on collection')
 
 ---
 
-## 10d. Walk-in Manual Order Entry — ✅ COMPLETE (Session 11)
+## 10d. Walk-in Manual Order Entry — ✅ COMPLETE (Session 11 + Session 13)
 
 **Problem solved:** Walk-up customers not in the system — split queue between app and verbal orders.
 
 **Solution:** "➕ New Order" button in kitchen header. Vendor taps, picks items, enters customer name (required) and optional phone number. Order drops into Pending column identically to an app order.
+
+**Session 13 addition:** Each item row in the walk-in modal has an always-visible "Customisation / special request" text input. Notes written to Firestore as `item.notes`. No toggle — kitchen tablet UX demands speed.
 
 **Firestore order document differences from app orders:**
 
@@ -392,6 +396,7 @@ The Account page queries orders by `(customerId + createdAt desc)`. Already crea
 | `customerId` | Firebase Auth uid | `null` |
 | `customerPhone` | Verified by Firebase Auth | Entered manually, unverified |
 | `customerName` | From users/{uid} doc | Entered by vendor in modal |
+| `items[].notes` | From basketNotes{} | From walkinNotes{} |
 
 **Walk-in badge** shown on kanban card and in detail drill-down.
 **Order ref** uses same `getNextOrderRef()` daily sequential counter — one unified sequence.
@@ -408,7 +413,7 @@ The Account page queries orders by `(customerId + createdAt desc)`. Already crea
 
 **Live orders:** real-time Firestore listeners keyed by `orderId` (map, not single var)
 **Order history:** 90-day window, limit 50, 3 shown initially with "Show X more"
-**Reorder:** button on collected history cards — clears basket, adds available items, routes to basket
+**Reorder:** button on collected history cards — clears basket, adds available items, restores notes from original order, routes to basket
 **Composite Firestore index** on `(customerId, createdAt)` — already created for La Muletti ✅
 
 ---
@@ -452,10 +457,6 @@ All fetches run concurrently via `Promise.all` at init. Graceful fallback to `CO
 | Pizza card hover | Gold border glow | Red ring `rgba(196,39,26,0.25)` + lift | Consistent with red-left-accent language |
 | `.status-preparing` | `rgba(255,130,50,...)` orange | `rgba(217,59,37,...)` red-aligned | Matches new ember token |
 
-**Post-session fix (inter-session):** Mobile `.m-menu-card` was missing `border-left: 3px solid var(--fire)`. The red left accent was added to `.d-pizza-card` (desktop) in Session 12 but not carried across to the mobile equivalent. One-line fix applied directly. Also: duplicate pizza card images (Marinara/Margherita showing same photo) were a Google Sheet data issue — wrong ibb.co URL in the Margherita image column — fixed in sheet, no deploy needed.
-
-**What was tried and rejected:** Cream background (`#F5ECD6`) for the desktop menu section. Looked out of place — breaks the premium dark brand feel. The section needed more darkness, not less.
-
 **Dietary badge classes:**
 ```css
 .diet-badge      — base pill styles
@@ -463,7 +464,35 @@ All fetches run concurrently via `Promise.all` at init. Graceful fallback to `CO
 .diet-badge-v    — soft green, for Vegetarian
 .diet-badge-hot  — muted red, for Spicy
 ```
-Used in both the mobile diet legend and the desktop menu note. `app.js` uses `.m-card-diet` for inline diet labels — those remain as text; only the legend/note use the new pill classes.
+
+---
+
+## 13a. Per-item Notes + Customer Ready Beep — ✅ COMPLETE (Session 13)
+
+### Per-item Notes
+- "Add customisation" toggle button on each basket line — mobile and desktop
+- Tap to reveal auto-expanding textarea (single line, grows as you type, full width)
+- Notes saved in `basketNotes{}` alongside `basket{}` — parallel state objects
+- Notes cleared on item remove, basket clear, and reorder reset
+- Notes restored from original order on reorder
+- Written to Firestore as `item.notes` (null if empty) — data model already had `notes: null`
+- Rendered italic gold on kitchen kanban card (`.k-card-item-note`)
+- Rendered in kitchen detail drill-down modal (`.k-detail-item-note`)
+- Rendered in customer order detail overlay (`.order-detail-item-note`)
+- Walk-in modal: always-visible text input per item (no toggle — kitchen tablet UX)
+- Walk-in notes stored in `walkinNotes{}`, written to Firestore on submit
+- 200-char limit, sanitised via `esc()` before any DOM render
+- Label: "Add customisation" / "Customisation added" (not "note")
+- Toggle colour: `rgba(255,255,255,0.72)` — white-based opacity to avoid brown-on-brown
+
+### Customer Ready Beep
+- Web Audio API, two beeps at 660 Hz (distinct from kitchen alert at 880 Hz), 300 ms apart
+- `unlockAudio()` called on Place Order tap (user gesture required by browser policy)
+- Shared `audioCtx` — created once, reused, resumed if suspended
+- Fires in both `startOrderStatusListener()` (confirmation modal) and `startAccountOrderListener()` (Account page)
+- `firedReadyBeep: true` flag set in `orderCache` after firing — prevents duplicate beeps
+- `loadUserOrders()` pre-flags already-ready orders with `firedReadyBeep: true` — prevents beep on page load
+- Silent fail if Web Audio API unavailable
 
 ---
 
@@ -492,7 +521,7 @@ Used in both the mobile diet legend and the desktop menu note. `app.js` uses `.m
 
 ## 14a. Live Location Broadcast — Spec (Session 14)
 
-**Why first:** Foundation piece. Once van GPS is flowing into Firestore, the geofence feature (Section 15) becomes a Cloud Function on top of the same data — no new device work needed.
+**Why first:** Foundation piece. Once van GPS is flowing into Firestore, the geofence feature becomes a Cloud Function on top of the same data — no new device work needed.
 
 **Kitchen side (`kitchen.html`):**
 - Toggle button in kitchen header — "📍 Broadcast: ON / OFF"
@@ -502,7 +531,7 @@ Used in both the mobile diet legend and the desktop menu note. `app.js` uses `.m
 - iOS caveat applies: dedicated Android device in van for production. iOS Safari kills background JS when screen sleeps.
 
 **Customer side (`index.html` / `app.js`):**
-- Real-time listener on `vendors/{vendorId}/location/current` — **not polling**. Firestore listeners are cheaper, zero-lag, and avoid the 11-min staleness window
+- Real-time listener on `vendors/{vendorId}/location/current` — not polling. Firestore listeners are cheaper, zero-lag, and avoid staleness
 - Find Us page shows Google Maps Embed iframe when broadcast is `active: true`
 - Falls back to existing events sheet view when broadcast is `active: false` or doc doesn't exist
 - "Live now" badge with last-update timestamp ("Updated 3 mins ago")
@@ -519,10 +548,9 @@ vendors/{vendorId}/location/current
 
 **Maps choice — Embed API, not JS API:**
 - Maps Embed API: free, simple iframe, no API key billing required for basic embed, ships fast
-- Maps JavaScript API: nicer marker, smooth updates, but needs API key with billing enabled and more code
-- **Decision:** ship Embed for the demo. Upgrade to JS API later if marker quality matters.
+- Decision: ship Embed for the demo. Upgrade to JS API later if marker quality matters.
 
-**Battery / data:** 10-min interval is the floor. Anything more frequent and a 12-hour service drains a phone battery. Vendor will keep the broadcast Android device on charge in the van.
+**Battery / data:** 10-min interval is the floor. Vendor will keep the broadcast Android device on charge in the van.
 
 ---
 
@@ -591,9 +619,13 @@ Customer taps AI chat bubble → types or dictates order in natural language →
 - Firebase SDK: CDN compat v10.12.2 — no bundler needed
 - Kitchen dashboard = same Netlify deployment as customer app (`/kitchen.html`)
 - Wait time options configurable per vendor in `CONFIG.ordering.waitOptions`
-- Secondary text colour must use `rgba(255,255,255,0.X)` not cream-based opacity (brown-on-brown problem)
+- Secondary text colour must use `rgba(255,255,255,0.X)` not cream-based opacity (brown-on-brown problem) — applies to ALL interactive muted text including toggle buttons, hints, placeholders
 - CSS for both `index.html` and `kitchen.html` is embedded in their respective `<style>` blocks — not in external files
-- Item notes field (`notes: null`) already in order data model — UI shipping in Session 13 (per-item notes promoted to pre-pitch sprint)
+- Item notes label: "Add customisation" / "Customisation added" — not "note"
+- `basketNotes{}` in `app.js` mirrors `basket{}` — cleared on item remove, basket clear, and reorder reset; notes restored from original order on reorder
+- Walk-in notes: `walkinNotes{}` in `kitchen.js`; always-visible input per item row (no toggle — kitchen tablet UX); written to Firestore as `item.notes`
+- Notes render: italic gold on kanban card (`.k-card-item-note`), kitchen detail modal (`.k-detail-item-note`), customer order detail overlay (`.order-detail-item-note`)
+- Ready beep: Web Audio API, 660 Hz (distinct from kitchen alert at 880 Hz), two beeps 300ms apart; `unlockAudio()` called on Place Order tap; `firedReadyBeep` flag in `orderCache` prevents spurious beeps on page load and duplicates
 - Mobile `.m-menu-card` and desktop `.d-pizza-card` are separate CSS rules — changes to one do NOT automatically apply to the other. Always check both when making card-level style changes
 - Menu management: Google Sheets CSV approach — vendor edits sheet, app updates within minutes, no deploy
 - `CONFIG.menuSheetUrl` must be inside the CONFIG object
@@ -617,7 +649,7 @@ Customer taps AI chat bubble → types or dictates order in natural language →
 - `orderCache` — client-side map populated on account load, enables instant detail drill-down without Firestore re-fetch
 - Post-order dismiss routes to Account page — customer immediately sees their live order
 - History shows collected/cancelled only — pending/active orders live in Live Orders section exclusively
-- Reorder button on collected history cards — `reorderItems()` clears basket, adds available items, routes to basket
+- Reorder button on collected history cards — `reorderItems()` clears basket, adds available items, restores notes, routes to basket
 - Real phone numbers must never be used for testing — Firebase throttles repeated SMS; always use Firebase test numbers
 - Session chunking: large file outputs cause conversation timeouts — break each session into single-file chunks
 - **Primary colour `--fire` is true red `#C4271A` (HSL 5°), not orange** — orange on warm dark bg = low contrast
@@ -639,46 +671,33 @@ The app promotes good decisions at exactly the moments when a vendor is most lik
 
 ---
 
-## 21. Next Session — Session 13: Per-item Notes + Ready Beep
+## 21. Next Session — Session 14: Live Location Broadcast
 
-**Goal:** Ship two small, demo-critical features in one session.
+**Goal:** Find Us page shows the van's live position on a map. Kitchen toggles broadcast on/off.
 
-### Part A — Per-item Notes
-- Tap-to-expand text input on each basket line
-- Saved with the order (`item.notes`) — data model already supports `notes: null`
-- Render notes on kitchen kanban card
-- Render notes in kitchen detail drill-down modal
-- Render notes in customer's Account page order detail
-- Walk-in order modal: notes input per item too — single source of truth
-- 200-char limit, sanitised via `esc()` before any DOM render
+**Spec:** See Section 14a for full technical detail.
 
-### Part B — Customer Ready Beep
-- Web Audio API two-beep pattern (mirrors kitchen beep in `kitchen.js`)
-- Fires when the live status listener sees `status === 'ready'`
-- Audio context already unlocked from order placement tap — no extra UX needed
-- Plays once per order on transition to ready (track `firedReadyBeep` per order in `orderCache`)
-- No-op on already-ready orders loaded into Account page on first load (only fire on transition)
+**Files to touch:**
+- `kitchen.html` — broadcast toggle button in header
+- `js/kitchen.js` — GPS ping logic, Firestore write, setInterval management
+- `index.html` — Google Maps Embed CSS (iframe styling for Find Us)
+- `js/app.js` — real-time listener on `vendors/{vendorId}/location/current`, Find Us page render
 
-**Files touched:**
-- `index.html` — basket UI for notes input, audio beep code
-- `js/app.js` — notes data flow, status listener beep trigger
-- `js/kitchen.js` — render notes on cards and detail modal
-- `kitchen.html` — walk-in modal: notes input per line
+**Quick win to tag on if time allows:**
+Empty basket button — visible when basket has items, wires to existing `clearBasket()`. `index.html` only, 20 minutes.
 
 ---
 
-## 21a. Three-Session Pre-Pitch Sprint
+## 21a. Three-Session Pre-Pitch Sprint (updated)
 
 | Session | Focus | Delta for Daniele |
 |---------|-------|-------------------|
-| 13 | Per-item notes + Ready beep | Customisation per item; phone beeps when order is ready |
+| 13 | Per-item notes + Ready beep | ✅ Customisation per item; phone beeps when order is ready |
 | 14 | Live location broadcast + Maps embed | Find Us page shows live van pin when broadcasting |
 | 15 | Real phone auth go-live | Daniele can place an order from his real phone in front of you |
 | 16 | Pitch deck update | Stalliq rebrand, kitchen co-pilot angle, roadmap slide with vision features |
 
-**SMS status notifications stay on the roadmap (Feature 16) — promised in deck, not demoed.** Reason: Twilio account, opt-out handling (UK STOP keyword legal requirement), throttling — full session minimum, not worth the risk before the meeting. The ready beep covers the "your order is ready" moment for anyone with the app open; Twilio comes post-pitch.
-
-**Pitch deck file (Session 16):** `vendorapp-pitch-v2.pptx` — paste the raw GitHub URL at session start so Claude can fetch it.
+**SMS status notifications stay on the roadmap (Feature 16) — promised in deck, not demoed.**
 
 ---
 
