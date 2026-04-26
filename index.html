@@ -601,9 +601,13 @@ html { scroll-behavior: smooth; }
 /* ─── CONTACT + EVENTS ─── */
 #d-contact { background: var(--dark); }
 .d-contact-inner {
-  max-width: 1280px; margin: 0 auto; padding: 100px 60px;
+  max-width: 1280px; margin: 0 auto; padding: 100px 60px 56px;
   display: grid; grid-template-columns: 1fr 1fr;
   gap: 80px; align-items: start;
+}
+.d-getintouch-wrap {
+  max-width: 1280px; margin: 0 auto; padding: 40px 60px 100px;
+  border-top: 1px solid rgba(212,160,67,0.12);
 }
 .d-contact-grid {
   display: grid; grid-template-columns: 1fr 1fr;
@@ -1196,8 +1200,8 @@ html { scroll-behavior: smooth; }
   border-radius: 12px;
 }
 #d-findus-status .fs-text { font-size: 14px; }
-/* Find Us page bottom padding so last panel isn't flush with nav */
-#page-findus { padding-bottom: 24px; }
+/* #page-findus inherits padding-bottom: 80px from .page — do not override */
+#m-van-location { margin-top: 12px; }
 /* Divider between primary find-us content and contact section */
 .m-findus-divider {
   display: flex; align-items: center; gap: 12px;
@@ -1327,16 +1331,15 @@ html { scroll-behavior: smooth; }
     </div>
   </section>
 
-  <!-- CONTACT -->
+  <!-- FIND US + CONTACT -->
   <section id="d-contact" class="d-texture">
     <div class="d-contact-inner">
       <div class="reveal">
-        <div class="d-eyebrow">Get in touch</div>
+        <div class="d-eyebrow">Live updates</div>
         <h2 class="d-title">Come <em>Find Us</em></h2>
-        <p class="d-body">Book La Muletti for your next event, or follow us on socials to find your nearest pop-up.</p>
-        <div class="d-contact-grid" id="d-contact-grid"></div>
+        <p class="d-body">Check if we're open and see our live location when we're out — or browse upcoming pop-ups.</p>
         <div id="d-findus-status"></div>
-        <div id="d-van-location" style="display:none; margin-top: 24px;"></div>
+        <div id="d-van-location" style="display:none; margin-top: 16px;"></div>
       </div>
       <div class="d-popup-section reveal">
         <div class="d-popup-title">Upcoming Pop-Ups</div>
@@ -1346,6 +1349,10 @@ html { scroll-behavior: smooth; }
           <a href="#d-menu" class="d-btn-primary">Order for Collection</a>
         </div>
       </div>
+    </div>
+    <div class="d-getintouch-wrap reveal">
+      <div class="d-popup-title">Get in Touch</div>
+      <div class="d-contact-grid" id="d-contact-grid"></div>
     </div>
   </section>
 
