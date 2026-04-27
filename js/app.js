@@ -3130,21 +3130,3 @@ function reorderItems(orderId) {
 
   console.log(`[Stalliq] Reorder: ${added} item type(s) added to basket from order ${orderId}.`);
 }
-  closeOrderDetail();
-
-  if (added === 0) {
-    setTimeout(() => alert("Sorry — none of those items are currently available."), 200);
-    return;
-  }
-
-  if (window.innerWidth < 768) {
-    mShowPage('basket');
-  } else {
-    const acctPanel = document.getElementById('d-account-panel');
-    if (acctPanel) acctPanel.classList.remove('open');
-    const basketPanel = document.getElementById('d-basket-panel');
-    if (basketPanel) basketPanel.classList.add('open');
-  }
-
-  console.log(`[Stalliq] Reorder: ${added} item type(s) added to basket from order ${orderId}.`);
-}
