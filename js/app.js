@@ -2072,8 +2072,8 @@ async function submitOrderToFirestore() {
     waitMins:  null,
     expiresAt,
     deleteAt,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    createdAt: new Date(),
+    updatedAt: new Date()
   };
 
   const docRef = await db.collection('orders').add(orderDoc);
