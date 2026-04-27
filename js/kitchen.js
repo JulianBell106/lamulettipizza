@@ -38,6 +38,10 @@ let ordersUnsubscribe = null;
 let broadcastActive     = false;
 let broadcastIntervalId = null;
 
+// Audio state — shared AudioContext unlocked on PIN entry (iOS requires gesture)
+let kitchenAudioCtx      = null;
+let pendingAlertInterval = null;   // repeating beep while pending orders exist
+
 // Walk-in modal state
 let walkinQty   = {};  // { menuItemId: qty }
 let walkinNotes = {};  // { menuItemId: noteText } — Session 13
@@ -107,7 +111,26 @@ function pinPress(digit) {
   if (pinEntry.length >= 6) return;
   pinEntry += digit;
   renderPinDots();
-  if (pinEntry.length === 6) setTimeout(checkPinMultiStaff, 120);
+  if (pinEntry.length === 6) {
+    _unlockKitchenAudio(); // must happen synchronously inside the touch gesture
+    setTimeout(checkPinMultiStaff, 120);
+  }
+}
+
+/**
+ * Creates (or resumes) the shared kitchen AudioContext while still inside
+ * a user gesture. iOS requires this — a context created later, outside a
+ * gesture, starts suspended and cannot play audio.
+ */
+function _unlockKitchenAudio() {
+  try {
+    if (!kitchenAudioCtx) {
+      kitchenAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (kitchenAudioCtx.state === 'suspended') {
+      kitchenAudioCtx.resume().catch(() => {});
+    }
+  } catch (_) {}
 }
 
 function pinBackspace() {
@@ -372,20 +395,36 @@ async function toggleBroadcast() {
  *   1. Checks geolocation availability
  *   2. Pushes current position immediately (sets active:true in Firestore)
  *   3. Starts 10-minute repeating ping interval
+ * If the first GPS push fails (e.g. permission denied) a toast is shown
+ * and broadcast does NOT start — Firestore state remains inactive.
  */
 async function startLocationBroadcast() {
   if (!navigator.geolocation) {
-    alert('Location is not available on this device.');
+    showToast('Location is not available on this device.', 4000);
     return;
   }
-  await pushLocation();    // immediate first push
+  try {
+    await pushLocation();   // immediate first push — rejects on GPS failure
+  } catch (err) {
+    let msg = 'Location access failed — please try again.';
+    if (err.code === 1) msg = 'Location permission denied — allow location access in your device settings, then try again.';
+    else if (err.code === 2) msg = 'Location unavailable — check your device GPS and try again.';
+    else if (err.code === 3) msg = 'Location request timed out — please try again.';
+    showToast(msg, 5000);
+    return;  // don't start the interval if the initial push failed
+  }
   _startLocationPing();   // then every 10 mins
 }
 
 /** Internal: creates/resets the repeating ping setInterval. */
 function _startLocationPing() {
   if (broadcastIntervalId) clearInterval(broadcastIntervalId);
-  broadcastIntervalId = setInterval(pushLocation, BROADCAST_INTERVAL_MS);
+  // Wrap in catch so a temporary GPS blip doesn't produce an unhandled rejection
+  broadcastIntervalId = setInterval(() => {
+    pushLocation().catch(err => {
+      console.warn('[Stalliq] Location ping failed (will retry next interval):', err.message);
+    });
+  }, BROADCAST_INTERVAL_MS);
   console.log('[Stalliq] Location ping interval started (10-min cadence).');
 }
 
@@ -419,7 +458,7 @@ function pushLocation() {
       },
       (err) => {
         console.error('[Stalliq] Geolocation error:', err.message);
-        resolve(); // don't block on GPS failure — just log
+        reject(err); // propagate so startLocationBroadcast() can show user feedback
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
     );
@@ -464,7 +503,7 @@ function listenOrders() {
       incoming[doc.id] = { id: doc.id, ...doc.data() };
     });
 
-    // Sound on new pending order
+    // Beep immediately when a brand-new pending order arrives
     Object.keys(incoming).forEach(id => {
       if (!currentOrders[id] && incoming[id].status === 'pending') {
         playOrderAlert();
@@ -473,6 +512,10 @@ function listenOrders() {
 
     currentOrders = incoming;
     renderOrders();
+
+    // Keep repeating alert running while any pending orders exist
+    const hasPending = Object.values(incoming).some(o => o.status === 'pending');
+    _managePendingAlert(hasPending);
   }, err => console.error('[Stalliq] Orders listener:', err));
 }
 
@@ -873,7 +916,22 @@ function clearElapsedTimers() {
 
 function playOrderAlert() {
   try {
-    const ctx  = new (window.AudioContext || window.webkitAudioContext)();
+    // Reuse the shared context unlocked at PIN entry; fall back to a fresh one
+    // on desktop where gesture timing doesn't matter.
+    const ctx = kitchenAudioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') {
+      // Resume first (succeeds because the context was already unlocked by a
+      // prior gesture), then schedule the beeps once running.
+      ctx.resume().then(() => _playOrderBeeps(ctx)).catch(() => {});
+    } else {
+      _playOrderBeeps(ctx);
+    }
+  } catch (_) {}
+}
+
+/** Schedules two short beeps on an already-running AudioContext. */
+function _playOrderBeeps(ctx) {
+  try {
     const gain = ctx.createGain();
     gain.connect(ctx.destination);
     [0, 0.25].forEach(offset => {
@@ -886,6 +944,20 @@ function playOrderAlert() {
       osc.stop(ctx.currentTime + offset + 0.2);
     });
   } catch (_) {}
+}
+
+/**
+ * Starts or stops the repeating order alert interval.
+ * Beeps every 8 seconds while pending orders exist; stops immediately when
+ * the kitchen accepts the last pending order.
+ */
+function _managePendingAlert(hasPending) {
+  if (hasPending && !pendingAlertInterval) {
+    pendingAlertInterval = setInterval(playOrderAlert, 8000);
+  } else if (!hasPending && pendingAlertInterval) {
+    clearInterval(pendingAlertInterval);
+    pendingAlertInterval = null;
+  }
 }
 
 
@@ -1189,8 +1261,9 @@ async function logoutStaff() {
   // No confirm dialog — in a busy multi-staff kitchen one tap must be enough.
   // The PIN screen is the re-entry gate; no data is lost on logout.
 
-  // Stop the orders listener so we don't receive updates after logout
+  // Stop the orders listener and any pending alert interval
   if (ordersUnsubscribe) { ordersUnsubscribe(); ordersUnsubscribe = null; }
+  if (pendingAlertInterval) { clearInterval(pendingAlertInterval); pendingAlertInterval = null; }
 
   // Sign out from Firebase Auth
   try { await firebase.auth().signOut(); } catch (_) {}
