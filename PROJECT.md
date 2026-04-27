@@ -414,7 +414,7 @@ Before the "Forgot all PINs?" reset flow will work, Julian must manually set the
 
 **How to seed Daniele's first staff document (do this once after deploying):**
 1. Use "Forgot all PINs?" on the kitchen PIN screen
-2. Enter Daniele's number → receive SMS code → verify → set a 4-digit PIN
+2. Enter Daniele's number → receive SMS code → verify → set a 6-digit PIN
 3. This creates a staff doc at `vendors/{vendorId}/staff/owner`
 4. Log in, open ⚙️ Staff Management, tap + Add Staff to add any additional team members
 5. Optionally rename the "Owner" entry to "Daniele" via the Edit button
@@ -473,7 +473,7 @@ Before the "Forgot all PINs?" reset flow will work, Julian must manually set the
 
 ### Login flow (replaces current single-PIN screen)
 
-1. PIN entry screen unchanged visually — staff enter their 4-digit PIN
+1. PIN entry screen unchanged visually — staff enter their 6-digit PIN
 2. On submit: hash the entered PIN → query `staff` collection for a document where `pinHash` matches AND `active == true`
 3. If match found: grant access, show brief "Welcome, [name]" toast, proceed to dashboard
 4. If no match: increment failed attempt counter (stored in `sessionStorage`); show error
@@ -486,7 +486,7 @@ Before the "Forgot all PINs?" reset flow will work, Julian must manually set the
 - Accessible via a ⚙️ settings icon in the kitchen header (visible once logged in)
 - Lists all active staff members by name
 - Actions per staff member: **Rename**, **Change PIN**, **Deactivate** (soft delete — sets `active: false`)
-- **Add new staff member**: enter name + choose 4-digit PIN → writes new document to Firestore
+- **Add new staff member**: enter name + choose 6-digit PIN → writes new document to Firestore
 - No "delete" — always deactivate. Keeps audit trail.
 - The management panel itself requires re-entering the logged-in staff member's own PIN before making changes (prevents casual tampering on an unlocked tablet)
 
