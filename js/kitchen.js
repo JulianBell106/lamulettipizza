@@ -234,6 +234,7 @@ async function checkPinMultiStaff() {
       const dashboard = document.getElementById('k-dashboard');
       if (dashboard) dashboard.style.display = 'flex';
       startDashboard();
+      updateStaffDisplay();
       showToast(`Welcome, ${match.name}!`);
     } else {
       // ❌ Wrong PIN — sign out to discard the anonymous session
@@ -1168,6 +1169,20 @@ async function submitWalkinOrder() {
      staff-edit-screen     — rename or change PIN for an existing member
    ============================================================================ */
 
+/** Updates the logged-in staff name display in the kitchen header. */
+function updateStaffDisplay() {
+  const wrap   = document.getElementById('k-logged-in-name');
+  const nameEl = document.getElementById('k-staff-name-text');
+  if (!wrap || !nameEl) return;
+  if (loggedInStaffName) {
+    nameEl.textContent = loggedInStaffName;
+    wrap.style.display = 'inline-flex';
+    wrap.style.alignItems = 'center';
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
 /** Simple toast notification — appears briefly then fades. */
 function showToast(message, duration = 2500) {
   const toast = document.getElementById('k-toast');
@@ -1179,10 +1194,14 @@ function showToast(message, duration = 2500) {
 
 // ── Settings panel open / close ──────────────────────────────────────────────
 
-async function openSettingsPanel() {
-  showStaffScreen('staff-list-screen');
+function openSettingsPanel() {
+  // Always start at the re-auth screen — clears any previous entry
+  staffConfirmEntry = '';
+  renderStaffConfirmDots();
+  const errEl = document.getElementById('staff-confirm-error');
+  if (errEl) errEl.textContent = '';
+  showStaffScreen('staff-confirm-screen');
   document.getElementById('staff-modal').classList.add('show');
-  await loadStaffList();
 }
 
 function closeSettingsPanel() {
@@ -1194,7 +1213,7 @@ function closeSettingsPanel() {
 // ── Screen switcher ──────────────────────────────────────────────────────────
 
 function showStaffScreen(screenId) {
-  ['staff-list-screen', 'staff-add-screen', 'staff-edit-screen']
+  ['staff-confirm-screen', 'staff-list-screen', 'staff-add-screen', 'staff-edit-screen']
     .forEach(id => {
       const el = document.getElementById(id);
       if (el) el.classList.toggle('hidden', id !== screenId);
@@ -1204,10 +1223,10 @@ function showStaffScreen(screenId) {
 // ── Settings re-auth (mini PIN keypad) ───────────────────────────────────────
 
 function staffConfirmPress(digit) {
-  if (staffConfirmEntry.length >= 4) return;
+  if (staffConfirmEntry.length >= 6) return;
   staffConfirmEntry += digit;
   renderStaffConfirmDots();
-  if (staffConfirmEntry.length === 4) setTimeout(confirmStaffIdentity, 120);
+  if (staffConfirmEntry.length === 6) setTimeout(confirmStaffIdentity, 120);
 }
 
 function staffConfirmBack() {
@@ -1218,7 +1237,7 @@ function staffConfirmBack() {
 }
 
 function renderStaffConfirmDots() {
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 6; i++) {
     const dot = document.getElementById(`sc-dot-${i}`);
     if (dot) dot.classList.toggle('filled', i < staffConfirmEntry.length);
   }
@@ -1588,6 +1607,7 @@ async function submitNewOwnerPin() {
     const dashboard = document.getElementById('k-dashboard');
     if (dashboard) dashboard.style.display = 'flex';
     startDashboard();
+    updateStaffDisplay();
     showToast('PIN reset — welcome back!');
   } catch (err) {
     console.error('[Stalliq] Set new owner PIN error:', err);

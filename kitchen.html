@@ -866,6 +866,8 @@
         <button class="k-new-order-btn" onclick="openWalkinModal()">➕ New Order</button>
         <!-- Session 14 — live location broadcast toggle -->
         <button class="k-broadcast-btn" id="k-broadcast-btn" onclick="toggleBroadcast()">📍 Broadcast</button>
+        <!-- Logged-in staff name (Session 16b) -->
+        <span id="k-logged-in-name" style="display:none; font-size:12px; color:rgba(255,255,255,0.60); white-space:nowrap;">👤 <span id="k-staff-name-text"></span></span>
         <!-- Session 15 — staff management -->
         <button class="k-settings-btn" id="k-settings-btn" onclick="openSettingsPanel()" title="Staff management">⚙️</button>
         <button class="k-status-btn open" id="k-status-btn" onclick="openKitchenModal()">
@@ -1018,8 +1020,36 @@
   <div class="k-modal-overlay" id="staff-modal">
     <div class="k-modal k-modal-staff">
 
+      <!-- Screen 0: Re-auth confirm (must enter own PIN before accessing staff list) -->
+      <div id="staff-confirm-screen">
+        <div class="k-modal-title">Confirm your identity</div>
+        <div class="k-modal-sub">Enter your own 6-digit PIN to continue.</div>
+        <div class="sc-dots">
+          <div class="sc-dot" id="sc-dot-0"></div>
+          <div class="sc-dot" id="sc-dot-1"></div>
+          <div class="sc-dot" id="sc-dot-2"></div>
+          <div class="sc-dot" id="sc-dot-3"></div>
+          <div class="sc-dot" id="sc-dot-4"></div>
+          <div class="sc-dot" id="sc-dot-5"></div>
+        </div>
+        <div class="pin-error" id="staff-confirm-error"></div>
+        <div class="sc-keypad">
+          <button class="sc-key" onclick="staffConfirmPress('1')">1</button>
+          <button class="sc-key" onclick="staffConfirmPress('2')">2</button>
+          <button class="sc-key" onclick="staffConfirmPress('3')">3</button>
+          <button class="sc-key" onclick="staffConfirmPress('4')">4</button>
+          <button class="sc-key" onclick="staffConfirmPress('5')">5</button>
+          <button class="sc-key" onclick="staffConfirmPress('6')">6</button>
+          <button class="sc-key" onclick="staffConfirmPress('7')">7</button>
+          <button class="sc-key" onclick="staffConfirmPress('8')">8</button>
+          <button class="sc-key" onclick="staffConfirmPress('9')">9</button>
+          <button class="sc-key" onclick="staffConfirmPress('0')">0</button>
+          <button class="sc-key back" onclick="staffConfirmBack()">⌫</button>
+        </div>
+      </div>
+
       <!-- Screen 1: Staff list -->
-      <div id="staff-list-screen">
+      <div id="staff-list-screen" class="hidden">
         <div class="k-modal-title">Staff Members</div>
         <div class="k-modal-sub">Everyone who can access the kitchen dashboard.</div>
         <div class="staff-list" id="staff-list"></div>
