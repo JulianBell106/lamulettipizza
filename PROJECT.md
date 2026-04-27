@@ -1,6 +1,6 @@
 # Stalliq — Project Bible
-> Last updated: April 2026 — Session 14 COMPLETE ✅
-> **Next sprint:** Session 15 — Real phone auth go-live + multi-staff kitchen PIN management (same session).
+> Last updated: April 2026 — Session 15 (PIN management) COMPLETE ✅
+> **Next sprint:** Session 15b — Real Firebase Phone Auth go-live (Blaze plan, App Check, remove test numbers, production domain).
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -186,7 +186,8 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 12 | Per-item Notes | ✅ Done | "Add customisation" toggle on basket lines (mobile + desktop). Notes in Firestore, kanban card, detail modal, customer order detail, walk-in modal. Session 13 |
 | 13 | Customer Ready Beep | ✅ Done | Two beeps via Web Audio API (660 Hz) when status → ready. unlockAudio() on Place Order tap. firedReadyBeep guard prevents spurious beeps on load. Session 13 |
 | 14 | Live Location Broadcast | ✅ Done | Full stack complete. Kitchen broadcasts GPS; customer Find Us page shows live map, kitchen status, tagline. Find Us page redesigned (mobile + desktop). Kitchen legibility pass. |
-| 15 | Real Phone Auth + Multi-Staff PIN | ⏳ Next (Session 15) | Phone auth go-live + multi-staff kitchen PIN management — same session. See Section 25. |
+| 15 | Multi-Staff Kitchen PIN | ✅ Done | Multi-staff PIN login (SHA-256 hashed), lockout after 5 fails (15 min), staff management panel (add/rename/change PIN/deactivate), forgot PIN flow via Firebase Phone Auth. Session 15. |
+| 15a | Real Phone Auth Go-Live | ⏳ Next (Session 15b) | Blaze plan, App Check, authorised domains, remove test numbers. See Section 23. |
 | 16 | SMS & WhatsApp Status Notifications | ⏳ Planned | Customer notified on order status changes — Twilio |
 | 17 | Geofence Notifications | ⏳ Planned | Van enters subscriber's area → phone buzzes |
 | 18 | Flash Sales & Broadcasts | ⏳ Planned | Vendor launches deal in seconds, broadcasts to subscribers |
@@ -208,7 +209,8 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 |---------|-------|--------|
 | 13 | Per-item notes + Ready beep | ✅ Done |
 | 14 | Live location broadcast + Find Us redesign + kitchen legibility | ✅ Done |
-| 15 | Real phone auth go-live + multi-staff kitchen PIN | ⏳ |
+| 15 | Multi-staff kitchen PIN management | ✅ Done |
+| 15b | Real Firebase Phone Auth go-live | ⏳ |
 | 16 | Pitch deck update | ⏳ |
 
 **What gets demoed live at the meeting:**
@@ -396,16 +398,29 @@ Independent food vendors are brilliant at their craft but are not trained kitche
 
 ---
 
-## 21. Next Session — Session 15: Real Auth + Multi-Staff PIN
+## 21. Next Session — Session 15b: Real Firebase Phone Auth Go-Live
 
 **Goals:**
-1. Real Firebase Phone Auth go-live (remove test numbers, production domain, App Check, Blaze plan)
-2. Multi-staff kitchen PIN management — see Section 25 for full spec
+1. Upgrade Firebase project to **Blaze plan** (pay-as-you-go — required for Phone Auth in production)
+2. Add **Netlify domain** (`stalliq-demo.netlify.app`) to Firebase authorised domains
+3. Enable **Firebase App Check** (reCAPTCHA Enterprise) to protect the SMS reset flow from abuse
+4. Remove **test phone numbers** from Firebase console
+5. Update `CONFIG.domains` in `js/config.js`
 
-**Approach:** Chunk into two halves. Auth first (config changes + testing), then PIN management (kitchen.html + kitchen.js + Firestore).
+**Firestore prerequisite for Forgot PIN flow:**
+Before the "Forgot all PINs?" reset flow will work, Julian must manually set the owner phone in Firestore:
+- Path: `vendors/{vendorId}/ownerPhone`
+- Value: owner's number in E.164 format, e.g. `+447951050383`
+
+**How to seed Daniele's first staff document (do this once after deploying):**
+1. Use "Forgot all PINs?" on the kitchen PIN screen
+2. Enter Daniele's number → receive SMS code → verify → set a 4-digit PIN
+3. This creates a staff doc at `vendors/{vendorId}/staff/owner`
+4. Log in, open ⚙️ Staff Management, tap + Add Staff to add any additional team members
+5. Optionally rename the "Owner" entry to "Daniele" via the Edit button
 
 **Session startup:**
-> "New session — read the live PROJECT.md from GitHub: https://raw.githubusercontent.com/JulianBell106/lamulettipizza/refs/heads/main/PROJECT.md — today we're doing Session 15: real Firebase Phone Auth go-live and multi-staff kitchen PIN management. See Sections 23 and 25 for the full spec."
+> "New session — read the live PROJECT.md from GitHub: https://raw.githubusercontent.com/JulianBell106/lamulettipizza/refs/heads/main/PROJECT.md — today we're doing Session 15b: real Firebase Phone Auth go-live. See Section 23 for the checklist."
 
 ---
 
@@ -509,6 +524,37 @@ Independent food vendors are brilliant at their craft but are not trained kitche
 - `kitchen.html`: add settings panel HTML + CSS; add "Forgot PIN?" link + reset flow screens
 - Firestore: seed initial staff document for Daniele during session (name + hashed PIN)
 - `vendors/{vendorId}/ownerPhone` written manually in Firestore for La Muletti during session
+
+---
+
+## 25a. Multi-Staff Kitchen PIN — Implementation Notes (Session 15) ✅
+
+**Files changed:** `kitchen.js`, `kitchen.html`
+
+### What was built
+
+**kitchen.js:**
+- `hashPin(pin)` — SHA-256 hex hash via Web Crypto API
+- `checkPinMultiStaff()` — replaces old `checkPin()`. Hashes entry, queries `staff` collection for `active == true` docs, compares hashes client-side (avoids composite index). Welcome toast on success.
+- `startLockoutCountdown()` — 15-min lockout after 5 fails, countdown in PIN error area, keypad opacity reduced. Lockout state persisted in `sessionStorage` so it survives page refresh.
+- DOMContentLoaded — restores lockout state from sessionStorage on page load
+- `showToast(message)` — brief green toast notification (used for welcome + management confirmations)
+- Section 17: full staff management panel — `openSettingsPanel`, `confirmStaffIdentity`, `loadStaffList`, `addStaff`, `deactivateStaff`, `openEditStaff`, `submitEditStaff`
+- Section 18: forgot PIN / owner reset — `openForgotPin`, `submitForgotPhone`, `submitForgotCode`, `submitNewOwnerPin`. Checks entered phone against `vendors/{vendorId}/ownerPhone` before sending SMS. Upserts at `staff/owner` doc ID.
+
+**kitchen.html:**
+- ⚙️ button in header (visible post-login) → opens staff management panel
+- "Forgot all PINs?" link under PIN keypad → opens forgot PIN modal
+- Staff management modal: 4 screens (confirm identity, staff list, add staff, edit staff)
+- Forgot PIN modal: 3 screens (phone entry, SMS code, new PIN)
+- Toast div + all CSS for new elements
+
+### Key decisions
+- `checkPinMultiStaff` loads all active staff and compares client-side — avoids Firestore composite index for a very small collection
+- Lockout state in `sessionStorage` (not `localStorage`) — correct for a shared kitchen tablet: resets if the browser is fully closed
+- Forgot PIN writes to a fixed `staff/owner` doc ID — easy to identify for later renaming
+- Settings panel re-auth required own PIN — prevents casual tampering on an unlocked tablet
+- Staff names with apostrophes are escaped (`safeName`) in the staff list render to avoid JS injection in inline `onclick` handlers
 
 ---
 

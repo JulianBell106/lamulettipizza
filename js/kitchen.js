@@ -42,6 +42,17 @@ let broadcastIntervalId = null;
 let walkinQty   = {};  // { menuItemId: qty }
 let walkinNotes = {};  // { menuItemId: noteText } — Session 13
 
+// Multi-staff PIN state (Session 15)
+let loggedInStaffId   = null;  // Firestore doc ID of the logged-in staff member
+let loggedInStaffName = null;  // Display name of the logged-in staff member
+let failedPinAttempts = 0;     // Failed attempts this session (persisted in sessionStorage)
+let pinLockedUntil    = null;  // Timestamp (ms) — null if not locked
+let pinLockTimer      = null;  // setInterval handle for lockout countdown display
+
+// Staff management state (Session 15)
+let staffConfirmEntry = '';    // PIN entry on settings re-auth screen
+let editingStaffId    = null;  // Staff doc ID currently being edited
+
 
 /* ============================================================================
    2. THEME + PAGE IDENTITY
@@ -96,7 +107,7 @@ function pinPress(digit) {
   if (pinEntry.length >= 4) return;
   pinEntry += digit;
   renderPinDots();
-  if (pinEntry.length === 4) setTimeout(checkPin, 120);
+  if (pinEntry.length === 4) setTimeout(checkPinMultiStaff, 120);
 }
 
 function pinBackspace() {
@@ -112,23 +123,116 @@ function renderPinDots() {
   }
 }
 
-function checkPin() {
-  const correctPin = String(CONFIG.kitchen?.pin || '1234');
-  if (pinEntry === correctPin) {
-    document.getElementById('pin-overlay').classList.add('hidden');
-    const dashboard = document.getElementById('k-dashboard');
-    if (dashboard) dashboard.style.display = 'flex';
-    startDashboard();
-  } else {
-    document.getElementById('pin-error').textContent = 'Incorrect PIN — try again';
+/** Hashes a PIN string using SHA-256. Returns a lowercase hex string. */
+async function hashPin(pin) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Shows a message in the main PIN error element. */
+function showPinError(msg) {
+  const el = document.getElementById('pin-error');
+  if (el) el.textContent = msg;
+}
+
+/** Triggers the shake animation on the main PIN dots. */
+function shakePinDots() {
+  const dots = document.querySelector('.pin-dots');
+  if (!dots) return;
+  dots.classList.remove('shake');
+  void dots.offsetWidth;
+  dots.classList.add('shake');
+}
+
+/** Starts a 15-minute lockout countdown shown in the PIN error element. */
+function startLockoutCountdown() {
+  if (pinLockTimer) clearInterval(pinLockTimer);
+  const keypad = document.querySelector('.pin-keypad');
+  if (keypad) keypad.style.opacity = '0.3';
+
+  function tick() {
+    if (!pinLockedUntil) { clearInterval(pinLockTimer); return; }
+    const remaining = Math.max(0, Math.ceil((pinLockedUntil - Date.now()) / 1000));
+    if (remaining === 0) {
+      clearInterval(pinLockTimer);
+      pinLockedUntil    = null;
+      failedPinAttempts = 0;
+      sessionStorage.removeItem('pinFailCount');
+      sessionStorage.removeItem('pinLockUntil');
+      showPinError('');
+      if (keypad) keypad.style.opacity = '';
+      return;
+    }
+    const mins = Math.floor(remaining / 60);
+    const secs = String(remaining % 60).padStart(2, '0');
+    showPinError(`Too many attempts — locked for ${mins}:${secs}`);
+  }
+  tick();
+  pinLockTimer = setInterval(tick, 1000);
+}
+
+/**
+ * Multi-staff PIN check (Session 15).
+ * Hashes the entered PIN and queries the Firestore staff collection for a match.
+ * Replaces the old single-PIN checkPin().
+ */
+async function checkPinMultiStaff() {
+  // Respect lockout
+  if (pinLockedUntil && Date.now() < pinLockedUntil) {
+    showPinError('Too many attempts — please wait for the timer to clear.');
     pinEntry = '';
     renderPinDots();
-    const dots = document.querySelector('.pin-dots');
-    if (dots) {
-      dots.classList.remove('shake');
-      void dots.offsetWidth;
-      dots.classList.add('shake');
+    return;
+  }
+
+  const hash = await hashPin(pinEntry);
+  pinEntry = '';
+  renderPinDots();
+
+  try {
+    const snapshot = await db.collection('vendors').doc(CONFIG.vendor.id)
+      .collection('staff')
+      .where('active', '==', true)
+      .get();
+
+    let match = null;
+    snapshot.forEach(doc => {
+      if (doc.data().pinHash === hash) match = { id: doc.id, ...doc.data() };
+    });
+
+    if (match) {
+      // ✅ Correct PIN — grant access
+      failedPinAttempts = 0;
+      pinLockedUntil    = null;
+      sessionStorage.removeItem('pinFailCount');
+      sessionStorage.removeItem('pinLockUntil');
+      loggedInStaffId   = match.id;
+      loggedInStaffName = match.name;
+
+      document.getElementById('pin-overlay').classList.add('hidden');
+      const dashboard = document.getElementById('k-dashboard');
+      if (dashboard) dashboard.style.display = 'flex';
+      startDashboard();
+      showToast(`Welcome, ${match.name}!`);
+    } else {
+      // ❌ Wrong PIN
+      failedPinAttempts++;
+      sessionStorage.setItem('pinFailCount', String(failedPinAttempts));
+
+      if (failedPinAttempts >= 5) {
+        pinLockedUntil = Date.now() + 15 * 60 * 1000;
+        sessionStorage.setItem('pinLockUntil', String(pinLockedUntil));
+        startLockoutCountdown();
+      } else {
+        const left = 5 - failedPinAttempts;
+        showPinError(`Incorrect PIN — ${left} attempt${left === 1 ? '' : 's'} remaining`);
+      }
+      shakePinDots();
     }
+  } catch (err) {
+    console.error('[Stalliq] PIN check error:', err);
+    showPinError('Connection error — please try again');
+    shakePinDots();
   }
 }
 
@@ -818,6 +922,19 @@ function startDashboard() {
 document.addEventListener('DOMContentLoaded', () => {
   applyKitchenTheme();
   initPageIdentity();
+
+  // Restore lockout state from sessionStorage (Session 15)
+  const savedFails    = parseInt(sessionStorage.getItem('pinFailCount') || '0', 10);
+  const savedLockUntil = parseInt(sessionStorage.getItem('pinLockUntil') || '0', 10);
+  if (savedFails) failedPinAttempts = savedFails;
+  if (savedLockUntil > Date.now()) {
+    pinLockedUntil = savedLockUntil;
+    startLockoutCountdown();
+  } else if (savedLockUntil) {
+    // Lockout expired while page was closed — clear it
+    sessionStorage.removeItem('pinFailCount');
+    sessionStorage.removeItem('pinLockUntil');
+  }
 });
 
 
@@ -1009,5 +1126,440 @@ async function submitWalkinOrder() {
   } catch (err) {
     console.error('[Stalliq] Walk-in order error:', err);
     if (btn) { btn.textContent = 'Error — try again'; btn.disabled = false; }
+  }
+}
+
+
+/* ============================================================================
+   17. STAFF MANAGEMENT PANEL (Session 15)
+   ============================================================================
+   Accessible via ⚙️ icon in the kitchen header (visible once logged in).
+   Requires re-entering the logged-in staff member's own PIN before any
+   changes can be made — prevents casual tampering on an unlocked tablet.
+
+   Screens (all inside #staff-modal):
+     staff-confirm-screen  — re-auth mini keypad
+     staff-list-screen     — list of active staff with Edit / Remove actions
+     staff-add-screen      — add a new staff member (name + PIN)
+     staff-edit-screen     — rename or change PIN for an existing member
+   ============================================================================ */
+
+/** Simple toast notification — appears briefly then fades. */
+function showToast(message, duration = 2500) {
+  const toast = document.getElementById('k-toast');
+  if (!toast) return;
+  toast.textContent = message;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), duration);
+}
+
+// ── Settings panel open / close ──────────────────────────────────────────────
+
+function openSettingsPanel() {
+  staffConfirmEntry = '';
+  renderStaffConfirmDots();
+  const errEl = document.getElementById('staff-confirm-error');
+  if (errEl) errEl.textContent = '';
+  showStaffScreen('staff-confirm-screen');
+  document.getElementById('staff-modal').classList.add('show');
+}
+
+function closeSettingsPanel() {
+  document.getElementById('staff-modal').classList.remove('show');
+  staffConfirmEntry = '';
+  editingStaffId    = null;
+}
+
+// ── Screen switcher ──────────────────────────────────────────────────────────
+
+function showStaffScreen(screenId) {
+  ['staff-confirm-screen', 'staff-list-screen', 'staff-add-screen', 'staff-edit-screen']
+    .forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('hidden', id !== screenId);
+    });
+}
+
+// ── Settings re-auth (mini PIN keypad) ───────────────────────────────────────
+
+function staffConfirmPress(digit) {
+  if (staffConfirmEntry.length >= 4) return;
+  staffConfirmEntry += digit;
+  renderStaffConfirmDots();
+  if (staffConfirmEntry.length === 4) setTimeout(confirmStaffIdentity, 120);
+}
+
+function staffConfirmBack() {
+  staffConfirmEntry = staffConfirmEntry.slice(0, -1);
+  renderStaffConfirmDots();
+  const errEl = document.getElementById('staff-confirm-error');
+  if (errEl) errEl.textContent = '';
+}
+
+function renderStaffConfirmDots() {
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById(`sc-dot-${i}`);
+    if (dot) dot.classList.toggle('filled', i < staffConfirmEntry.length);
+  }
+}
+
+async function confirmStaffIdentity() {
+  const hash = await hashPin(staffConfirmEntry);
+  staffConfirmEntry = '';
+  renderStaffConfirmDots();
+
+  try {
+    const doc = await db.collection('vendors').doc(CONFIG.vendor.id)
+                        .collection('staff').doc(loggedInStaffId).get();
+    if (doc.exists && doc.data().pinHash === hash) {
+      await loadStaffList();
+      showStaffScreen('staff-list-screen');
+    } else {
+      const errEl = document.getElementById('staff-confirm-error');
+      if (errEl) errEl.textContent = 'Incorrect PIN — try again';
+      const dots = document.querySelector('.sc-dots');
+      if (dots) { dots.classList.remove('shake'); void dots.offsetWidth; dots.classList.add('shake'); }
+    }
+  } catch (err) {
+    console.error('[Stalliq] Staff confirm error:', err);
+    const errEl = document.getElementById('staff-confirm-error');
+    if (errEl) errEl.textContent = 'Connection error — try again';
+  }
+}
+
+// ── Staff list ───────────────────────────────────────────────────────────────
+
+async function loadStaffList() {
+  const snapshot = await db.collection('vendors').doc(CONFIG.vendor.id)
+                            .collection('staff')
+                            .where('active', '==', true)
+                            .get();
+
+  // Sort by createdAt client-side (avoids needing a composite Firestore index)
+  const staffDocs = [];
+  snapshot.forEach(doc => staffDocs.push({ id: doc.id, ...doc.data() }));
+  staffDocs.sort((a, b) => {
+    const aT = a.createdAt?.toDate?.()?.getTime() || 0;
+    const bT = b.createdAt?.toDate?.()?.getTime() || 0;
+    return aT - bT;
+  });
+
+  const listEl = document.getElementById('staff-list');
+  if (!listEl) return;
+
+  if (staffDocs.length === 0) {
+    listEl.innerHTML = `<div class="staff-empty">No staff members yet — add one below.</div>`;
+    return;
+  }
+
+  listEl.innerHTML = staffDocs.map(d => {
+    const isSelf = d.id === loggedInStaffId;
+    const safeName = d.name.replace(/'/g, "\\'");
+    return `
+      <div class="staff-row${isSelf ? ' staff-row-self' : ''}">
+        <div class="staff-row-name">
+          ${d.name}
+          ${isSelf ? '<span class="staff-you-badge">You</span>' : ''}
+        </div>
+        <div class="staff-row-actions">
+          <button class="staff-action-btn" onclick="openEditStaff('${d.id}', '${safeName}')">Edit</button>
+          ${!isSelf
+            ? `<button class="staff-action-btn danger" onclick="deactivateStaff('${d.id}', '${safeName}')">Remove</button>`
+            : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── Deactivate staff ─────────────────────────────────────────────────────────
+
+async function deactivateStaff(staffId, name) {
+  if (!confirm(`Remove ${name} from the kitchen? They will no longer be able to log in.`)) return;
+  try {
+    await db.collection('vendors').doc(CONFIG.vendor.id)
+            .collection('staff').doc(staffId)
+            .update({ active: false });
+    showToast(`${name} removed.`);
+    await loadStaffList();
+  } catch (err) {
+    console.error('[Stalliq] Deactivate staff error:', err);
+    showToast('Error — please try again');
+  }
+}
+
+// ── Add staff ────────────────────────────────────────────────────────────────
+
+function openAddStaff() {
+  ['add-staff-name', 'add-staff-pin', 'add-staff-pin2'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const errEl = document.getElementById('add-staff-error');
+  if (errEl) errEl.textContent = '';
+  showStaffScreen('staff-add-screen');
+  setTimeout(() => { const el = document.getElementById('add-staff-name'); if (el) el.focus(); }, 200);
+}
+
+async function submitAddStaff() {
+  const nameEl = document.getElementById('add-staff-name');
+  const pinEl  = document.getElementById('add-staff-pin');
+  const pin2El = document.getElementById('add-staff-pin2');
+  const errEl  = document.getElementById('add-staff-error');
+  const btn    = document.getElementById('add-staff-btn');
+
+  const name = (nameEl?.value || '').trim();
+  const pin  = (pinEl?.value  || '').trim();
+  const pin2 = (pin2El?.value || '').trim();
+
+  if (!name)                   { errEl.textContent = 'Name is required.'; return; }
+  if (!/^\d{4}$/.test(pin))    { errEl.textContent = 'PIN must be exactly 4 digits.'; return; }
+  if (pin !== pin2)             { errEl.textContent = 'PINs do not match.'; return; }
+  errEl.textContent = '';
+  if (btn) { btn.textContent = 'Adding…'; btn.disabled = true; }
+
+  try {
+    const pinHash = await hashPin(pin);
+    await db.collection('vendors').doc(CONFIG.vendor.id)
+            .collection('staff').add({
+              name,
+              pinHash,
+              active:    true,
+              createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            });
+    showToast(`${name} added!`);
+    await loadStaffList();
+    showStaffScreen('staff-list-screen');
+  } catch (err) {
+    console.error('[Stalliq] Add staff error:', err);
+    if (errEl) errEl.textContent = 'Error — please try again';
+  } finally {
+    if (btn) { btn.textContent = 'Add Staff Member'; btn.disabled = false; }
+  }
+}
+
+// ── Edit staff (rename / change PIN) ─────────────────────────────────────────
+
+function openEditStaff(staffId, name) {
+  editingStaffId = staffId;
+  const nameEl = document.getElementById('edit-staff-name');
+  if (nameEl) nameEl.value = name;
+  ['edit-staff-pin', 'edit-staff-pin2'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const errEl = document.getElementById('edit-staff-error');
+  if (errEl) errEl.textContent = '';
+  showStaffScreen('staff-edit-screen');
+}
+
+async function submitEditStaff() {
+  const nameEl = document.getElementById('edit-staff-name');
+  const pinEl  = document.getElementById('edit-staff-pin');
+  const pin2El = document.getElementById('edit-staff-pin2');
+  const errEl  = document.getElementById('edit-staff-error');
+  const btn    = document.getElementById('edit-staff-btn');
+
+  const name = (nameEl?.value || '').trim();
+  const pin  = (pinEl?.value  || '').trim();
+  const pin2 = (pin2El?.value || '').trim();
+
+  if (!name) { errEl.textContent = 'Name is required.'; return; }
+
+  const updates = { name };
+  if (pin) {
+    if (!/^\d{4}$/.test(pin)) { errEl.textContent = 'PIN must be exactly 4 digits.'; return; }
+    if (pin !== pin2)          { errEl.textContent = 'PINs do not match.'; return; }
+    updates.pinHash = await hashPin(pin);
+  }
+
+  errEl.textContent = '';
+  if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
+
+  try {
+    await db.collection('vendors').doc(CONFIG.vendor.id)
+            .collection('staff').doc(editingStaffId)
+            .update(updates);
+    if (editingStaffId === loggedInStaffId) loggedInStaffName = name;
+    showToast('Changes saved!');
+    await loadStaffList();
+    showStaffScreen('staff-list-screen');
+  } catch (err) {
+    console.error('[Stalliq] Edit staff error:', err);
+    if (errEl) errEl.textContent = 'Error — please try again';
+  } finally {
+    if (btn) { btn.textContent = 'Save Changes'; btn.disabled = false; }
+  }
+}
+
+
+/* ============================================================================
+   18. FORGOT PIN / OWNER RESET FLOW (Session 15)
+   ============================================================================
+   Triggered from the lock screen when all PINs are forgotten.
+   Uses Firebase Phone Auth to verify the owner's registered phone number
+   (stored at vendors/{vendorId}/ownerPhone — set manually during onboarding).
+   On success, writes/updates a staff doc at staff/owner and logs straight in.
+
+   Firestore prerequisite: vendors/{vendorId}/ownerPhone must be set to the
+   owner's phone in E.164 format (e.g. +447951050383) before this flow works.
+
+   Screens (inside #forgot-modal):
+     forgot-phone-screen   — enter owner phone number
+     forgot-code-screen    — enter 6-digit SMS code
+     forgot-newpin-screen  — choose a new 4-digit PIN
+   ============================================================================ */
+
+let forgotPhoneVerifier      = null;
+let forgotConfirmationResult = null;
+
+function openForgotPin() {
+  ['forgot-phone-input', 'forgot-code-input', 'forgot-newpin-input', 'forgot-newpin2-input']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ['forgot-phone-error', 'forgot-code-error', 'forgot-newpin-error']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.textContent = ''; });
+  showForgotScreen('forgot-phone-screen');
+  document.getElementById('forgot-modal').classList.add('show');
+}
+
+function closeForgotPin() {
+  document.getElementById('forgot-modal').classList.remove('show');
+  if (forgotPhoneVerifier) {
+    try { forgotPhoneVerifier.clear(); } catch (_) {}
+    forgotPhoneVerifier = null;
+  }
+  forgotConfirmationResult = null;
+}
+
+function showForgotScreen(screenId) {
+  ['forgot-phone-screen', 'forgot-code-screen', 'forgot-newpin-screen']
+    .forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('hidden', id !== screenId);
+    });
+}
+
+/** Normalises a UK phone number to E.164 (+44...). */
+function toE164UK(raw) {
+  const digits = raw.replace(/\D/g, '');
+  if (digits.startsWith('44'))  return '+' + digits;
+  if (digits.startsWith('0'))   return '+44' + digits.slice(1);
+  if (digits.length === 10)     return '+44' + digits;
+  return raw;
+}
+
+async function submitForgotPhone() {
+  const phoneInput = document.getElementById('forgot-phone-input');
+  const errEl      = document.getElementById('forgot-phone-error');
+  const btn        = document.getElementById('forgot-phone-btn');
+  const phone      = toE164UK((phoneInput?.value || '').trim());
+
+  if (!phone || phone.length < 11) { errEl.textContent = 'Please enter a valid phone number.'; return; }
+  errEl.textContent = '';
+  if (btn) { btn.textContent = 'Checking…'; btn.disabled = true; }
+
+  try {
+    // Verify the entered number matches the stored owner phone
+    const vendorDoc  = await db.collection('vendors').doc(CONFIG.vendor.id).get();
+    const ownerPhone = vendorDoc.exists ? toE164UK(String(vendorDoc.data().ownerPhone || '')) : null;
+
+    if (!ownerPhone || ownerPhone !== phone) {
+      errEl.textContent = 'This number is not registered as the owner phone. Contact your administrator.';
+      if (btn) { btn.textContent = 'Send Code'; btn.disabled = false; }
+      return;
+    }
+
+    // Set up invisible reCAPTCHA and send SMS
+    if (!forgotPhoneVerifier) {
+      forgotPhoneVerifier = new firebase.auth.RecaptchaVerifier('forgot-recaptcha', {
+        size: 'invisible',
+        callback: () => {},
+      });
+    }
+
+    forgotConfirmationResult = await firebase.auth().signInWithPhoneNumber(phone, forgotPhoneVerifier);
+    showForgotScreen('forgot-code-screen');
+    setTimeout(() => { const el = document.getElementById('forgot-code-input'); if (el) el.focus(); }, 200);
+  } catch (err) {
+    console.error('[Stalliq] Forgot PIN — phone submit error:', err);
+    let msg = 'Error sending SMS — please try again.';
+    if (err.code === 'auth/too-many-requests')    msg = 'Too many requests — please try again later.';
+    if (err.code === 'auth/invalid-phone-number') msg = 'Invalid phone number format.';
+    errEl.textContent = msg;
+    if (forgotPhoneVerifier) { try { forgotPhoneVerifier.clear(); } catch (_) {} forgotPhoneVerifier = null; }
+  } finally {
+    if (btn) { btn.textContent = 'Send Code'; btn.disabled = false; }
+  }
+}
+
+async function submitForgotCode() {
+  const codeEl = document.getElementById('forgot-code-input');
+  const errEl  = document.getElementById('forgot-code-error');
+  const btn    = document.getElementById('forgot-code-btn');
+  const code   = (codeEl?.value || '').trim();
+
+  if (!code) { errEl.textContent = 'Please enter the 6-digit code.'; return; }
+  errEl.textContent = '';
+  if (btn) { btn.textContent = 'Verifying…'; btn.disabled = true; }
+
+  try {
+    await forgotConfirmationResult.confirm(code);
+    showForgotScreen('forgot-newpin-screen');
+    setTimeout(() => { const el = document.getElementById('forgot-newpin-input'); if (el) el.focus(); }, 200);
+  } catch (err) {
+    console.error('[Stalliq] Forgot PIN — code confirm error:', err);
+    let msg = 'Invalid code — please try again.';
+    if (err.code === 'auth/code-expired') msg = 'Code has expired — go back and request a new one.';
+    errEl.textContent = msg;
+  } finally {
+    if (btn) { btn.textContent = 'Verify Code'; btn.disabled = false; }
+  }
+}
+
+async function submitNewOwnerPin() {
+  const pinEl  = document.getElementById('forgot-newpin-input');
+  const pin2El = document.getElementById('forgot-newpin2-input');
+  const errEl  = document.getElementById('forgot-newpin-error');
+  const btn    = document.getElementById('forgot-newpin-btn');
+
+  const pin  = (pinEl?.value  || '').trim();
+  const pin2 = (pin2El?.value || '').trim();
+
+  if (!/^\d{4}$/.test(pin)) { errEl.textContent = 'PIN must be exactly 4 digits.'; return; }
+  if (pin !== pin2)          { errEl.textContent = 'PINs do not match.'; return; }
+  errEl.textContent = '';
+  if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
+
+  try {
+    const pinHash = await hashPin(pin);
+    // Upsert the owner staff document (fixed ID 'owner' for easy identification)
+    await db.collection('vendors').doc(CONFIG.vendor.id)
+            .collection('staff').doc('owner')
+            .set({
+              name:      'Owner',
+              pinHash,
+              active:    true,
+              createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            }, { merge: true });
+
+    closeForgotPin();
+
+    // Log straight in as Owner
+    failedPinAttempts = 0;
+    pinLockedUntil    = null;
+    sessionStorage.removeItem('pinFailCount');
+    sessionStorage.removeItem('pinLockUntil');
+    loggedInStaffId   = 'owner';
+    loggedInStaffName = 'Owner';
+
+    document.getElementById('pin-overlay').classList.add('hidden');
+    const dashboard = document.getElementById('k-dashboard');
+    if (dashboard) dashboard.style.display = 'flex';
+    startDashboard();
+    showToast('PIN reset — welcome back!');
+  } catch (err) {
+    console.error('[Stalliq] Set new owner PIN error:', err);
+    if (errEl) errEl.textContent = 'Error saving PIN — please try again.';
+  } finally {
+    if (btn) { btn.textContent = 'Set New PIN'; btn.disabled = false; }
   }
 }

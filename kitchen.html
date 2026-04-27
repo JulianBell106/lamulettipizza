@@ -655,6 +655,150 @@
     .k-walkin-total { font-size: 16px; font-weight: 600; color: var(--gold); text-align: right; padding: 6px 0 2px; min-height: 28px; }
     .k-walkin-nudge { font-size: 12px; color: var(--s-urgent); min-height: 16px; margin-top: -8px; margin-bottom: 8px; }
 
+    /* ============================================================
+       TOAST NOTIFICATION (Session 15)
+    ============================================================ */
+    .k-toast {
+      position: fixed;
+      bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: rgba(39,174,96,0.92);
+      color: #fff;
+      font-size: 14px; font-weight: 600;
+      padding: 12px 24px;
+      border-radius: 100px;
+      opacity: 0;
+      transition: opacity 0.25s, transform 0.25s;
+      z-index: 2000;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    .k-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ============================================================
+       SETTINGS BUTTON (Session 15)
+    ============================================================ */
+    .k-settings-btn {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.70);
+      font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s, color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .k-settings-btn:active { background: rgba(255,255,255,0.14); color: var(--cream); }
+
+    /* ============================================================
+       FORGOT PIN LINK
+    ============================================================ */
+    .pin-forgot-link {
+      font-size: 12px;
+      color: var(--ash);
+      background: none;
+      border: none;
+      text-decoration: underline;
+      cursor: pointer;
+      padding: 4px 0;
+      letter-spacing: 0.3px;
+      margin-top: -12px;
+    }
+    .pin-forgot-link:hover { color: var(--cream); }
+
+    /* ============================================================
+       STAFF MANAGEMENT MODAL (Session 15)
+    ============================================================ */
+    .k-modal-staff {
+      max-height: 88vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 20px;
+    }
+
+    /* Settings re-auth mini PIN keypad */
+    .sc-dots { display: flex; gap: 14px; justify-content: center; margin: 16px 0 6px; }
+    .sc-dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      border: 2px solid var(--ash);
+      transition: background 0.12s, border-color 0.12s, transform 0.12s;
+    }
+    .sc-dot.filled { background: var(--gold); border-color: var(--gold); transform: scale(1.1); }
+
+    .sc-keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 60px);
+      gap: 10px;
+      justify-content: center;
+      margin: 10px 0 14px;
+    }
+    .sc-key {
+      width: 60px; height: 60px; border-radius: 50%;
+      border: 1px solid rgba(253,246,236,0.12);
+      background: rgba(253,246,236,0.04);
+      color: var(--cream); font-size: 18px; font-weight: 500;
+      display: flex; align-items: center; justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.1s;
+    }
+    .sc-key:active { background: rgba(212,160,67,0.18); }
+    .sc-key.back   { border-color: transparent; background: transparent; color: var(--ash); }
+    .sc-key.zero   { grid-column: 2; }
+    .sc-error { font-size: 12px; color: var(--s-urgent); min-height: 16px; text-align: center; margin-bottom: 8px; }
+
+    /* Staff list */
+    .staff-list { display: flex; flex-direction: column; gap: 10px; margin: 12px 0; }
+    .staff-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 12px 14px; border-radius: 10px;
+      border: 1px solid rgba(253,246,236,0.08);
+      background: rgba(253,246,236,0.03);
+    }
+    .staff-row-self { border-color: rgba(212,160,67,0.25); background: rgba(212,160,67,0.05); }
+    .staff-row-name { font-size: 15px; color: var(--cream); font-weight: 500; flex: 1; }
+    .staff-you-badge {
+      display: inline-block; font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;
+      color: var(--gold); border: 1px solid rgba(212,160,67,0.4); border-radius: 4px;
+      padding: 1px 5px; margin-left: 6px; vertical-align: middle;
+    }
+    .staff-row-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .staff-action-btn {
+      padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;
+      border: 1px solid rgba(253,246,236,0.15);
+      background: rgba(253,246,236,0.06); color: var(--cream);
+      -webkit-tap-highlight-color: transparent;
+      transition: opacity 0.12s;
+    }
+    .staff-action-btn:active { opacity: 0.75; }
+    .staff-action-btn.danger { color: var(--s-urgent); border-color: rgba(231,76,60,0.3); background: rgba(231,76,60,0.08); }
+    .staff-empty { font-size: 13px; color: var(--ash); text-align: center; padding: 20px 0; }
+
+    /* Staff form fields */
+    .staff-form-field { margin-bottom: 14px; }
+    .staff-form-label {
+      display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 2px;
+      color: var(--ash); margin-bottom: 6px;
+    }
+    .staff-form-hint { font-size: 11px; color: var(--ash); opacity: 0.7; text-transform: none; letter-spacing: 0; }
+    .staff-form-input {
+      width: 100%; padding: 12px 14px;
+      border-radius: 9px; border: 1px solid rgba(253,246,236,0.13);
+      background: rgba(253,246,236,0.04); color: var(--cream);
+      font-size: 15px; font-family: inherit;
+      transition: border-color 0.15s;
+    }
+    .staff-form-input::placeholder { color: var(--ash); }
+    .staff-form-input:focus { outline: none; border-color: var(--gold); }
+    .staff-form-error { font-size: 12px; color: var(--s-urgent); min-height: 16px; margin-top: -8px; margin-bottom: 10px; }
+
+    /* ============================================================
+       FORGOT PIN MODAL (Session 15)
+    ============================================================ */
+    .k-modal-forgot { max-height: 85vh; overflow-y: auto; }
+    .forgot-intro { font-size: 13px; color: rgba(253,246,236,0.65); line-height: 1.55; margin-bottom: 20px; }
+
   </style>
 </head>
 <body>
@@ -689,6 +833,7 @@
       <button class="pin-key zero" onclick="pinPress('0')">0</button>
       <div></div>
     </div>
+    <button class="pin-forgot-link" onclick="openForgotPin()">Forgot all PINs?</button>
   </div>
 
 
@@ -707,6 +852,8 @@
         <button class="k-new-order-btn" onclick="openWalkinModal()">➕ New Order</button>
         <!-- Session 14 — live location broadcast toggle -->
         <button class="k-broadcast-btn" id="k-broadcast-btn" onclick="toggleBroadcast()">📍 Broadcast</button>
+        <!-- Session 15 — staff management -->
+        <button class="k-settings-btn" id="k-settings-btn" onclick="openSettingsPanel()" title="Staff management">⚙️</button>
         <button class="k-status-btn open" id="k-status-btn" onclick="openKitchenModal()">
           🟢 Open
         </button>
@@ -843,6 +990,182 @@
         <button class="k-modal-btn secondary" onclick="closeWalkinModal()">Cancel</button>
         <button class="k-modal-btn primary" id="walkin-submit-btn" onclick="submitWalkinOrder()">Place Order →</button>
       </div>
+    </div>
+  </div>
+
+
+  <!-- Toast notification (Session 15) -->
+  <div id="k-toast" class="k-toast"></div>
+
+
+  <!-- ============================================================
+       STAFF MANAGEMENT MODAL (Session 15)
+  ============================================================ -->
+  <div class="k-modal-overlay" id="staff-modal">
+    <div class="k-modal k-modal-staff">
+
+      <!-- Screen 1: Confirm identity before allowing changes -->
+      <div id="staff-confirm-screen">
+        <div class="k-modal-title">Staff Management</div>
+        <div class="k-modal-sub">Confirm your PIN to continue.</div>
+        <div class="sc-dots">
+          <div class="sc-dot" id="sc-dot-0"></div>
+          <div class="sc-dot" id="sc-dot-1"></div>
+          <div class="sc-dot" id="sc-dot-2"></div>
+          <div class="sc-dot" id="sc-dot-3"></div>
+        </div>
+        <div class="sc-error" id="staff-confirm-error"></div>
+        <div class="sc-keypad">
+          <button class="sc-key" onclick="staffConfirmPress('1')">1</button>
+          <button class="sc-key" onclick="staffConfirmPress('2')">2</button>
+          <button class="sc-key" onclick="staffConfirmPress('3')">3</button>
+          <button class="sc-key" onclick="staffConfirmPress('4')">4</button>
+          <button class="sc-key" onclick="staffConfirmPress('5')">5</button>
+          <button class="sc-key" onclick="staffConfirmPress('6')">6</button>
+          <button class="sc-key" onclick="staffConfirmPress('7')">7</button>
+          <button class="sc-key" onclick="staffConfirmPress('8')">8</button>
+          <button class="sc-key" onclick="staffConfirmPress('9')">9</button>
+          <button class="sc-key back" onclick="staffConfirmBack()">⌫</button>
+          <button class="sc-key zero" onclick="staffConfirmPress('0')">0</button>
+          <div></div>
+        </div>
+        <div class="k-modal-actions">
+          <button class="k-modal-btn secondary" onclick="closeSettingsPanel()">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Screen 2: Staff list -->
+      <div id="staff-list-screen" class="hidden">
+        <div class="k-modal-title">Staff Members</div>
+        <div class="k-modal-sub">Everyone who can access the kitchen dashboard.</div>
+        <div class="staff-list" id="staff-list"></div>
+        <div class="k-modal-actions">
+          <button class="k-modal-btn secondary" onclick="closeSettingsPanel()">Close</button>
+          <button class="k-modal-btn primary" onclick="openAddStaff()">+ Add Staff</button>
+        </div>
+      </div>
+
+      <!-- Screen 3: Add new staff member -->
+      <div id="staff-add-screen" class="hidden">
+        <div class="k-modal-title">Add Staff Member</div>
+        <div class="k-modal-sub">They'll use their 4-digit PIN to log in to the kitchen.</div>
+        <div class="staff-form-field">
+          <label class="staff-form-label" for="add-staff-name">Name *</label>
+          <input type="text" class="staff-form-input" id="add-staff-name"
+                 placeholder="e.g. Marco"
+                 autocomplete="off" autocorrect="off" spellcheck="false">
+        </div>
+        <div class="staff-form-field">
+          <label class="staff-form-label" for="add-staff-pin">PIN *</label>
+          <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4"
+                 class="staff-form-input" id="add-staff-pin" placeholder="4 digits">
+        </div>
+        <div class="staff-form-field">
+          <label class="staff-form-label" for="add-staff-pin2">Confirm PIN *</label>
+          <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4"
+                 class="staff-form-input" id="add-staff-pin2" placeholder="Repeat PIN">
+        </div>
+        <div class="staff-form-error" id="add-staff-error"></div>
+        <div class="k-modal-actions">
+          <button class="k-modal-btn secondary" onclick="showStaffScreen('staff-list-screen')">Back</button>
+          <button class="k-modal-btn primary" id="add-staff-btn" onclick="submitAddStaff()">Add Staff Member</button>
+        </div>
+      </div>
+
+      <!-- Screen 4: Edit staff (rename / change PIN) -->
+      <div id="staff-edit-screen" class="hidden">
+        <div class="k-modal-title">Edit Staff Member</div>
+        <div class="k-modal-sub">Leave the PIN fields blank to keep the current PIN.</div>
+        <div class="staff-form-field">
+          <label class="staff-form-label" for="edit-staff-name">Name *</label>
+          <input type="text" class="staff-form-input" id="edit-staff-name"
+                 placeholder="Name"
+                 autocomplete="off" autocorrect="off" spellcheck="false">
+        </div>
+        <div class="staff-form-field">
+          <label class="staff-form-label" for="edit-staff-pin">
+            New PIN <span class="staff-form-hint">— optional</span>
+          </label>
+          <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4"
+                 class="staff-form-input" id="edit-staff-pin" placeholder="Leave blank to keep existing PIN">
+        </div>
+        <div class="staff-form-field">
+          <label class="staff-form-label" for="edit-staff-pin2">
+            Confirm New PIN <span class="staff-form-hint">— optional</span>
+          </label>
+          <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4"
+                 class="staff-form-input" id="edit-staff-pin2" placeholder="Repeat new PIN">
+        </div>
+        <div class="staff-form-error" id="edit-staff-error"></div>
+        <div class="k-modal-actions">
+          <button class="k-modal-btn secondary" onclick="showStaffScreen('staff-list-screen')">Back</button>
+          <button class="k-modal-btn primary" id="edit-staff-btn" onclick="submitEditStaff()">Save Changes</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ============================================================
+       FORGOT PIN MODAL (Session 15)
+  ============================================================ -->
+  <div class="k-modal-overlay" id="forgot-modal">
+    <div class="k-modal k-modal-forgot">
+
+      <!-- Screen 1: Enter owner phone number -->
+      <div id="forgot-phone-screen">
+        <div class="k-modal-title">Reset Kitchen Access</div>
+        <p class="forgot-intro">Enter the registered owner phone number. We'll send a one-time verification code via SMS.</p>
+        <div class="staff-form-field">
+          <label class="staff-form-label" for="forgot-phone-input">Owner phone number</label>
+          <input type="tel" class="staff-form-input" id="forgot-phone-input"
+                 placeholder="07700 900000" autocomplete="tel">
+        </div>
+        <div class="staff-form-error" id="forgot-phone-error"></div>
+        <div id="forgot-recaptcha"></div>
+        <div class="k-modal-actions">
+          <button class="k-modal-btn secondary" onclick="closeForgotPin()">Cancel</button>
+          <button class="k-modal-btn primary" id="forgot-phone-btn" onclick="submitForgotPhone()">Send Code</button>
+        </div>
+      </div>
+
+      <!-- Screen 2: Enter SMS verification code -->
+      <div id="forgot-code-screen" class="hidden">
+        <div class="k-modal-title">Enter Verification Code</div>
+        <p class="forgot-intro">Enter the 6-digit code we sent to your phone.</p>
+        <div class="staff-form-field">
+          <label class="staff-form-label" for="forgot-code-input">Verification code</label>
+          <input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="6"
+                 class="staff-form-input" id="forgot-code-input" placeholder="123456">
+        </div>
+        <div class="staff-form-error" id="forgot-code-error"></div>
+        <div class="k-modal-actions">
+          <button class="k-modal-btn secondary" onclick="showForgotScreen('forgot-phone-screen')">Back</button>
+          <button class="k-modal-btn primary" id="forgot-code-btn" onclick="submitForgotCode()">Verify Code</button>
+        </div>
+      </div>
+
+      <!-- Screen 3: Set a new PIN -->
+      <div id="forgot-newpin-screen" class="hidden">
+        <div class="k-modal-title">Set New PIN</div>
+        <p class="forgot-intro">Choose a new 4-digit PIN for the owner account.</p>
+        <div class="staff-form-field">
+          <label class="staff-form-label" for="forgot-newpin-input">New PIN</label>
+          <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4"
+                 class="staff-form-input" id="forgot-newpin-input" placeholder="4 digits">
+        </div>
+        <div class="staff-form-field">
+          <label class="staff-form-label" for="forgot-newpin2-input">Confirm new PIN</label>
+          <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4"
+                 class="staff-form-input" id="forgot-newpin2-input" placeholder="Repeat PIN">
+        </div>
+        <div class="staff-form-error" id="forgot-newpin-error"></div>
+        <div class="k-modal-actions">
+          <button class="k-modal-btn primary" id="forgot-newpin-btn" onclick="submitNewOwnerPin()">Set New PIN &amp; Log In</button>
+        </div>
+      </div>
+
     </div>
   </div>
 
