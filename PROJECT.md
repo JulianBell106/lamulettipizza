@@ -1,7 +1,8 @@
 # Stalliq — Project Bible
-> Last updated: April 2026 — Session 19 (Loyalty stamp card + functional offers ✅)
-> **Next sprint:** Session 20 — Go live with Daniele. Complete remaining go-live checklist items (ICO registration, Google Sheet protection, allergen disclaimer, Firestore TTL activation).
+> Last updated: April 2026 — Session 20 (Bug fixes: index.html restore, order submission, discount display, desktop nav)
+> **Next sprint:** Session 21 — Fix customer order detail modal discount display. Go live with Daniele.
 > **Pending (Julian):** ICO registration (ico.org.uk, ~£40/year) · Activate Firestore TTL policy (Firebase Console → Firestore → TTL → collection: `orders`, field: `deleteAt`) · Google Sheet header row protection · Allergen disclaimer in onboarding doc · **Publish updated Firestore rules** (firestore.rules — adds offerUsage sub-collection + stamp award write) · **Migrate offers sheet** to new schema (see Section 29).
+> **Known bug (Session 20):** Customer order detail modal (account page → tap a past order) does not show discount/subtotal breakdown — shows Total only. Fix in Session 21.
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -219,7 +220,7 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 16d | Mobile performance + ready beep fix | ✅ Done |
 | 17 | Pitch deck v4 — 8-slide, text-stripped, redesigned Offer | ✅ Done |
 | 18 | iOS/Android hardening, UX fixes, GDPR retention | ✅ Done |
-| 19 | Go live with Daniele | ⏳ Next |
+| 19 | Go live with Daniele | ⏳ Pending |
 
 **What gets demoed live at the meeting:**
 - Premium desktop site shown first on laptop — sets the brand tone
@@ -716,157 +717,31 @@ Fix: `playReadyBeep()` is now `async` and calls `await ctx.resume()` before sche
 
 | # | Title | Notes |
 |---|-------|-------|
-| 1 | Title | S-circle (cream oval + "S" text), dark background, Stalliq/La Muletti sub |
-| 2 | The Challenge | 3 icon cards — one punchy one-liner each (orders lost, wait time, no repeat customers) |
-| 3 | The Solution | STALLIQ hero headline + 0% commission panel vs Just Eat/Deliveroo |
-| 4 | How It Works | 4-step flow — red numbered circles, step label, one-line description, italic footer |
-| 5 | Kitchen Management | 4 features — inline icon left of title, one-line body each |
-| 6 | Customer Experience | Hero italic sub, 4 title-only lines (no body), larger phone mockup |
-| 7 | The Offer | £708 deal panel left (gold border, 12 months free, 50% off for life), ask list right (red eyebrow), founding rate footer bar |
-| 8 | Next Steps | 3 actions (demo, agree partnership, go live) + contact card (STALLIQ logo, Julian Bell, Endoo Limited) |
-
-**Brand / visual rules (all applied in v4):**
-- Palette: dark `1A0A00`, red `C4271A`, gold `D4A043`, cream `FDF6EC`, offWhite `F5F0E8`
-- Fonts: Georgia (headings), Calibri (body)
-- Gold accents on ALL light slides — red is reserved for dark slides only (How It Works circles, "WHAT WE ASK" eyebrow on Offer)
-- Title: cream OVAL + "S" text (not red/gold ovals from v1/v2)
-- Icons: gold `#D4A043`, rendered via react-icons + sharp
+| 1 | Title | S-circle (cream oval + "S" text), dark ba
 
 ---
 
-## 28. Session 18 — iOS/Android Hardening + UX Fixes (COMPLETE ✅)
+## 30. Session 20 — Bug Fixes (COMPLETE ✅)
 
-**Files changed:** `js/kitchen.js`, `js/app.js`, `index.html`
+**Files changed:** `js/app.js`, `index.html`
 
-### Auth flow retest
-Customer order placement + Firebase Phone Auth confirmed working on real device. Session 18 unblocked.
+### Bugs fixed
 
-### iOS/Android bug fixes
+| # | Bug | Fix |
+|---|-----|-----|
+| 1 | `index.html` truncated at 1655 lines — app not loading | Appended missing 135 lines from git (`sed -n '1656,1790p'`). File restored and closes with `</body></html>`. |
+| 2 | `Illegal return statement` at `app.js:3137` — page not rendering | `reorderItems` function body was duplicated outside its closing `}`. Removed the duplicate block. |
+| 3 | `addDoc() called with invalid data: Lc object` on order submission | `firebase.firestore.FieldValue.serverTimestamp()` returning an internal class instance rejected by underlying modular `addDoc()`. Replaced with `new Date()` for `createdAt` and `updatedAt` on the order doc. Firestore compat SDK auto-converts `Date` to Timestamp. |
+| 4 | Order placed confirmation screen showing no discount | `buildOrderSummaryHTML()` was called AFTER `selectedOffer = null` in both `dPlaceOrder` and `mPlaceOrder`, so `getActiveDiscount()` returned null. Moved HTML build before the state clear in both functions. |
+| 5 | Mobile bottom nav bar visible on desktop | CSS `.m-bottom-nav { display: flex }` had no desktop override. Changed base rule to `display: none` and added `@media (max-width: 767px) { display: flex }`. Also removed a duplicate `<nav class="m-bottom-nav">` that existed after `</body></html>` (browser was rendering it due to fault-tolerant HTML parsing). |
+| 6 | Null bytes in `app.js` causing `SyntaxError: Invalid or unexpected token` | Stripped with `tr -d '\0'`. Root cause: Edit tool occasionally appends null bytes when writing near end of file. |
 
-**Location broadcast permission (kitchen.js)**
-`startLocationBroadcast()` now catches Geolocation API errors and shows a descriptive toast (permission denied / position unavailable / timeout) instead of failing silently. The toggle no longer appears to do nothing if permission is blocked.
+### Recurring issue — Edit tool file truncation
+The Edit tool continues to truncate large files (app.js ~3100 lines, index.html ~1900 lines). **Established workaround:**
+1. Apply changes via Python (`subprocess` + string replace on git HEAD content) or bash heredoc
+2. Verify with `node --check` (JS) or line count + `tail` check (HTML)
+3. Never use the Edit tool directly on files >1000 lines
 
-**Kitchen order beep — iOS (kitchen.js)**
-- Shared `kitchenAudioCtx` created and unlocked synchronously in `pinPress()` (inside the user gesture) — guarantees iOS audio is unlocked at login
-- `playOrderAlert()` split into `_playOrderBeeps()` helper; handles closed context (iOS closes AudioContext after extended lock)
-- Repeating alert: `_managePendingAlert(hasPending)` starts an 8-second interval while any pending orders exist, stops when all accepted
-- `pendingAlertInterval` cleared on logout
+### Known bug — carried to Session 21
+**Customer order detail modal does not show discount.** When a customer opens a past order from their account page history, the modal shows items + Total only — no subtotal or green discount line. The kitchen detail modal (`kitchen.js`) was fixed in Session 19 and correctly shows the breakdown. The customer-side equivalent (likely `buildOrderDetailHTML` or similar in `app.js`) needs the same treatment: recalculate subtotal as `orderTotal + discount.amount`, add the discount row, show final total.
 
-**Kitchen screen lock — iOS (kitchen.js)**
-Full sequence to recover from iOS screen lock (which freezes JS regardless of wake lock):
-- `sessionStorage` persists `kitchenStaffId` / `kitchenStaffName` on login, cleared on logout
-- `visibilitychange` records `kitchenHiddenAt` on hide
-- On return: if away >60s → `location.reload()` for a guaranteed clean Firebase state
-- On reload: `onAuthStateChanged` detects saved session → auto-restores dashboard, skips PIN, shows "Welcome back" toast
-- If away <60s: incremental reconnect — `firebase.firestore().enableNetwork()` + `listenOrders()` restart
-- `_managePendingAlert()` now shows `_showAudioRestorePrompt()` banner whenever pending orders exist but AudioContext isn't running (covers post-reload case where no PIN gesture has unlocked audio)
-
-**Audio restore banner (kitchen.js)**
-Pulsing red fixed banner "🔔 New order — tap to restore sound alerts". Guaranteed iOS audio unlock via explicit tap gesture. Auto-dismissed when all pending orders accepted.
-
-**Screen Wake Lock (kitchen.js)**
-`navigator.wakeLock.request('screen')` acquired on `startDashboard()`, released on logout. Re-acquired on `visibilitychange`. Supported iOS 16.4+; silent fallback on older devices. Prevents screen sleeping during service without user pressing power button.
-
-**GPS broadcast fixes (kitchen.js)**
-- `listenBroadcastState()` now calls `pushLocation()` immediately when it detects `active: true` — covers page load, reload, and Firestore reconnect. Previously waited a full interval before the first push, causing stale maps
-- `visibilitychange` handler also does an immediate `pushLocation()` when restarting the broadcast interval after a short absence
-- Broadcast interval reduced from 10 minutes → 2 minutes
-- GPS/broadcast interval force-cleared and restarted on every `visibilitychange` (iOS may suspend setInterval silently during screen lock)
-
-**Customer ready beep — Android (app.js)**
-- `unlockAudio()` and `playReadyBeep()` both handle closed `audioCtx` (create fresh on closed)
-- Snapshot handlers check `document.visibilityState` before setting `firedReadyBeep = true` — if backgrounded, flag stays unset so beep fires on return
-- `visibilitychange` listener scans `orderCache` and fires missed beeps on return
-- Green pulsing banner "🟢 Your order is ready — tap here" shown when returning with a ready order — guaranteed audio unlock + visual fallback. Dismissed on tap or when order collected.
-
-### UX improvements
-
-**Account order history — live update (app.js)**
-When kitchen marks order as Collected, order now appears in History immediately without page refresh. `_prependToHistory(order)` inserts at top of history list and updates `historyAllOrders`.
-
-**Show less history (app.js)**
-Expanded "Show N more" list now has a "Show less" button to collapse back to 3. Extracted `_renderHistoryList(showAll)` helper used by both `showMoreHistory()` and new `showLessHistory()`. `historyAllOrders` persists full list for accurate re-render either way.
-
-**Empty basket button (index.html)**
-Ghost-style "Clear basket" button added below "Place Order" on mobile basket page. Wires to existing `clearBasket()`.
-
-### GDPR — data retention (app.js, kitchen.js)
-`deleteAt` field (90 days from `createdAt`) added to every order document — both customer-placed and walk-in. **Julian still needs to activate the TTL policy in Firebase Console:** Firestore → TTL → Add policy → Collection: `orders`, Field: `deleteAt`. This is a one-time console action that switches on automatic deletion.
-
----
-
-## 24. Working Rhythm
-
-**Start:** "New session — ignore the project file attachment, read the live PROJECT.md from GitHub instead: https://raw.githubusercontent.com/JulianBell106/lamulettipizza/refs/heads/main/PROJECT.md — today we're working on [task]"
-
-**End:** "Update PROJECT.md" → download → copy to repo → commit → push
-
-**Always work inside the La Muletti Claude Project.**
-**One session = one focused task.**
-**For large files: use str_replace diffs, not full file output.**
-
----
-
-## 29. Session 19 — Loyalty Stamp Card + Functional Offers (COMPLETE ✅)
-
-**Files changed:** `js/app.js`, `index.html`, `firestore.rules`
-
-### What was built
-
-**Loyalty stamp card (fully functional):**
-- Stamp count stored in `users/{uid}.stampCount` in Firestore
-- 1 stamp awarded per collected order — guarded by `orders/{orderId}.stampsAwarded: true` flag (idempotent, no double-awarding)
-- Stamp count loaded from Firestore on account page open, re-renders stamp grid live
-- At checkout: if stamps ≥ required, loyalty reward auto-applies — cheapest item in basket becomes free
-- On successful order with loyalty: stamp count resets to 0 in Firestore
-- Stamp card subtitle driven by `loyaltyConfig.stampsRequired` from sheet (no more hardcoded "Buy 9...")
-
-**Functional offers:**
-- Offer selection UI in both mobile basket and desktop basket sidebar
-- Available offers filtered by: date range (start/end), active flag, per-customer `max_uses`
-- Per-customer usage stored in `users/{uid}/offerUsage/{offerId}.count`
-- Only 1 offer per order; no stacking with loyalty (loyalty takes priority, hides offers)
-- Offer usage loaded on account page open, cached in `userOfferUsage` map
-- After order with offer: usage incremented in Firestore and local cache
-- Account page shows offers with Available / Used / Expired badges driven by real state
-
-**Discount at checkout:**
-- `getLoyaltyDiscount()` — cheapest item, returns null if not enough stamps
-- `getOfferDiscount()` — fixed £ or % off based on selected offer
-- `getActiveDiscount()` — loyalty takes priority, no stacking
-- `basketFinalTotal()` — total after discount, never negative
-- `discount` field stored on order doc: `{ type, description, amount, offerId? }`
-- `orderTotal` on order doc is the discounted total (what customer pays)
-
-### New sheet format (offers sheet)
-
-Replace the existing sheet with these columns (order-independent, matched by header name):
-
-| type | id | title | description | discount_type | discount_value | stamps_required | reward_type | max_uses | start_date | end_date | active |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-
-**type** = `loyalty` or `offer`
-**discount_type** = `fixed` (£) or `percent` (%)
-**max_uses** = 0 or blank = unlimited; 1 = once per customer; etc.
-**start_date / end_date** = `YYYY-MM-DD` format, or blank = always active
-**active** = `TRUE` / `FALSE`
-
-Example rows:
-```
-loyalty,loyalty_1,La Muletti Loyalty,Collect 8 stamps get your next pizza free,,,8,free_item,,,, TRUE
-offer,welcome10,Welcome offer,£2 off your first order,fixed,2,,,1,,,TRUE
-offer,july_promo,July special,15% off all weekend,percent,15,,,,,2025-07-06,TRUE
-```
-
-### Firestore rule changes
-
-Two additions to `firestore.rules` — must re-publish to Firebase Console:
-1. `users/{uid}/offerUsage/{offerId}` sub-collection — owner read/write
-2. `orders/{orderId}` customer narrow update — allows setting `stampsAwarded: true` only
-
-### Design decisions
-- **No stacking** — loyalty auto-applies and hides offer picker; offer applies only if no loyalty reward
-- **Cheapest item free** — loyalty reward = cheapest item in basket (vendor-friendly)
-- **Per-customer max_uses** — not global; each customer gets their own usage counter
-- **Stamp on collected** — stamp awarded when kitchen marks order as Collected, not at checkout
-- **`reward_type` field** — currently always `free_item`; column left in schema for future `fixed_discount` support without a rebuild
