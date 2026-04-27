@@ -41,7 +41,6 @@ let broadcastIntervalId = null;
 // Audio state — shared AudioContext unlocked on PIN entry (iOS requires gesture)
 let kitchenAudioCtx      = null;
 let pendingAlertInterval = null;   // repeating beep while pending orders exist
-let pendingBeepOnTouch   = false;  // true when a beep is waiting for the next touch gesture
 
 // Screen Wake Lock — keeps iPad/iOS screen on during a kitchen session
 let wakeLockSentinel = null;
@@ -426,7 +425,6 @@ function _showAudioRestorePrompt() {
 function _dismissAudioRestorePrompt() {
   const el = document.getElementById('k-audio-restore');
   if (el) el.remove();
-  pendingBeepOnTouch = false;
 }
 
 
