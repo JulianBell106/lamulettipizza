@@ -793,11 +793,21 @@
     .staff-form-input:focus { outline: none; border-color: var(--gold); }
     .staff-form-error { font-size: 12px; color: var(--s-urgent); min-height: 16px; margin-top: -8px; margin-bottom: 10px; }
 
+    /* Global close footer — always at the bottom of the staff modal */
+    .staff-modal-footer {
+      margin-top: 20px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(253,246,236,0.08);
+    }
+
     /* ============================================================
        FORGOT PIN MODAL (Session 15)
     ============================================================ */
     /* Must sit above the PIN overlay (z-index 1000) since it's launched from the lock screen */
     #forgot-modal { z-index: 1100; }
+
+    /* Hidden utility — used to show/hide modal screens */
+    .hidden { display: none !important; }
     .k-modal-forgot { max-height: 85vh; overflow-y: auto; }
     .forgot-intro { font-size: 13px; color: rgba(253,246,236,0.65); line-height: 1.55; margin-bottom: 20px; }
 
@@ -1006,48 +1016,17 @@
   <div class="k-modal-overlay" id="staff-modal">
     <div class="k-modal k-modal-staff">
 
-      <!-- Screen 1: Confirm identity before allowing changes -->
-      <div id="staff-confirm-screen">
-        <div class="k-modal-title">Staff Management</div>
-        <div class="k-modal-sub">Confirm your PIN to continue.</div>
-        <div class="sc-dots">
-          <div class="sc-dot" id="sc-dot-0"></div>
-          <div class="sc-dot" id="sc-dot-1"></div>
-          <div class="sc-dot" id="sc-dot-2"></div>
-          <div class="sc-dot" id="sc-dot-3"></div>
-        </div>
-        <div class="sc-error" id="staff-confirm-error"></div>
-        <div class="sc-keypad">
-          <button class="sc-key" onclick="staffConfirmPress('1')">1</button>
-          <button class="sc-key" onclick="staffConfirmPress('2')">2</button>
-          <button class="sc-key" onclick="staffConfirmPress('3')">3</button>
-          <button class="sc-key" onclick="staffConfirmPress('4')">4</button>
-          <button class="sc-key" onclick="staffConfirmPress('5')">5</button>
-          <button class="sc-key" onclick="staffConfirmPress('6')">6</button>
-          <button class="sc-key" onclick="staffConfirmPress('7')">7</button>
-          <button class="sc-key" onclick="staffConfirmPress('8')">8</button>
-          <button class="sc-key" onclick="staffConfirmPress('9')">9</button>
-          <button class="sc-key back" onclick="staffConfirmBack()">⌫</button>
-          <button class="sc-key zero" onclick="staffConfirmPress('0')">0</button>
-          <div></div>
-        </div>
-        <div class="k-modal-actions">
-          <button class="k-modal-btn secondary" onclick="closeSettingsPanel()">Cancel</button>
-        </div>
-      </div>
-
-      <!-- Screen 2: Staff list -->
-      <div id="staff-list-screen" class="hidden">
+      <!-- Screen 1: Staff list -->
+      <div id="staff-list-screen">
         <div class="k-modal-title">Staff Members</div>
         <div class="k-modal-sub">Everyone who can access the kitchen dashboard.</div>
         <div class="staff-list" id="staff-list"></div>
-        <div class="k-modal-actions">
-          <button class="k-modal-btn secondary" onclick="closeSettingsPanel()">Close</button>
-          <button class="k-modal-btn primary" onclick="openAddStaff()">+ Add Staff</button>
+        <div class="k-modal-actions" style="margin-top:4px;">
+          <button class="k-modal-btn primary" onclick="openAddStaff()">+ Add Staff Member</button>
         </div>
       </div>
 
-      <!-- Screen 3: Add new staff member -->
+      <!-- Screen 2: Add new staff member -->
       <div id="staff-add-screen" class="hidden">
         <div class="k-modal-title">Add Staff Member</div>
         <div class="k-modal-sub">They'll use their 4-digit PIN to log in to the kitchen.</div>
@@ -1069,12 +1048,12 @@
         </div>
         <div class="staff-form-error" id="add-staff-error"></div>
         <div class="k-modal-actions">
-          <button class="k-modal-btn secondary" onclick="showStaffScreen('staff-list-screen')">Back</button>
-          <button class="k-modal-btn primary" id="add-staff-btn" onclick="submitAddStaff()">Add Staff Member</button>
+          <button class="k-modal-btn secondary" onclick="showStaffScreen('staff-list-screen')">← Back</button>
+          <button class="k-modal-btn primary" id="add-staff-btn" onclick="submitAddStaff()">Save</button>
         </div>
       </div>
 
-      <!-- Screen 4: Edit staff (rename / change PIN) -->
+      <!-- Screen 3: Edit staff (rename / change PIN) -->
       <div id="staff-edit-screen" class="hidden">
         <div class="k-modal-title">Edit Staff Member</div>
         <div class="k-modal-sub">Leave the PIN fields blank to keep the current PIN.</div>
@@ -1100,9 +1079,14 @@
         </div>
         <div class="staff-form-error" id="edit-staff-error"></div>
         <div class="k-modal-actions">
-          <button class="k-modal-btn secondary" onclick="showStaffScreen('staff-list-screen')">Back</button>
+          <button class="k-modal-btn secondary" onclick="showStaffScreen('staff-list-screen')">← Back</button>
           <button class="k-modal-btn primary" id="edit-staff-btn" onclick="submitEditStaff()">Save Changes</button>
         </div>
+      </div>
+
+      <!-- Global footer — always visible -->
+      <div class="staff-modal-footer">
+        <button class="k-modal-btn secondary" onclick="closeSettingsPanel()">Close</button>
       </div>
 
     </div>

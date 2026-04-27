@@ -1155,13 +1155,10 @@ function showToast(message, duration = 2500) {
 
 // ── Settings panel open / close ──────────────────────────────────────────────
 
-function openSettingsPanel() {
-  staffConfirmEntry = '';
-  renderStaffConfirmDots();
-  const errEl = document.getElementById('staff-confirm-error');
-  if (errEl) errEl.textContent = '';
-  showStaffScreen('staff-confirm-screen');
+async function openSettingsPanel() {
+  showStaffScreen('staff-list-screen');
   document.getElementById('staff-modal').classList.add('show');
+  await loadStaffList();
 }
 
 function closeSettingsPanel() {
@@ -1173,7 +1170,7 @@ function closeSettingsPanel() {
 // ── Screen switcher ──────────────────────────────────────────────────────────
 
 function showStaffScreen(screenId) {
-  ['staff-confirm-screen', 'staff-list-screen', 'staff-add-screen', 'staff-edit-screen']
+  ['staff-list-screen', 'staff-add-screen', 'staff-edit-screen']
     .forEach(id => {
       const el = document.getElementById(id);
       if (el) el.classList.toggle('hidden', id !== screenId);
