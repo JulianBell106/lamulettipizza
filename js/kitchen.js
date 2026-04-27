@@ -42,6 +42,9 @@ let broadcastIntervalId = null;
 let kitchenAudioCtx      = null;
 let pendingAlertInterval = null;   // repeating beep while pending orders exist
 
+// Screen Wake Lock — keeps iPad/iOS screen on during a kitchen session
+let wakeLockSentinel = null;
+
 // Walk-in modal state
 let walkinQty   = {};  // { menuItemId: qty }
 let walkinNotes = {};  // { menuItemId: noteText } — Session 13
@@ -283,6 +286,49 @@ async function checkPinMultiStaff() {
     shakePinDots();
   }
 }
+
+
+/* ============================================================================
+   4a. SCREEN WAKE LOCK (Session 18)
+   ============================================================================
+   Prevents iOS/iPadOS from sleeping the screen during an active kitchen
+   session. Without this, setInterval timers (order alert beep, GPS broadcast)
+   stop firing when the screen locks.
+
+   Supported on iOS Safari 16.4+ (March 2023) and all modern desktop browsers.
+   Older devices fall back silently — no error shown to the user.
+
+   The lock is released automatically by the OS when the page is backgrounded,
+   so we re-request it on visibilitychange whenever a staff member is logged in.
+   ============================================================================ */
+
+async function _acquireWakeLock() {
+  if (!('wakeLock' in navigator)) return;  // not supported — silent fallback
+  try {
+    wakeLockSentinel = await navigator.wakeLock.request('screen');
+    console.log('[Stalliq] Screen wake lock acquired.');
+    wakeLockSentinel.addEventListener('release', () => {
+      console.log('[Stalliq] Screen wake lock released.');
+    });
+  } catch (err) {
+    // Can fail if the document is hidden at the moment of request — harmless
+    console.warn('[Stalliq] Wake lock request failed:', err.message);
+  }
+}
+
+async function _releaseWakeLock() {
+  if (wakeLockSentinel) {
+    try { await wakeLockSentinel.release(); } catch (_) {}
+    wakeLockSentinel = null;
+  }
+}
+
+// Re-acquire after the user switches back to the tab/app (OS releases on hide)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && loggedInStaffId) {
+    _acquireWakeLock();
+  }
+});
 
 
 /* ============================================================================
@@ -1014,6 +1060,7 @@ function startDashboard() {
   listenBroadcastState(); // Session 14 — live location broadcast
   listenOrders();
   initKanbanDrag();
+  _acquireWakeLock();    // Session 18 — keep screen on during kitchen session
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1261,9 +1308,10 @@ async function logoutStaff() {
   // No confirm dialog — in a busy multi-staff kitchen one tap must be enough.
   // The PIN screen is the re-entry gate; no data is lost on logout.
 
-  // Stop the orders listener and any pending alert interval
+  // Stop the orders listener, pending alert interval, and screen wake lock
   if (ordersUnsubscribe) { ordersUnsubscribe(); ordersUnsubscribe = null; }
   if (pendingAlertInterval) { clearInterval(pendingAlertInterval); pendingAlertInterval = null; }
+  _releaseWakeLock();
 
   // Sign out from Firebase Auth
   try { await firebase.auth().signOut(); } catch (_) {}

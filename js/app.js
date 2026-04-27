@@ -1944,10 +1944,16 @@ function startOrderStatusListener(orderId) {
 
       if (status === 'ready') {
         // ── Session 13: Ready beep — fires once on transition ─────────────
+        // If the page is backgrounded when this fires (e.g. user switched apps),
+        // skip the beep and leave firedReadyBeep unset so the visibilitychange
+        // handler can fire it when the user returns.
         if (!orderCache[orderId]?.firedReadyBeep) {
-          playReadyBeep();
-          if (orderCache[orderId]) orderCache[orderId].firedReadyBeep = true;
-          else orderCache[orderId] = { firedReadyBeep: true };
+          if (document.visibilityState === 'visible') {
+            playReadyBeep();
+            if (orderCache[orderId]) orderCache[orderId].firedReadyBeep = true;
+            else orderCache[orderId] = { firedReadyBeep: true };
+          }
+          // else: leave flag unset — visibilitychange handler will fire it
         }
 
         const mIcon  = document.querySelector('#m-order-confirm .m-confirm-icon');
@@ -2082,6 +2088,23 @@ async function playReadyBeep() {
     // Audio unavailable — silent fail, order status still updates visually
   }
 }
+
+/**
+ * Fires any ready beeps that were missed while the page was backgrounded.
+ * Called on visibilitychange when the user returns to the browser.
+ * Only beeps once even if multiple orders are ready.
+ */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  let needsBeep = false;
+  Object.values(orderCache).forEach(order => {
+    if (order.status === 'ready' && !order.firedReadyBeep) {
+      order.firedReadyBeep = true;
+      needsBeep = true;
+    }
+  });
+  if (needsBeep) playReadyBeep();
+});
 
 
 /* ============================================================================
@@ -2404,8 +2427,11 @@ function startAccountOrderListener(orderId) {
       // Session 13: fire ready beep on transition to ready
       if (status === 'ready') {
         if (!orderCache[orderId]?.firedReadyBeep) {
-          playReadyBeep();
-          if (orderCache[orderId]) orderCache[orderId].firedReadyBeep = true;
+          if (document.visibilityState === 'visible') {
+            playReadyBeep();
+            if (orderCache[orderId]) orderCache[orderId].firedReadyBeep = true;
+          }
+          // else: leave flag unset — visibilitychange handler will fire it
         }
       }
 
