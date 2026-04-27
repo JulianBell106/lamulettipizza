@@ -123,9 +123,23 @@ function renderPinDots() {
   }
 }
 
-/** Hashes a PIN string using SHA-256. Returns a lowercase hex string. */
-async function hashPin(pin) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
+/**
+ * Generates a cryptographically random 16-byte hex salt.
+ * Used when writing a new or updated PIN to Firestore.
+ */
+function generateSalt() {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Hashes a PIN + salt using SHA-256. Returns a lowercase hex string.
+ * @param {string} pin  — the raw 6-digit PIN
+ * @param {string} salt — the per-staff random hex salt ('' for legacy docs)
+ */
+async function hashPin(pin, salt = '') {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin + salt));
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
@@ -1211,22 +1225,28 @@ function renderStaffConfirmDots() {
 }
 
 async function confirmStaffIdentity() {
-  const hash = await hashPin(staffConfirmEntry);
+  const enteredPin  = staffConfirmEntry;
   staffConfirmEntry = '';
   renderStaffConfirmDots();
 
   try {
+    // Load the logged-in staff doc to get their salt, then hash the entered PIN with it
     const doc = await db.collection('vendors').doc(CONFIG.vendor.id)
                         .collection('staff').doc(loggedInStaffId).get();
-    if (doc.exists && doc.data().pinHash === hash) {
-      await loadStaffList();
-      showStaffScreen('staff-list-screen');
-    } else {
-      const errEl = document.getElementById('staff-confirm-error');
-      if (errEl) errEl.textContent = 'Incorrect PIN — try again';
-      const dots = document.querySelector('.sc-dots');
-      if (dots) { dots.classList.remove('shake'); void dots.offsetWidth; dots.classList.add('shake'); }
+    if (doc.exists) {
+      const data = doc.data();
+      const salt = data.pinSalt || '';  // backward compat: pre-16b docs have no salt
+      const hash = await hashPin(enteredPin, salt);
+      if (data.pinHash === hash) {
+        await loadStaffList();
+        showStaffScreen('staff-list-screen');
+        return;
+      }
     }
+    const errEl = document.getElementById('staff-confirm-error');
+    if (errEl) errEl.textContent = 'Incorrect PIN — try again';
+    const dots = document.querySelector('.sc-dots');
+    if (dots) { dots.classList.remove('shake'); void dots.offsetWidth; dots.classList.add('shake'); }
   } catch (err) {
     console.error('[Stalliq] Staff confirm error:', err);
     const errEl = document.getElementById('staff-confirm-error');
@@ -1325,11 +1345,13 @@ async function submitAddStaff() {
   if (btn) { btn.textContent = 'Adding…'; btn.disabled = true; }
 
   try {
-    const pinHash = await hashPin(pin);
+    const pinSalt = generateSalt();
+    const pinHash = await hashPin(pin, pinSalt);
     await db.collection('vendors').doc(CONFIG.vendor.id)
             .collection('staff').add({
               name,
               pinHash,
+              pinSalt,
               active:    true,
               createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             });
@@ -1376,7 +1398,9 @@ async function submitEditStaff() {
   if (pin) {
     if (!/^\d{6}$/.test(pin)) { errEl.textContent = 'PIN must be exactly 6 digits.'; return; }
     if (pin !== pin2)          { errEl.textContent = 'PINs do not match.'; return; }
-    updates.pinHash = await hashPin(pin);
+    const pinSalt   = generateSalt();
+    updates.pinSalt = pinSalt;
+    updates.pinHash = await hashPin(pin, pinSalt);
   }
 
   errEl.textContent = '';
@@ -1537,13 +1561,15 @@ async function submitNewOwnerPin() {
   if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
 
   try {
-    const pinHash = await hashPin(pin);
+    const pinSalt = generateSalt();
+    const pinHash = await hashPin(pin, pinSalt);
     // Upsert the owner staff document (fixed ID 'owner' for easy identification)
     await db.collection('vendors').doc(CONFIG.vendor.id)
             .collection('staff').doc('owner')
             .set({
               name:      'Owner',
               pinHash,
+              pinSalt,
               active:    true,
               createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             }, { merge: true });

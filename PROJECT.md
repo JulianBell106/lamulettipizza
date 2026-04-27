@@ -1,6 +1,6 @@
 # Stalliq — Project Bible
-> Last updated: April 2026 — Session 16a (Security hardening — anonymous auth ✅) IN PROGRESS
-> **Next sprint:** Session 16b — Complete security hardening (Firestore rules, PIN salting, cookie notice, privacy policy).
+> Last updated: April 2026 — Session 16b (Security hardening — complete ✅)
+> **Next sprint:** Session 17 — Pitch deck update.
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -188,7 +188,7 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 14 | Live Location Broadcast | ✅ Done | Full stack complete. Kitchen broadcasts GPS; customer Find Us page shows live map, kitchen status, tagline. Find Us page redesigned (mobile + desktop). Kitchen legibility pass. |
 | 15 | Multi-Staff Kitchen PIN | ✅ Done | Multi-staff PIN login (SHA-256 hashed), lockout after 5 fails (15 min), staff management panel (add/rename/change PIN/deactivate), forgot PIN flow via Firebase Phone Auth. Session 15. |
 | 15a | Real Phone Auth Go-Live | ✅ Done | Blaze plan, App Check (reCAPTCHA v3), authorised domain confirmed, test numbers removed, old kitchen.pin removed. Session 15b. |
-| 15b | Security Hardening + GDPR | 🔄 In Progress | Anonymous auth ✅, Firestore rules ⏳, PIN salting ⏳, cookie notice ⏳, privacy policy ⏳. Session 16a/16b. |
+| 15b | Security Hardening + GDPR | ✅ Done | Anonymous auth, Firestore rules, PIN salting, cookie notice, privacy policy. Sessions 16a/16b. |
 | 16 | SMS & WhatsApp Status Notifications | ⏳ Planned | Customer notified on order status changes — Twilio |
 | 17 | Geofence Notifications | ⏳ Planned | Van enters subscriber's area → phone buzzes |
 | 18 | Flash Sales & Broadcasts | ⏳ Planned | Vendor launches deal in seconds, broadcasts to subscribers |
@@ -213,8 +213,8 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 15 | Multi-staff kitchen PIN management | ✅ Done |
 | 15b | Real Firebase Phone Auth go-live | ✅ Done |
 | 16a | Security hardening — anonymous auth | ✅ Done |
-| 16b | Security hardening — rules, salting, GDPR | ⏳ Next |
-| 17 | Pitch deck update | ⏳ |
+| 16b | Security hardening — rules, salting, GDPR | ✅ Done |
+| 17 | Pitch deck update | ⏳ Next |
 
 **What gets demoed live at the meeting:**
 - Premium desktop site shown first on laptop — sets the brand tone
@@ -424,7 +424,7 @@ Before the "Forgot all PINs?" reset flow will work, Julian must manually set the
 5. Optionally rename the "Owner" entry to "Daniele" via the Edit button
 
 **Session startup:**
-> "New session — read the live PROJECT.md from GitHub: https://raw.githubusercontent.com/JulianBell106/lamulettipizza/refs/heads/main/PROJECT.md — today we're doing Session 16b: complete the security hardening sprint (Firestore rules, PIN salting, cookie notice, privacy policy)."
+> "New session — read the live PROJECT.md from GitHub: https://raw.githubusercontent.com/JulianBell106/lamulettipizza/refs/heads/main/PROJECT.md — today we're doing Session 17: pitch deck update."
 
 ---
 
@@ -448,8 +448,8 @@ Before the "Forgot all PINs?" reset flow will work, Julian must manually set the
 | # | Task | Status |
 |---|------|--------|
 | 1 | Firestore composite index | ✅ Created for La Muletti |
-| 2 | Firestore security rules | ⏳ Session 16b |
-| 3 | Remove `noindex, nofollow` from index.html | ⏳ Session 16b |
+| 2 | Firestore security rules | ✅ Session 16b |
+| 3 | Remove `noindex, nofollow` from index.html | ✅ Session 16b |
 | 4 | Firebase Phone Auth — real domain | ✅ |
 | 4a | Firebase App Check (reCAPTCHA v3) | ✅ |
 | 4b | Firebase Blaze plan | ✅ |
@@ -458,9 +458,9 @@ Before the "Forgot all PINs?" reset flow will work, Julian must manually set the
 | 7 | CONFIG.domains updated | ⏳ |
 | 8 | Kitchen PIN system replaced with multi-staff PIN management | ✅ Session 15 |
 | 8a | Anonymous Firebase auth for kitchen (enables security rules) | ✅ Session 16a |
-| 8b | PIN hash salting (per-staff random salt in Firestore) | ⏳ Session 16b |
-| 8c | Cookie/storage notice (PECR compliance) | ⏳ Session 16b |
-| 8d | Privacy policy page | ⏳ Session 16b |
+| 8b | PIN hash salting (per-staff random salt in Firestore) | ✅ Session 16b |
+| 8c | Cookie/storage notice (PECR compliance) | ✅ Session 16b |
+| 8d | Privacy policy page | ✅ Session 16b |
 | 8e | ICO registration (Endoo Limited) | ⏳ Julian — ico.org.uk, ~£40/year |
 | 9 | noindex on kitchen.html | ✅ Present |
 | 10 | Google Sheet — protect header row | ⏳ |
@@ -588,21 +588,23 @@ Before the "Forgot all PINs?" reset flow will work, Julian must manually set the
 
 ---
 
-### 26b. Session 16b — Remaining Hardening (PENDING ⏳)
+### 26b. Session 16b — Remaining Hardening (COMPLETE ✅)
 
-**Task order:**
+**Tasks completed:**
 
-| # | Task | Notes |
+| # | Task | Status |
 |---|------|-------|
-| 1 | **Firestore security rules** | Most critical. Paste into Firebase Console → Firestore → Rules tab. |
-| 2 | **PIN hash salting** | Add `generateSalt()`, update `hashPin(pin, salt)`, write `pinSalt` alongside `pinHash` in submitAddStaff / submitEditStaff / submitNewOwnerPin. Backward compat: existing docs without salt treated as salt = ''. |
-| 3 | **Cookie/storage notice** | Small dismissible banner in `index.html` (PECR compliance). sessionStorage used = first-party, but phone number collection needs notice. |
-| 4 | **Remove noindex from index.html** | Currently `<meta name="robots" content="noindex, nofollow">` — remove before go-live |
-| 5 | **Privacy policy page** | Standalone page linked from footer. Covers: data collected, why, retention, ICO registration, contact. |
+| 1 | **Firestore security rules** | ✅ Written to `firestore.rules` — Julian to paste into Firebase Console → Firestore → Rules tab |
+| 2 | **PIN hash salting** | ✅ `generateSalt()` added; `hashPin(pin, salt='')` updated; all write paths (submitAddStaff, submitEditStaff, submitNewOwnerPin) generate and store `pinSalt`; `confirmStaffIdentity` now reads stored salt before comparing; backward compat: missing salt = '' |
+| 3 | **Cookie/storage notice** | ✅ Dismissible banner in `index.html` — links to `privacy.html`, dismissed state in localStorage |
+| 4 | **Remove noindex from index.html** | ✅ Done (kitchen.html retains noindex) |
+| 5 | **Privacy policy page** | ✅ `privacy.html` created — on-brand, covers UK GDPR requirements; linked from desktop footer and cookie banner |
 
 **Operational tasks for Julian (not code):**
 - Register Endoo Limited with ICO: ico.org.uk → "Register with the ICO" → ~£40/year. Required before collecting personal data in production.
-- Data retention policy: decide how long to keep completed orders in Firestore (suggest: 90 days, then delete or archive)
+- Paste `firestore.rules` contents into Firebase Console → Firestore → Rules tab and publish.
+- Data retention: 90-day retention documented in privacy policy — implement Firestore TTL or scheduled Cloud Function before go-live.
+- Seed Daniele's staff PIN via the "Forgot all PINs?" flow (see Section 21) — existing pinHash will have no salt (backward compat handles this).
 
 ---
 

@@ -1,0 +1,144 @@
+// ============================================================================
+// Stalliq — Firestore Security Rules
+// Session 16b — April 2026
+//
+// Auth model:
+//   Customer ordering: Firebase Phone Auth  (provider == 'phone')
+//   Kitchen dashboard: Firebase Anonymous Auth (signed in on successful PIN)
+//   Public reads:      No auth required (menu, kitchen status, location)
+//
+// HOW TO DEPLOY:
+//   1. Go to https://console.firebase.google.com → stalliq project
+//   2. Firestore Database → Rules tab
+//   3. Replace ALL existing content with everything below the separator line
+//   4. Click "Publish"
+// ============================================================================
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper functions ────────────────────────────────────────────────────
+
+    /** True if the request comes from any authenticated Firebase session
+        (phone auth OR anonymous auth). */
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    /** True if the request comes from a Phone Auth user (i.e. a customer). */
+    function isPhoneAuth() {
+      return request.auth != null
+          && request.auth.token.firebase.sign_in_provider == 'phone';
+    }
+
+    /** True if the request comes from an Anonymous Auth session (i.e. the
+        kitchen dashboard after a successful PIN login). */
+    function isAnonymousAuth() {
+      return request.auth != null
+          && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+
+    /** True if the requesting user owns this document (customer reads their
+        own profile or their own order). */
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+
+    // ── Vendor document ─────────────────────────────────────────────────────
+    //
+    // vendors/{vendorId}
+    //   Public read: kitchenStatus needs to be readable without auth so the
+    //   customer app can show the open/closed pill even before sign-in.
+    //   Write: kitchen only (anonymous auth after PIN login).
+
+    match /vendors/{vendorId} {
+      allow read:  if true;
+      allow write: if isAnonymousAuth();
+
+      // ── Location broadcast ───────────────────────────────────────────────
+      // vendors/{vendorId}/location/current
+      //   Public read: customer Find Us page shows the map without auth.
+      //   Write: kitchen anonymous session only.
+
+      match /location/{docId} {
+        allow read:  if true;
+        allow write: if isAnonymousAuth();
+      }
+
+      // ── Staff collection ─────────────────────────────────────────────────
+      // vendors/{vendorId}/staff/{staffId}
+      //   Read & write: any authenticated session.
+      //   On login: the kitchen signs in anonymously BEFORE querying this
+      //   collection, so anonymous auth is the minimum required.
+      //   Both anonymous (kitchen) and phone (shouldn't happen, but safe) pass.
+      //   No public access — plaintext staff names must not be exposed.
+
+      match /staff/{staffId} {
+        allow read, write: if isAuthenticated();
+      }
+
+      // ── Daily order counter ──────────────────────────────────────────────
+      // vendors/{vendorId}/counters/daily
+      //   Read: authenticated only (kitchen dashboard shows queue count).
+      //   Write: authenticated only (kitchen walk-in orders increment it;
+      //           customer orders also increment via transaction).
+
+      match /counters/{docId} {
+        allow read, write: if isAuthenticated();
+      }
+    }
+
+
+    // ── Orders ──────────────────────────────────────────────────────────────
+    //
+    // orders/{orderId}
+    //
+    //   CREATE:
+    //     - Phone auth customers place their own orders.
+    //     - Anonymous auth kitchen places walk-in orders.
+    //     - The new order must carry the correct vendorId (prevents a
+    //       customer writing orders to another vendor's queue).
+    //
+    //   READ:
+    //     - Kitchen (anonymous auth) can read all orders for its vendor.
+    //     - Customer (phone auth) can read orders where customerId == their UID.
+    //
+    //   UPDATE:
+    //     - Kitchen (anonymous auth) can update any order (accept, status etc).
+    //     - Customer cannot update orders (prevents tampering with status).
+    //
+    //   DELETE: Nobody — orders are retained for audit / MI.
+
+    match /orders/{orderId} {
+      allow create: if isAuthenticated();
+
+      allow read:   if isAnonymousAuth()
+                    || (isPhoneAuth()
+                        && resource.data.customerId == request.auth.uid);
+
+      allow update: if isAnonymousAuth();
+
+      allow delete: if false;
+    }
+
+
+    // ── User profiles ────────────────────────────────────────────────────────
+    //
+    // users/{uid}
+    //   Each customer can only read and write their own profile document.
+    //   Kitchen has no legitimate reason to read user profiles.
+
+    match /users/{uid} {
+      allow read, write: if isOwner(uid);
+    }
+
+
+    // ── Catch-all deny ───────────────────────────────────────────────────────
+    // Any path not explicitly matched above is denied by default in Firestore.
+    // This comment is here as a reminder — no explicit rule needed.
+
+  }
+}

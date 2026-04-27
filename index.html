@@ -9,7 +9,6 @@
 <meta name="apple-mobile-web-app-title" content="La Muletti">
 <link rel="apple-touch-icon" href="https://i.ibb.co/bMvvnQxp/pizza-image-7.jpg">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="robots" content="noindex, nofollow">
 <title>La Muletti Pizza — Neapolitan Wood-Fired Pizza · Milton Keynes</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -828,6 +827,58 @@ html { scroll-behavior: smooth; }
 }
 
 /* ═══════════════════════════════════════
+   COOKIE / PRIVACY NOTICE BANNER (PECR)
+   Fixed at bottom; dismissed via localStorage.
+═══════════════════════════════════════ */
+#cookie-notice {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 9000;
+  background: rgba(26,10,0,0.97);
+  border-top: 1px solid var(--gold-rule);
+  padding: 14px 20px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: cookieSlideUp 0.4s cubic-bezier(0.16,1,0.3,1);
+}
+@media (min-width: 768px) {
+  #cookie-notice { padding: 14px 60px 18px; }
+}
+@keyframes cookieSlideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+#cookie-notice.hidden { display: none; }
+.cookie-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  flex: 1;
+}
+.cookie-text a {
+  color: var(--gold);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.cookie-btn {
+  flex-shrink: 0;
+  background: var(--fire);
+  color: var(--cream);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cookie-btn:hover { background: var(--ember); }
+
+/* ═══════════════════════════════════════
    MOBILE APP
 ═══════════════════════════════════════ */
 #mobile-app {
@@ -1359,7 +1410,7 @@ html { scroll-behavior: smooth; }
   <!-- FOOTER -->
   <footer class="d-footer">
     <div class="d-footer-logo">La <span>Muletti</span> Pizza</div>
-    <div class="d-footer-copy">© 2025 La Muletti Pizza · Milton Keynes · hello@lamulettipizza.co.uk</div>
+    <div class="d-footer-copy">© 2025 La Muletti Pizza · Milton Keynes · hello@lamulettipizza.co.uk · <a href="privacy.html" style="color:var(--gold);text-decoration:underline;text-underline-offset:2px;">Privacy policy</a></div>
   </footer>
 
 </div><!-- /desktop-site -->
@@ -1669,6 +1720,28 @@ html { scroll-behavior: smooth; }
     </div>
   </div>
 </div>
+
+<!-- COOKIE / PRIVACY NOTICE (PECR compliance) -->
+<div id="cookie-notice" class="hidden">
+  <p class="cookie-text">
+    This site uses your phone number to send order confirmations and
+    remembers your session to show your order status.
+    No cookies are used for advertising.
+    <a href="privacy.html" target="_blank">Privacy policy</a>
+  </p>
+  <button class="cookie-btn" onclick="dismissCookieNotice()">Got it</button>
+</div>
+<script>
+  (function() {
+    if (!localStorage.getItem('stalliq_cookie_ok')) {
+      document.getElementById('cookie-notice').classList.remove('hidden');
+    }
+  })();
+  function dismissCookieNotice() {
+    localStorage.setItem('stalliq_cookie_ok', '1');
+    document.getElementById('cookie-notice').classList.add('hidden');
+  }
+</script>
 
 <!-- SCRIPTS -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
