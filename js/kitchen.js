@@ -257,6 +257,11 @@ async function checkPinMultiStaff() {
       loggedInStaffId   = match.id;
       loggedInStaffName = match.name;
 
+      // Persist session so a reload (triggered by screen-lock recovery) can
+      // restore the dashboard without requiring the PIN again.
+      sessionStorage.setItem('kitchenStaffId',   loggedInStaffId);
+      sessionStorage.setItem('kitchenStaffName', loggedInStaffName);
+
       document.getElementById('pin-overlay').classList.add('hidden');
       const dashboard = document.getElementById('k-dashboard');
       if (dashboard) dashboard.style.display = 'flex';
@@ -324,21 +329,32 @@ async function _releaseWakeLock() {
   }
 }
 
-// Re-acquire wake lock, restart Firestore listeners, and restart intervals
-// when returning from background or screen lock.
-// iOS freezes the JS process on manual screen lock regardless of wake lock,
-// dropping the Firebase WebSocket. We must force a reconnect and re-establish
-// all listeners — otherwise new orders arrive silently with no beep or kanban update.
+// On hide: record the timestamp so we know how long we were away.
+// On show: if away > 60s, reload the page for a guaranteed clean state on iOS.
+// Quick app switches (<60s) use incremental reconnect — no reload, no flicker.
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState !== 'visible' || !loggedInStaffId) return;
+  if (document.visibilityState === 'hidden') {
+    if (loggedInStaffId) sessionStorage.setItem('kitchenHiddenAt', String(Date.now()));
+    return;
+  }
 
+  if (!loggedInStaffId) return;
+
+  const hiddenAt = parseInt(sessionStorage.getItem('kitchenHiddenAt') || '0', 10);
+  const awayMs   = hiddenAt ? Date.now() - hiddenAt : 0;
+  sessionStorage.removeItem('kitchenHiddenAt');
+
+  if (awayMs > 60_000) {
+    // iOS freezes and corrupts Firebase state after extended locks.
+    // A full reload is the only reliable fix. Session auto-restores via
+    // sessionStorage — no PIN required on return.
+    location.reload();
+    return;
+  }
+
+  // Short absence (<60s) — incremental reconnect, no reload
   _acquireWakeLock();
-
-  // Force Firebase to re-open its network connection — iOS may have closed it
   firebase.firestore().enableNetwork().catch(() => {});
-
-  // Restart the orders listener — re-subscribes cleanly (listenOrders()
-  // unsubscribes the old one internally before creating the new one)
   listenOrders();
 
   // Force-clear both interval handles — iOS may have suspended them silently
@@ -1151,16 +1167,39 @@ document.addEventListener('DOMContentLoaded', () => {
   initPageIdentity();
 
   // Restore lockout state from sessionStorage (Session 15)
-  const savedFails    = parseInt(sessionStorage.getItem('pinFailCount') || '0', 10);
-  const savedLockUntil = parseInt(sessionStorage.getItem('pinLockUntil') || '0', 10);
+  const savedFails     = parseInt(sessionStorage.getItem('pinFailCount')  || '0', 10);
+  const savedLockUntil = parseInt(sessionStorage.getItem('pinLockUntil')  || '0', 10);
   if (savedFails) failedPinAttempts = savedFails;
   if (savedLockUntil > Date.now()) {
     pinLockedUntil = savedLockUntil;
     startLockoutCountdown();
   } else if (savedLockUntil) {
-    // Lockout expired while page was closed — clear it
     sessionStorage.removeItem('pinFailCount');
     sessionStorage.removeItem('pinLockUntil');
+  }
+
+  // Session 18: Auto-restore dashboard after a screen-lock reload.
+  // If the page was reloaded by the visibilitychange handler (away > 60s),
+  // sessionStorage still holds the staff session and Firebase anonymous auth
+  // is still valid — skip the PIN and go straight back to the dashboard.
+  const savedStaffId   = sessionStorage.getItem('kitchenStaffId');
+  const savedStaffName = sessionStorage.getItem('kitchenStaffName');
+  if (savedStaffId && savedStaffName) {
+    const unsubAuth = firebase.auth().onAuthStateChanged(user => {
+      unsubAuth(); // only need this once
+      if (user) {
+        loggedInStaffId   = savedStaffId;
+        loggedInStaffName = savedStaffName;
+        document.getElementById('pin-overlay').classList.add('hidden');
+        const dashboard = document.getElementById('k-dashboard');
+        if (dashboard) dashboard.style.display = 'flex';
+        startDashboard();
+        updateStaffDisplay();
+        showToast(`Welcome back, ${savedStaffName}!`);
+      }
+      // user is null only if the anonymous session somehow expired — fall
+      // through to PIN screen normally, which is the safe default.
+    });
   }
 });
 
@@ -1396,6 +1435,10 @@ async function logoutStaff() {
   if (ordersUnsubscribe) { ordersUnsubscribe(); ordersUnsubscribe = null; }
   if (pendingAlertInterval) { clearInterval(pendingAlertInterval); pendingAlertInterval = null; }
   _releaseWakeLock();
+
+  // Clear persisted session so reload does not auto-restore after a logout
+  sessionStorage.removeItem('kitchenStaffId');
+  sessionStorage.removeItem('kitchenStaffName');
 
   // Sign out from Firebase Auth
   try { await firebase.auth().signOut(); } catch (_) {}
