@@ -1411,6 +1411,11 @@ document.addEventListener('DOMContentLoaded', async function () {
         { icon: '🍕', title: 'Buy 9, Get 1 Free', description: 'Collect 9 stamps to unlock your free pizza', badge: 'Coming soon' }
       ];
 
+  // ── Static renders — no network dependency, fire immediately ────────────
+  // renderMobileHome uses only CONFIG.homePills — no sheet data needed.
+  renderMobileHome();
+  renderMobileAbout();
+
   // ── Fetch all sheets concurrently ─────────────────────────────────────────
   await Promise.all([
     fetchMenuFromSheet(),
@@ -1426,10 +1431,8 @@ document.addEventListener('DOMContentLoaded', async function () {
   renderDesktopStory();
   renderDesktopContact();
 
-  // ── Mobile renders ────────────────────────────────────────────────────────
-  renderMobileHome();
+  // ── Mobile renders (sheet-dependent) ─────────────────────────────────────
   renderMobileMenu();
-  renderMobileAbout();
   renderMobileFindUs();
 
   // ── Footer ────────────────────────────────────────────────────────────────
@@ -2055,10 +2058,14 @@ function unlockAudio() {
  * Uses the shared audioCtx if available, otherwise attempts a new context.
  * Silently fails if audio is unavailable.
  */
-function playReadyBeep() {
+async function playReadyBeep() {
   try {
     const ctx  = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
     if (!audioCtx) audioCtx = ctx;
+    // Mobile (especially iOS) suspends AudioContext after inactivity.
+    // Resume it now — this works because the context was already unlocked
+    // by the user's "Place Order" tap gesture earlier in the session.
+    if (ctx.state === 'suspended') await ctx.resume();
     const gain = ctx.createGain();
     gain.connect(ctx.destination);
     [0, 0.3].forEach(offset => {
