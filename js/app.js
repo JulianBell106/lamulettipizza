@@ -2343,6 +2343,27 @@ function buildHistoryItemHTML(order) {
     </div>`;
 }
 
+/**
+ * Prepends a just-collected (or cancelled) order to the history list in real
+ * time, without requiring a page reload.
+ * Called by startAccountOrderListener() when an order reaches a terminal status.
+ * Works for both 'm' and 'd' prefixes — only inserts into whichever containers
+ * are currently in the DOM.
+ */
+function _prependToHistory(order) {
+  ['m', 'd'].forEach(prefix => {
+    const historyList  = document.getElementById(`${prefix}-order-history-list`);
+    const historyEmpty = document.getElementById(`${prefix}-order-history-empty`);
+    if (!historyList) return;
+
+    // Hide the "no orders yet" empty state if visible
+    if (historyEmpty) historyEmpty.style.display = 'none';
+
+    // Insert the new item at the top, before any existing history
+    historyList.insertAdjacentHTML('afterbegin', buildHistoryItemHTML(order));
+  });
+}
+
 function showMoreHistory() {
   const wrap = document.getElementById('history-show-more-wrap');
   if (!wrap || historyRemainder.length === 0) return;
@@ -2393,6 +2414,11 @@ function startAccountOrderListener(orderId) {
           accountOrderListeners[orderId]();
           delete accountOrderListeners[orderId];
         }
+
+        // Move order into history immediately — no reload needed
+        const finalOrder = orderCache[orderId];
+        if (finalOrder) _prependToHistory(finalOrder);
+
         const cardEl = document.getElementById(`m-coc-${orderId}`);
         if (cardEl) {
           cardEl.style.transition = 'opacity 0.4s';
