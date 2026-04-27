@@ -1,6 +1,7 @@
 # Stalliq — Project Bible
-> Last updated: April 2026 — Session 16b (Security hardening — complete ✅)
+> Last updated: April 2026 — Session 16b/16c (Security hardening + kitchen UI polish ✅)
 > **Next sprint:** Session 17 — Pitch deck update.
+> **Pending test:** Customer order placement + auth flow — Firebase phone auth was rate-limited during testing. Retest before go-live.
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -214,6 +215,7 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 15b | Real Firebase Phone Auth go-live | ✅ Done |
 | 16a | Security hardening — anonymous auth | ✅ Done |
 | 16b | Security hardening — rules, salting, GDPR | ✅ Done |
+| 16c | Kitchen UI polish + bug fixes | ✅ Done |
 | 17 | Pitch deck update | ⏳ Next |
 
 **What gets demoed live at the meeting:**
@@ -423,6 +425,9 @@ Before the "Forgot all PINs?" reset flow will work, Julian must manually set the
 4. Log in, open ⚙️ Staff Management, tap + Add Staff to add any additional team members
 5. Optionally rename the "Owner" entry to "Daniele" via the Edit button
 
+**Pending retest before go-live:**
+> Customer order placement + phone auth — Firebase was rate-limiting during Session 16c testing. Test fresh: place an order as a customer (real phone, real SMS), confirm it lands in kitchen, accept it, advance to Ready, check Account page shows the order.
+
 **Session startup:**
 > "New session — read the live PROJECT.md from GitHub: https://raw.githubusercontent.com/JulianBell106/lamulettipizza/refs/heads/main/PROJECT.md — today we're doing Session 17: pitch deck update."
 
@@ -602,13 +607,52 @@ Before the "Forgot all PINs?" reset flow will work, Julian must manually set the
 
 **Operational tasks for Julian (not code):**
 - Register Endoo Limited with ICO: ico.org.uk → "Register with the ICO" → ~£40/year. Required before collecting personal data in production.
-- Paste `firestore.rules` contents into Firebase Console → Firestore → Rules tab and publish.
+- Paste `firestore.rules` contents into Firebase Console → Firestore → Rules tab and publish. ✅ Done.
 - Data retention: 90-day retention documented in privacy policy — implement Firestore TTL or scheduled Cloud Function before go-live.
 - Seed Daniele's staff PIN via the "Forgot all PINs?" flow (see Section 21) — existing pinHash will have no salt (backward compat handles this).
 
 ---
 
-### 26c. Planned Firestore Security Rules (to be written in 16b)
+### 26c. Session 16c — Kitchen UI Polish + Bug Fixes (COMPLETE ✅)
+
+Additional work done in the same session during testing.
+
+**Bugs fixed:**
+
+| # | Bug | Fix |
+|---|-----|-----|
+| 1 | Anonymous Auth not enabled in Firebase Console | Enabled manually — `signInAnonymously()` now works |
+| 2 | Staff management confirm screen HTML missing entirely | Added `staff-confirm-screen` div to modal — CSS and JS existed but the HTML was never written |
+| 3 | Confirm screen keypad coded for 4 digits, PINs are 6 | Fixed `staffConfirmPress` (limit 6), `renderStaffConfirmDots` (loop 0–5), fires at length 6 |
+| 4 | `showStaffScreen()` didn't know `staff-confirm-screen` existed | Added to the screen ID array |
+| 5 | `openSettingsPanel()` skipped straight to staff list | Now always opens confirm screen first; clears entry and error |
+| 6 | Desktop menu qty buttons caused all cards to flash | `renderDesktopMenu()` was rebuilding the full grid + re-running `initScrollReveal()` on every tap. Fixed with `patchDesktopMenuItemControls(id)` — surgically updates only the tapped item's controls in-place |
+| 7 | Cookie banner hidden behind mobile nav bar | Added `bottom: calc(72px + env(safe-area-inset-bottom))` on mobile |
+| 8 | No GDPR/privacy link on mobile | Privacy policy link added to Account page (both signed-in and signed-out states) |
+
+**Kitchen header redesign:**
+
+Header restructured into three distinct zones:
+
+| Zone | Contents | Treatment |
+|------|----------|-----------|
+| Left | Logo + "Kitchen Dashboard" | Unchanged |
+| Centre | 🟢 Open · ➕ New Order · 📍 Broadcast | Gold-tinted raised panel with drop shadow — primary operational controls |
+| Right | Clock · 👤 Name · Sign out · ⚙️ | Neutral raised panel — session/system controls |
+
+- Logged-in staff name displayed in right panel after PIN login
+- Sign out button: instant, no confirm dialog (multi-staff van context — one tap must be enough)
+- `updateStaffDisplay()` shows/hides name and sign out button on login/logout
+- `logoutStaff()` signs out Firebase session, stops orders listener, returns to PIN screen
+
+### 26d. Firestore Security Rules — Implemented
+
+Rules written to `firestore.rules` and published to Firebase Console. See file for full detail. Summary:
+- Staff collection: auth required (anonymous or phone)
+- Orders: kitchen (anonymous) reads/writes all; customers read own orders only; nobody deletes
+- User profiles: owner UID only
+- Kitchen status + location: public read, anonymous-auth write
+- Catch-all: Firestore default deny covers everything else
 
 Kitchen auth model:
 - Customer ordering flow: Firebase Phone Auth (`provider == 'phone'`)
