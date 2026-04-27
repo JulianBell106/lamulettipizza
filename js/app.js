@@ -2632,7 +2632,7 @@ function renderAccountOffers(ids) {
 
     return `
       <div class="m-offer-card"${dimStyle}>
-        <div class="m-offer-icon">🏷</div>
+        <div class="m-offer-icon">🎁</div>
         <div class="m-offer-body">
           <div class="m-offer-title">${esc(offer.title)}</div>
           <div class="m-offer-desc">${esc(offer.description || valLabel)}</div>
