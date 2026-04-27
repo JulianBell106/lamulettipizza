@@ -324,13 +324,22 @@ async function _releaseWakeLock() {
   }
 }
 
-// Re-acquire wake lock and restart any pending alert when returning from
-// background or screen lock — iOS kills setInterval during screen lock so
-// we can't rely on the interval still running when the screen wakes.
+// Re-acquire wake lock, restart Firestore listeners, and restart intervals
+// when returning from background or screen lock.
+// iOS freezes the JS process on manual screen lock regardless of wake lock,
+// dropping the Firebase WebSocket. We must force a reconnect and re-establish
+// all listeners — otherwise new orders arrive silently with no beep or kanban update.
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible' || !loggedInStaffId) return;
 
   _acquireWakeLock();
+
+  // Force Firebase to re-open its network connection — iOS may have closed it
+  firebase.firestore().enableNetwork().catch(() => {});
+
+  // Restart the orders listener — re-subscribes cleanly (listenOrders()
+  // unsubscribes the old one internally before creating the new one)
+  listenOrders();
 
   // Force-clear both interval handles — iOS may have suspended them silently
   // during screen lock, leaving handles non-null but timers not ticking.
@@ -347,12 +356,7 @@ document.addEventListener('visibilitychange', () => {
 
   const hasPending = Object.values(currentOrders).some(o => o.status === 'pending');
   if (hasPending) {
-    // Try the beep immediately — may work if iOS is lenient (first lock of a
-    // session, brief lock, etc.). Silently fails if the context is blocked.
     playOrderAlert();
-    // Always show the tap-to-restore banner as a guaranteed fallback.
-    // iOS audio REQUIRES an explicit user gesture after extended screen lock —
-    // no event-based workaround is reliable. The banner tap is that gesture.
     _showAudioRestorePrompt();
     _managePendingAlert(true);
   } else {
