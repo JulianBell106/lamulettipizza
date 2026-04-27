@@ -332,34 +332,78 @@ document.addEventListener('visibilitychange', () => {
 
   _acquireWakeLock();
 
-  // Force-clear the interval handle — iOS may have suspended it silently,
-  // leaving the handle non-null but the timer not actually ticking.
+  // Force-clear both interval handles — iOS may have suspended them silently
+  // during screen lock, leaving handles non-null but timers not ticking.
   if (pendingAlertInterval) {
     clearInterval(pendingAlertInterval);
     pendingAlertInterval = null;
   }
+  if (broadcastIntervalId) {
+    clearInterval(broadcastIntervalId);
+    broadcastIntervalId = null;
+  }
+  // Restart GPS ping if broadcast was active before the lock
+  if (broadcastActive) _startLocationPing();
 
   const hasPending = Object.values(currentOrders).some(o => o.status === 'pending');
   if (hasPending) {
-    // Try immediately — works when iOS treats visibilitychange as close enough
-    // to a gesture (often true for the first lock/unlock in a session).
+    // Try the beep immediately — may work if iOS is lenient (first lock of a
+    // session, brief lock, etc.). Silently fails if the context is blocked.
     playOrderAlert();
-    // Set the touch flag as a guaranteed fallback: if the immediate attempt
-    // was silently blocked (iOS is strict after repeated locks), the next
-    // screen touch — a real gesture — will fire the beep.
-    pendingBeepOnTouch = true;
+    // Always show the tap-to-restore banner as a guaranteed fallback.
+    // iOS audio REQUIRES an explicit user gesture after extended screen lock —
+    // no event-based workaround is reliable. The banner tap is that gesture.
+    _showAudioRestorePrompt();
     _managePendingAlert(true);
+  } else {
+    _dismissAudioRestorePrompt();
   }
 });
 
-// Guaranteed audio fallback — fires on the first touch after returning from
-// a screen lock when iOS has blocked the visibilitychange attempt.
-document.addEventListener('touchstart', () => {
-  if (!pendingBeepOnTouch || !loggedInStaffId) return;
+/**
+ * Shows a fixed red banner at the top of the screen prompting staff to tap.
+ * The tap is a real user gesture, guaranteeing the AudioContext can resume
+ * and the beep will fire. Also acts as a visual alert if audio fails entirely.
+ * Safe to call multiple times — only one banner is ever shown.
+ */
+function _showAudioRestorePrompt() {
+  if (document.getElementById('k-audio-restore')) return;
+
+  const btn = document.createElement('button');
+  btn.id = 'k-audio-restore';
+  btn.textContent = '🔔 New order — tap to restore sound alerts';
+  btn.style.cssText = [
+    'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:9999',
+    'width:100%', 'padding:14px 16px',
+    'background:var(--fire,#C4271A)', 'color:#fff',
+    'font-size:15px', 'font-weight:700', 'text-align:center',
+    'border:none', 'cursor:pointer', 'letter-spacing:0.02em',
+    'animation:k-restore-pulse 1.2s ease-in-out infinite',
+  ].join(';');
+
+  // Inject the pulse keyframe once
+  if (!document.getElementById('k-restore-style')) {
+    const style = document.createElement('style');
+    style.id = 'k-restore-style';
+    style.textContent = '@keyframes k-restore-pulse{0%,100%{opacity:1}50%{opacity:0.65}}';
+    document.head.appendChild(style);
+  }
+
+  btn.addEventListener('click', () => {
+    _dismissAudioRestorePrompt();
+    _unlockKitchenAudio();
+    playOrderAlert();
+  });
+
+  document.body.appendChild(btn);
+}
+
+/** Removes the audio restore banner if present. */
+function _dismissAudioRestorePrompt() {
+  const el = document.getElementById('k-audio-restore');
+  if (el) el.remove();
   pendingBeepOnTouch = false;
-  _unlockKitchenAudio(); // refresh the context within the gesture
-  playOrderAlert();
-}, { passive: true });
+}
 
 
 /* ============================================================================
@@ -1037,6 +1081,7 @@ function _managePendingAlert(hasPending) {
   } else if (!hasPending && pendingAlertInterval) {
     clearInterval(pendingAlertInterval);
     pendingAlertInterval = null;
+    _dismissAudioRestorePrompt(); // clear banner when no pending orders remain
   }
 }
 
@@ -1294,6 +1339,7 @@ async function submitWalkinOrder() {
       status:        'pending',
       waitMins:      null,
       expiresAt:     null,
+      deleteAt:      new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // GDPR 90-day retention
       createdAt:     firebase.firestore.FieldValue.serverTimestamp(),
       updatedAt:     firebase.firestore.FieldValue.serverTimestamp(),
     });

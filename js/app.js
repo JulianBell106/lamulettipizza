@@ -97,7 +97,8 @@ let customerName     = null;   // cached after phone auth
 let pendingOrderFn   = null;   // called after auth completes
 let kitchenStatus    = 'open'; // updated live by Firestore listener (Section 31)
 const orderCache     = {};     // orderId → order data, populated by loadUserOrders
-let historyRemainder = [];     // orders beyond initial 3, revealed by "Show more"
+let historyRemainder  = [];     // orders beyond initial 3, revealed by "Show more"
+let historyAllOrders  = [];     // full list — used by showLessHistory()
 
 /**
  * menuData — the active menu used by all render and basket functions.
@@ -1681,6 +1682,7 @@ async function submitOrderToFirestore() {
   const orderRef     = await getNextOrderRef();
   const timeoutMins  = CONFIG.ordering.timeoutMins || 10;
   const expiresAt    = new Date(Date.now() + timeoutMins * 60 * 1000);
+  const deleteAt     = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000); // GDPR 90-day retention
 
   const items = Object.keys(basket).map(Number).map(id => {
     const item = menuData.find(m => m.id === id);
@@ -1708,6 +1710,7 @@ async function submitOrderToFirestore() {
     status:    'pending',
     waitMins:  null,
     expiresAt,
+    deleteAt,
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
@@ -2049,6 +2052,8 @@ let audioCtx = null;
  */
 function unlockAudio() {
   try {
+    // Discard a closed context — iOS/Android can close it after extended lock
+    if (audioCtx && audioCtx.state === 'closed') audioCtx = null;
     if (!audioCtx) {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     } else if (audioCtx.state === 'suspended') {
@@ -2066,6 +2071,8 @@ function unlockAudio() {
  */
 async function playReadyBeep() {
   try {
+    // Discard closed context (iOS/Android close it after extended background)
+    if (audioCtx && audioCtx.state === 'closed') audioCtx = null;
     const ctx  = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
     if (!audioCtx) audioCtx = ctx;
     // Mobile (especially iOS) suspends AudioContext after inactivity.
@@ -2090,9 +2097,8 @@ async function playReadyBeep() {
 }
 
 /**
- * Fires any ready beeps that were missed while the page was backgrounded.
- * Called on visibilitychange when the user returns to the browser.
- * Only beeps once even if multiple orders are ready.
+ * Fires any ready beeps missed while the page was backgrounded, and shows a
+ * visual "order ready" prompt as a guaranteed fallback for when audio is blocked.
  */
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
@@ -2103,8 +2109,50 @@ document.addEventListener('visibilitychange', () => {
       needsBeep = true;
     }
   });
-  if (needsBeep) playReadyBeep();
+  if (needsBeep) {
+    playReadyBeep();
+    _showCustomerReadyPrompt();
+  } else {
+    _dismissCustomerReadyPrompt();
+  }
 });
+
+/**
+ * Shows a fixed green banner when the customer's order is ready.
+ * Doubles as a guaranteed audio-unlock gesture on mobile browsers that block
+ * audio after backgrounding. Dismissed on tap or when order is collected.
+ */
+function _showCustomerReadyPrompt() {
+  if (document.getElementById('cust-ready-banner')) return;
+  const btn = document.createElement('button');
+  btn.id = 'cust-ready-banner';
+  btn.textContent = '🟢 Your order is ready — tap here';
+  btn.style.cssText = [
+    'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:9999',
+    'width:100%', 'padding:14px 16px',
+    'background:#2a7a3b', 'color:#fff',
+    'font-size:15px', 'font-weight:700', 'text-align:center',
+    'border:none', 'cursor:pointer', 'letter-spacing:0.02em',
+    'animation:cust-ready-pulse 1.2s ease-in-out infinite',
+  ].join(';');
+  if (!document.getElementById('cust-ready-style')) {
+    const style = document.createElement('style');
+    style.id = 'cust-ready-style';
+    style.textContent = '@keyframes cust-ready-pulse{0%,100%{opacity:1}50%{opacity:0.7}}';
+    document.head.appendChild(style);
+  }
+  btn.addEventListener('click', () => {
+    _dismissCustomerReadyPrompt();
+    unlockAudio();
+    playReadyBeep();
+  });
+  document.body.appendChild(btn);
+}
+
+function _dismissCustomerReadyPrompt() {
+  const el = document.getElementById('cust-ready-banner');
+  if (el) el.remove();
+}
 
 
 /* ============================================================================
@@ -2259,34 +2307,13 @@ function loadUserOrders(uid, ids) {
       }
 
       // ── Order history — collected/cancelled only ─────────────────────────
+      historyAllOrders = historyOrders;
       if (historyOrders.length === 0) {
         if (historyList)  historyList.innerHTML = '';
         if (historyEmpty) historyEmpty.style.display = 'block';
       } else {
         if (historyEmpty) historyEmpty.style.display = 'none';
-
-        const INITIAL_SHOW = 3;
-        const shownOrders  = historyOrders.slice(0, INITIAL_SHOW);
-        historyRemainder   = historyOrders.slice(INITIAL_SHOW);
-
-        let html = shownOrders.map(order => buildHistoryItemHTML(order)).join('');
-
-        if (historyRemainder.length > 0) {
-          const n = historyRemainder.length;
-          html += `
-            <div id="history-show-more-wrap" style="padding:4px 0 8px;">
-              <button class="m-signout-btn" style="margin:0;width:100%;"
-                onclick="showMoreHistory()">
-                Show ${n} more order${n === 1 ? '' : 's'}
-              </button>
-            </div>`;
-        }
-
-        html += `<div style="text-align:center;padding:10px 0 4px;font-size:11px;color:rgba(255,255,255,0.45);letter-spacing:0.08em;text-transform:uppercase;">
-                   Showing last 3 months
-                 </div>`;
-
-        if (historyList) historyList.innerHTML = html;
+        _renderHistoryList(false);
       }
     })
     .catch(err => {
@@ -2374,6 +2401,9 @@ function buildHistoryItemHTML(order) {
  * are currently in the DOM.
  */
 function _prependToHistory(order) {
+  // Keep the master list in sync so show more/less stays accurate
+  historyAllOrders = [order, ...historyAllOrders.filter(o => o.id !== order.id)];
+
   ['m', 'd'].forEach(prefix => {
     const historyList  = document.getElementById(`${prefix}-order-history-list`);
     const historyEmpty = document.getElementById(`${prefix}-order-history-empty`);
@@ -2387,12 +2417,51 @@ function _prependToHistory(order) {
   });
 }
 
-function showMoreHistory() {
-  const wrap = document.getElementById('history-show-more-wrap');
-  if (!wrap || historyRemainder.length === 0) return;
-  const html = historyRemainder.map(order => buildHistoryItemHTML(order)).join('');
-  wrap.outerHTML = html;
-  historyRemainder = [];
+function showMoreHistory()  { _renderHistoryList(true);  }
+function showLessHistory()  { _renderHistoryList(false); }
+
+/**
+ * Renders the order history list into both m and d containers.
+ * showAll=false: first 3 orders + "Show N more" button.
+ * showAll=true:  all orders + "Show less" button.
+ */
+function _renderHistoryList(showAll) {
+  const INITIAL_SHOW = 3;
+  const orders = historyAllOrders;
+  if (!orders || orders.length === 0) return;
+
+  const shown     = showAll ? orders : orders.slice(0, INITIAL_SHOW);
+  const remaining = showAll ? 0 : orders.length - INITIAL_SHOW;
+
+  let html = shown.map(o => buildHistoryItemHTML(o)).join('');
+
+  if (!showAll && remaining > 0) {
+    html += `
+      <div id="history-show-more-wrap" style="padding:4px 0 8px;">
+        <button class="m-signout-btn" style="margin:0;width:100%;"
+          onclick="showMoreHistory()">
+          Show ${remaining} more order${remaining === 1 ? '' : 's'}
+        </button>
+      </div>`;
+  } else if (showAll && orders.length > INITIAL_SHOW) {
+    html += `
+      <div id="history-show-less-wrap" style="padding:4px 0 8px;">
+        <button class="m-signout-btn" style="margin:0;width:100%;"
+          onclick="showLessHistory()">
+          Show less
+        </button>
+      </div>`;
+  }
+
+  html += `<div style="text-align:center;padding:10px 0 4px;font-size:11px;
+             color:rgba(255,255,255,0.45);letter-spacing:0.08em;text-transform:uppercase;">
+             Showing last 3 months
+           </div>`;
+
+  ['m', 'd'].forEach(prefix => {
+    const el = document.getElementById(`${prefix}-order-history-list`);
+    if (el) el.innerHTML = html;
+  });
 }
 
 function startAccountOrderListener(orderId) {
@@ -2444,6 +2513,7 @@ function startAccountOrderListener(orderId) {
         // Move order into history immediately — no reload needed
         const finalOrder = orderCache[orderId];
         if (finalOrder) _prependToHistory(finalOrder);
+        _dismissCustomerReadyPrompt();
 
         const cardEl = document.getElementById(`m-coc-${orderId}`);
         if (cardEl) {
