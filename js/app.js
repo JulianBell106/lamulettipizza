@@ -667,9 +667,9 @@ function dPlaceOrder() {
       } else if (discount?.type === 'offer') {
         await recordOfferUsage(discount.offerId);
       }
-      selectedOffer = null;
-
       const { rows } = buildOrderSummaryHTML('d-order-row');
+
+      selectedOffer = null;
       document.getElementById('d-order-ref').textContent   = 'Order ref ' + orderRef;
       document.getElementById('d-order-details').innerHTML = rows;
 
@@ -897,9 +897,9 @@ function mPlaceOrder() {
       } else if (discount?.type === 'offer') {
         await recordOfferUsage(discount.offerId);
       }
-      selectedOffer = null;
-
       const { rows } = buildOrderSummaryHTML('m-confirm-row');
+
+      selectedOffer = null;
       document.getElementById('m-confirm-ref').textContent   = 'Order ref ' + orderRef;
       document.getElementById('m-confirm-details').innerHTML = rows;
       document.getElementById('m-confirm-msg').textContent   = CONFIG.ordering.confirmMsg;

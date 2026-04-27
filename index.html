@@ -1152,6 +1152,7 @@ html { scroll-behavior: smooth; }
 .m-history-chevron { color: rgba(212,160,67,0.4); font-size: 16px; margin-left: auto; }
 
 /* ─── BOTTOM NAV ─── */
+@media (min-width: 768px) { .m-bottom-nav { display: none; } }
 .m-bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 72px; background: rgba(20,8,0,0.96); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid rgba(212,160,67,0.18); display: flex; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
 .m-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; -webkit-tap-highlight-color: transparent; position: relative; }
 .m-nav-icon { font-size: 20px; line-height: 1; }
