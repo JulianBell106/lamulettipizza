@@ -1186,7 +1186,8 @@ function updateStaffDisplay() {
  * Clears the anonymous Firebase Auth session, resets all dashboard state.
  */
 async function logoutStaff() {
-  if (!confirm(`Sign out${loggedInStaffName ? ` (${loggedInStaffName})` : ''}?`)) return;
+  // No confirm dialog — in a busy multi-staff kitchen one tap must be enough.
+  // The PIN screen is the re-entry gate; no data is lost on logout.
 
   // Stop the orders listener so we don't receive updates after logout
   if (ordersUnsubscribe) { ordersUnsubscribe(); ordersUnsubscribe = null; }

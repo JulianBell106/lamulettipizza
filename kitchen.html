@@ -160,6 +160,19 @@
     .k-header-right { display: flex; align-items: center; gap: 8px; }
     .k-time { font-size: 20px; font-weight: 700; color: rgba(255,255,255,0.95); font-variant-numeric: tabular-nums; }
 
+    /* ── Primary action panel — centre raised group ── */
+    .k-action-panel {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(212,160,67,0.07);
+      border: 1px solid rgba(212,160,67,0.20);
+      border-radius: 28px;
+      padding: 6px 10px;
+      box-shadow: 0 3px 14px rgba(0,0,0,0.50),
+                  inset 0 1px 0 rgba(255,255,255,0.07);
+    }
+
     .k-new-order-btn {
       padding: 7px 12px;
       border-radius: 20px;
@@ -880,24 +893,29 @@
   <div id="k-dashboard" style="display:none">
 
     <header class="k-header">
+
+      <!-- LEFT: brand identity -->
       <div>
         <div class="k-logo" id="k-logo">Kitchen</div>
         <div class="k-header-sub">Kitchen Dashboard</div>
       </div>
+
+      <!-- CENTRE: primary operational controls — raised panel -->
+      <div class="k-action-panel">
+        <button class="k-status-btn open" id="k-status-btn" onclick="openKitchenModal()">🟢 Open</button>
+        <button class="k-new-order-btn" onclick="openWalkinModal()">➕ New Order</button>
+        <button class="k-broadcast-btn" id="k-broadcast-btn" onclick="toggleBroadcast()">📍 Broadcast</button>
+      </div>
+
+      <!-- RIGHT: session / system -->
       <div class="k-header-right">
         <div class="k-time" id="k-time">--:--</div>
-        <button class="k-new-order-btn" onclick="openWalkinModal()">➕ New Order</button>
-        <!-- Session 14 — live location broadcast toggle -->
-        <button class="k-broadcast-btn" id="k-broadcast-btn" onclick="toggleBroadcast()">📍 Broadcast</button>
-        <!-- Logged-in staff name + logout (Session 16b) -->
         <span id="k-logged-in-name" class="k-staff-name" style="display:none;">👤 <span id="k-staff-name-text"></span></span>
         <button class="k-logout-btn" id="k-logout-btn" onclick="logoutStaff()" style="display:none;">Sign out</button>
-        <!-- Session 15 — staff management -->
         <button class="k-settings-btn" id="k-settings-btn" onclick="openSettingsPanel()" title="Staff management">⚙️</button>
-        <button class="k-status-btn open" id="k-status-btn" onclick="openKitchenModal()">
-          🟢 Open
-        </button>
       </div>
+
+
     </header>
 
     <div class="k-queue-bar">
