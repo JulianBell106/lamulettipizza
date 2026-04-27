@@ -367,8 +367,12 @@ document.addEventListener('visibilitychange', () => {
     clearInterval(broadcastIntervalId);
     broadcastIntervalId = null;
   }
-  // Restart GPS ping if broadcast was active before the lock
-  if (broadcastActive) _startLocationPing();
+  // Restart GPS ping if broadcast was active before the lock,
+  // with an immediate push so the map doesn't stay stale for a full interval.
+  if (broadcastActive) {
+    pushLocation().catch(() => {});
+    _startLocationPing();
+  }
 
   const hasPending = Object.values(currentOrders).some(o => o.status === 'pending');
   if (hasPending) {
@@ -484,7 +488,7 @@ function closeKitchenModal() { document.getElementById('kitchen-modal').classLis
    Use a dedicated Android device in the van for production.
    ============================================================================ */
 
-const BROADCAST_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+const BROADCAST_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
 
 /** Syncs the broadcast toggle button label and colour with broadcastActive. */
 function renderBroadcastBtn() {
@@ -514,6 +518,11 @@ function listenBroadcastState() {
     renderBroadcastBtn();
 
     if (broadcastActive && !broadcastIntervalId) {
+      // Push immediately on startup/reconnect so the map isn't stale for a
+      // full interval — then hand off to the regular ping cadence.
+      pushLocation().catch(err => {
+        console.warn('[Stalliq] Broadcast reconnect push failed:', err.message);
+      });
       _startLocationPing();
     } else if (!broadcastActive && broadcastIntervalId) {
       clearInterval(broadcastIntervalId);
