@@ -323,10 +323,26 @@ async function _releaseWakeLock() {
   }
 }
 
-// Re-acquire after the user switches back to the tab/app (OS releases on hide)
+// Re-acquire wake lock and restart any pending alert when returning from
+// background or screen lock — iOS kills setInterval during screen lock so
+// we can't rely on the interval still running when the screen wakes.
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && loggedInStaffId) {
-    _acquireWakeLock();
+  if (document.visibilityState !== 'visible' || !loggedInStaffId) return;
+
+  _acquireWakeLock();
+
+  // Force-clear the interval handle — iOS may have suspended it silently,
+  // leaving the handle non-null but the timer not actually ticking.
+  if (pendingAlertInterval) {
+    clearInterval(pendingAlertInterval);
+    pendingAlertInterval = null;
+  }
+
+  // If pending orders still exist, beep immediately and restart the interval.
+  const hasPending = Object.values(currentOrders).some(o => o.status === 'pending');
+  if (hasPending) {
+    playOrderAlert();
+    _managePendingAlert(true);
   }
 });
 
