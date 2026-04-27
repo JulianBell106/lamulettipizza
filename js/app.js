@@ -219,21 +219,39 @@ function generateOrderRef() {
 }
 
 function buildOrderSummaryHTML(rowClass) {
-  let total = 0;
-  let rows  = '';
+  let subtotal = 0;
+  let rows     = '';
+  const c      = CONFIG.business.currency;
+
   Object.keys(basket).map(Number).forEach(id => {
     const item = menuData.find(m => m.id === id);
     const qty  = basket[id];
     const sub  = item.price * qty;
-    total += sub;
+    subtotal += sub;
     rows += `<div class="${rowClass}">
                <span>${esc(item.name)} × ${qty}</span>
-               <strong>${CONFIG.business.currency}${sub.toFixed(2)}</strong>
+               <strong>${c}${sub.toFixed(2)}</strong>
              </div>`;
   });
+
+  const disc  = getActiveDiscount();
+  const total = Math.max(0, subtotal - (disc ? disc.amount : 0));
+
   rows += `<div class="${rowClass}" style="border-top:1px solid rgba(212,160,67,0.15);margin-top:8px;padding-top:8px;">
+             <span>Subtotal</span>
+             <strong>${c}${subtotal.toFixed(2)}</strong>
+           </div>`;
+
+  if (disc) {
+    rows += `<div class="${rowClass}" style="color:#8de88d;">
+               <span>🎉 ${esc(disc.description)}</span>
+               <strong>−${c}${disc.amount.toFixed(2)}</strong>
+             </div>`;
+  }
+
+  rows += `<div class="${rowClass}" style="border-top:1px solid rgba(212,160,67,0.15);margin-top:4px;padding-top:8px;">
              <span>Total</span>
-             <strong style="color:var(--gold)">${CONFIG.business.currency}${total.toFixed(2)}</strong>
+             <strong style="color:var(--gold)">${c}${total.toFixed(2)}</strong>
            </div>`;
   rows += `<div class="${rowClass}">
              <span>Payment</span>
@@ -3094,6 +3112,24 @@ function reorderItems(orderId) {
   renderDesktopMenu();
   renderMobileMenu();
 
+  closeOrderDetail();
+
+  if (added === 0) {
+    setTimeout(() => alert("Sorry — none of those items are currently available."), 200);
+    return;
+  }
+
+  if (window.innerWidth < 768) {
+    mShowPage('basket');
+  } else {
+    const acctPanel = document.getElementById('d-account-panel');
+    if (acctPanel) acctPanel.classList.remove('open');
+    const basketPanel = document.getElementById('d-basket-panel');
+    if (basketPanel) basketPanel.classList.add('open');
+  }
+
+  console.log(`[Stalliq] Reorder: ${added} item type(s) added to basket from order ${orderId}.`);
+}
   closeOrderDetail();
 
   if (added === 0) {

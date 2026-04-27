@@ -1013,7 +1013,12 @@ function openDetailModal(orderId) {
     <div class="k-detail-section">
       <div class="k-detail-label">Items</div>
       <div class="k-detail-items">${itemsHTML}</div>
-    </div>
+    <div class="k-detail-section k-detail-totals">
+      ${order.discount ? `
+        <div class="k-detail-row"><span>Subtotal</span><strong>${currency}${((order.orderTotal || 0) + (order.discount.amount || 0)).toFixed(2)}</strong></div>
+        <div class="k-detail-row" style="color:#8de88d;"><span>🎉 ${order.discount.description}</span><strong>−${currency}${(order.discount.amount || 0).toFixed(2)}</strong></div>
+      ` : ''}
+      <div class="k-detail-row"><span>Total</span><strong>${currency}${(order.orderTotal || 0).toFixed(2)}</strong></div>
 
     <div class="k-detail-section k-detail-totals">
       <div class="k-detail-row"><span>Order total</span><strong>${currency}${(order.orderTotal || 0).toFixed(2)}</strong></div>
