@@ -1153,7 +1153,8 @@ html { scroll-behavior: smooth; }
 
 /* ─── BOTTOM NAV ─── */
 @media (min-width: 768px) { .m-bottom-nav { display: none; } }
-.m-bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 72px; background: rgba(20,8,0,0.96); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid rgba(212,160,67,0.18); display: flex; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
+.m-bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 72px; background: rgba(20,8,0,0.96); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid rgba(212,160,67,0.18); display: none; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
+@media (max-width: 767px) { .m-bottom-nav { display: flex; } }
 .m-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; -webkit-tap-highlight-color: transparent; position: relative; }
 .m-nav-icon { font-size: 20px; line-height: 1; }
 .m-nav-label { font-size: 9px; letter-spacing: 0.05em; text-transform: uppercase; color: rgba(253,246,236,0.4); font-weight: 500; }
@@ -1654,141 +1655,6 @@ html { scroll-behavior: smooth; }
     <div class="m-confirm-time" id="m-confirm-time">⏳</div>
     <div class="m-confirm-timelabel" id="m-confirm-timelabel">Waiting for kitchen to accept…</div>
     <div class="m-confirm-ref" id="m-confirm-ref">Order ref #001</div>
-    <div class="m-confirm-details" id="m-confirm-details"></div>
-    <p class="m-confirm-msg" id="m-confirm-msg">Thanks for your order!</p>
-    <button class="m-btn" style="width:100%;max-width:320px;" id="m-confirm-dismiss-btn" onclick="mDismissOrder()">Done — See you soon!</button>
-  </div>
-
-  <nav class="m-bottom-nav">
-    <div class="m-nav-item active" onclick="mShowPage('home')"    id="m-nav-home">   <div class="m-nav-icon">🏠</div><div class="m-nav-label">Home</div></div>
-    <div class="m-nav-item"        onclick="mShowPage('menu')"    id="m-nav-menu">   <div class="m-nav-icon">🍕</div><div class="m-nav-label">Menu</div></div>
-    <div class="m-nav-item"        onclick="mShowPage('basket')"  id="m-nav-basket"> <div class="m-nav-icon">🛒</div><div class="m-nav-label">Basket</div><div class="m-basket-badge" id="m-basket-badge">0</div></div>
-    <div class="m-nav-item"        onclick="mShowPage('about')"   id="m-nav-about">  <div class="m-nav-icon">👫</div><div class="m-nav-label">About</div></div>
-    <div class="m-nav-item"        onclick="mShowPage('findus')"  id="m-nav-findus"> <div class="m-nav-icon">📍</div><div class="m-nav-label">Find Us</div></div>
-    <div class="m-nav-item"        onclick="mShowPage('account')" id="m-nav-account"><div class="m-nav-icon">👤</div><div class="m-nav-label">Account</div></div>
-  </nav>
-
-</div><!-- /mobile-app -->
-
-<!-- ORDER DETAIL OVERLAY -->
-<div id="order-detail-overlay">
-  <div class="order-detail-sheet">
-    <div class="order-detail-handle"></div>
-    <div class="order-detail-header">
-      <div class="order-detail-ref" id="od-ref">—</div>
-      <button class="order-detail-close" onclick="closeOrderDetail()">×</button>
-    </div>
-    <div class="order-detail-meta">
-      <div class="order-detail-date" id="od-date">—</div>
-      <div class="order-detail-status-badge" id="od-status-badge"></div>
-    </div>
-    <div class="order-detail-items">
-      <div class="order-detail-items-label">Items</div>
-      <div id="od-items-list"></div>
-    </div>
-    <div class="order-detail-totals">
-      <div class="order-detail-total-row">
-        <span>Payment</span>
-        <span id="od-payment">Cash on collection</span>
-      </div>
-      <div class="order-detail-total-row main">
-        <span>Total</span>
-        <span id="od-total">—</span>
-      </div>
-    </div>
-    <div id="od-reorder-wrap"></div>
-  </div>
-</div>
-
-<!-- AUTH OVERLAY -->
-<div id="auth-overlay">
-  <div id="auth-screen-phone" class="auth-screen">
-    <div class="auth-modal">
-      <button class="auth-back" onclick="authClose()">✕ Cancel</button>
-      <div class="auth-icon">📱</div>
-      <div class="auth-title" id="auth-title">Confirm your order</div>
-      <p class="auth-sub" id="auth-sub-text">Enter your mobile and we'll text you when your order is ready to collect</p>
-      <div class="auth-field">
-        <label class="auth-label">Mobile number</label>
-        <div class="auth-phone-row">
-          <div class="auth-prefix">🇬🇧 +44</div>
-          <input id="auth-phone-input" type="tel" inputmode="numeric"
-                 placeholder="7911 123456" maxlength="11" class="auth-input"
-                 onkeydown="if(event.key==='Enter')authSendCode()">
-        </div>
-      </div>
-      <div id="recaptcha-container"></div>
-      <button id="auth-send-btn" class="auth-primary-btn" onclick="authSendCode()">Send verification code</button>
-      <div id="auth-phone-err" class="auth-err"></div>
-    </div>
-  </div>
-  <div id="auth-screen-code" class="auth-screen" style="display:none">
-    <div class="auth-modal">
-      <button class="auth-back" onclick="authShowScreen('phone')">← Back</button>
-      <div class="auth-icon">💬</div>
-      <div class="auth-title">Enter the code</div>
-      <p class="auth-sub" id="auth-code-msg">We sent a 6-digit code to your mobile</p>
-      <div class="auth-field">
-        <label class="auth-label">Verification code</label>
-        <input id="auth-code-input" type="tel" inputmode="numeric"
-               placeholder="• • • • • •" maxlength="6"
-               class="auth-input auth-code-input"
-               onkeydown="if(event.key==='Enter')authVerifyCode()">
-      </div>
-      <button class="auth-primary-btn" onclick="authVerifyCode()">Verify →</button>
-      <div id="auth-code-err" class="auth-err"></div>
-    </div>
-  </div>
-  <div id="auth-screen-name" class="auth-screen" style="display:none">
-    <div class="auth-modal">
-      <div class="auth-icon">👋</div>
-      <div class="auth-title">What's your first name?</div>
-      <p class="auth-sub">We'll call your name when your order is ready to collect</p>
-      <div class="auth-field">
-        <label class="auth-label">First name</label>
-        <input id="auth-name-input" type="text" inputmode="text"
-               placeholder="e.g. Julian" maxlength="30" class="auth-input"
-               onkeydown="if(event.key==='Enter')authSaveName()">
-      </div>
-      <button class="auth-primary-btn" onclick="authSaveName()">Continue →</button>
-      <div id="auth-name-err" class="auth-err"></div>
-    </div>
-  </div>
-</div>
-
-<!-- COOKIE / PRIVACY NOTICE (PECR compliance) -->
-<div id="cookie-notice" class="hidden">
-  <p class="cookie-text">
-    This site uses your phone number to send order confirmations and
-    remembers your session to show your order status.
-    No cookies are used for advertising.
-    <a href="privacy.html" target="_blank">Privacy policy</a>
-  </p>
-  <button class="cookie-btn" onclick="dismissCookieNotice()">Got it</button>
-</div>
-<script>
-  (function() {
-    if (!localStorage.getItem('stalliq_cookie_ok')) {
-      document.getElementById('cookie-notice').classList.remove('hidden');
-    }
-  })();
-  function dismissCookieNotice() {
-    localStorage.setItem('stalliq_cookie_ok', '1');
-    document.getElementById('cookie-notice').classList.add('hidden');
-  }
-</script>
-
-<!-- SCRIPTS -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="js/config.js"></script>
-<script src="js/firebase.js"></script>
-<script src="js/app.js"></script>
-
-</body>
-</html>
     <div class="m-confirm-details" id="m-confirm-details"></div>
     <p class="m-confirm-msg" id="m-confirm-msg">Thanks for your order!</p>
     <button class="m-btn" style="width:100%;max-width:320px;" id="m-confirm-dismiss-btn" onclick="mDismissOrder()">Done — See you soon!</button>
