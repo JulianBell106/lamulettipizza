@@ -1,7 +1,7 @@
 # Stalliq — Project Bible
-> Last updated: April 2026 — Session 16b/16c (Security hardening + kitchen UI polish ✅)
+> Last updated: April 2026 — Session 16d (Mobile performance + ready beep fix ✅)
 > **Next sprint:** Session 17 — Pitch deck update.
-> **Pending test:** Customer order placement + auth flow — Firebase phone auth was rate-limited during testing. Retest before go-live.
+> **Pending test:** Customer order placement + auth flow — Firebase phone auth was rate-limited during testing. Retest before go-live. Also retest ready beep after 16d fix.
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -216,6 +216,7 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 16a | Security hardening — anonymous auth | ✅ Done |
 | 16b | Security hardening — rules, salting, GDPR | ✅ Done |
 | 16c | Kitchen UI polish + bug fixes | ✅ Done |
+| 16d | Mobile performance + ready beep fix | ✅ Done |
 | 17 | Pitch deck update | ⏳ Next |
 
 **What gets demoed live at the meeting:**
@@ -665,6 +666,26 @@ Rules to implement:
 - `vendors/{vendorId}/staff/{staffId}` — read/write requires `request.auth != null` (any authenticated session)
 - `orders/{orderId}` — create by phone-auth or anonymous-auth; customer reads own order (`resource.data.customerId == request.auth.uid`); anonymous-auth reads/updates all orders for their vendor
 - `users/{uid}` — read/write only by matching UID (`request.auth.uid == uid`)
+
+---
+
+### 26e. Session 16d — Mobile Performance + Ready Beep Fix (COMPLETE ✅)
+
+**Files changed:** `js/app.js` only.
+
+**Bug 1 — Mobile home page slow to render (pills/feature tags)**
+
+`renderMobileHome()` was called after `await Promise.all([fetchMenuFromSheet(), fetchEventsFromSheet(), fetchOffersFromSheet()])`. The pills ("Authentic Neapolitan", "Mobile Pizzeria", "Private Catering", "Pay on Collection" etc.) are built entirely from `CONFIG.homePills` — static local config, zero network dependency. They were waiting 2–4 seconds for three Google Sheets fetches to complete before appearing. Same applied to `renderMobileAbout()`.
+
+Fix: both are now called before the `await Promise.all(...)`. Only `renderMobileMenu()` and `renderMobileFindUs()` remain after the fetches (they depend on sheet data).
+
+**Bug 2 — Ready beep silent on customer device**
+
+`playReadyBeep()` was scheduling Web Audio oscillators without checking whether the `AudioContext` was suspended. Mobile browsers (iOS especially) automatically suspend the `AudioContext` after a period of inactivity — even after it was unlocked by the "Place Order" tap. By the time the kitchen marks the order ready and the Firestore listener fires, the context is typically suspended again. Oscillators scheduled against a suspended context produce silence.
+
+Fix: `playReadyBeep()` is now `async` and calls `await ctx.resume()` before scheduling oscillators if the context is in the `'suspended'` state. The resume succeeds because the context was already unlocked earlier in the same session via the user gesture.
+
+**Note:** Web Audio follows the device's media volume, not notification volume. If the device is on silent/media muted, the beep will still be silent regardless of this fix.
 
 ---
 
