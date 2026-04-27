@@ -1169,18 +1169,49 @@ async function submitWalkinOrder() {
      staff-edit-screen     — rename or change PIN for an existing member
    ============================================================================ */
 
-/** Updates the logged-in staff name display in the kitchen header. */
+/** Updates the logged-in staff name display and logout button in the header. */
 function updateStaffDisplay() {
-  const wrap   = document.getElementById('k-logged-in-name');
-  const nameEl = document.getElementById('k-staff-name-text');
-  if (!wrap || !nameEl) return;
-  if (loggedInStaffName) {
-    nameEl.textContent = loggedInStaffName;
-    wrap.style.display = 'inline-flex';
-    wrap.style.alignItems = 'center';
-  } else {
-    wrap.style.display = 'none';
-  }
+  const wrap      = document.getElementById('k-logged-in-name');
+  const nameEl    = document.getElementById('k-staff-name-text');
+  const logoutBtn = document.getElementById('k-logout-btn');
+  const show      = !!loggedInStaffName;
+
+  if (wrap)      wrap.style.display      = show ? 'inline' : 'none';
+  if (nameEl)    nameEl.textContent      = loggedInStaffName || '';
+  if (logoutBtn) logoutBtn.style.display = show ? 'inline-flex' : 'none';
+}
+
+/**
+ * Signs the current staff member out and returns to the PIN screen.
+ * Clears the anonymous Firebase Auth session, resets all dashboard state.
+ */
+async function logoutStaff() {
+  if (!confirm(`Sign out${loggedInStaffName ? ` (${loggedInStaffName})` : ''}?`)) return;
+
+  // Stop the orders listener so we don't receive updates after logout
+  if (ordersUnsubscribe) { ordersUnsubscribe(); ordersUnsubscribe = null; }
+
+  // Sign out from Firebase Auth
+  try { await firebase.auth().signOut(); } catch (_) {}
+
+  // Clear staff state
+  loggedInStaffId   = null;
+  loggedInStaffName = null;
+  currentOrders     = {};
+
+  // Hide dashboard, show PIN screen
+  const dashboard = document.getElementById('k-dashboard');
+  if (dashboard) dashboard.style.display = 'none';
+  const overlay = document.getElementById('pin-overlay');
+  if (overlay) overlay.classList.remove('hidden');
+
+  // Reset PIN dots and errors
+  pinEntry = '';
+  renderPinDots();
+  showPinError('');
+
+  // Update header
+  updateStaffDisplay();
 }
 
 /** Simple toast notification — appears briefly then fades. */

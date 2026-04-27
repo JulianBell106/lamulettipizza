@@ -192,6 +192,29 @@
       border-color: rgba(39,174,96,0.30);
     }
 
+    /* ── Logged-in staff name (Session 16b) ── */
+    .k-staff-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: rgba(255,255,255,0.85);
+      white-space: nowrap;
+      letter-spacing: 0.2px;
+    }
+
+    /* ── Logout button (Session 16b) ── */
+    .k-logout-btn {
+      padding: 7px 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(231,76,60,0.35);
+      background: rgba(231,76,60,0.10);
+      color: rgba(231,76,60,0.90);
+      font-size: 14px; font-weight: 700; letter-spacing: 0.2px;
+      transition: opacity 0.15s, background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+      white-space: nowrap;
+    }
+    .k-logout-btn:active { opacity: 0.75; background: rgba(231,76,60,0.20); }
+
     .k-status-btn {
       padding: 7px 12px;
       border-radius: 20px;
@@ -866,8 +889,9 @@
         <button class="k-new-order-btn" onclick="openWalkinModal()">➕ New Order</button>
         <!-- Session 14 — live location broadcast toggle -->
         <button class="k-broadcast-btn" id="k-broadcast-btn" onclick="toggleBroadcast()">📍 Broadcast</button>
-        <!-- Logged-in staff name (Session 16b) -->
-        <span id="k-logged-in-name" style="display:none; font-size:12px; color:rgba(255,255,255,0.60); white-space:nowrap;">👤 <span id="k-staff-name-text"></span></span>
+        <!-- Logged-in staff name + logout (Session 16b) -->
+        <span id="k-logged-in-name" class="k-staff-name" style="display:none;">👤 <span id="k-staff-name-text"></span></span>
+        <button class="k-logout-btn" id="k-logout-btn" onclick="logoutStaff()" style="display:none;">Sign out</button>
         <!-- Session 15 — staff management -->
         <button class="k-settings-btn" id="k-settings-btn" onclick="openSettingsPanel()" title="Staff management">⚙️</button>
         <button class="k-status-btn open" id="k-status-btn" onclick="openKitchenModal()">
