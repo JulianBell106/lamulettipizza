@@ -796,6 +796,8 @@
     /* ============================================================
        FORGOT PIN MODAL (Session 15)
     ============================================================ */
+    /* Must sit above the PIN overlay (z-index 1000) since it's launched from the lock screen */
+    #forgot-modal { z-index: 1100; }
     .k-modal-forgot { max-height: 85vh; overflow-y: auto; }
     .forgot-intro { font-size: 13px; color: rgba(253,246,236,0.65); line-height: 1.55; margin-bottom: 20px; }
 
