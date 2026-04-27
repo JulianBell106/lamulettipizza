@@ -1521,7 +1521,7 @@ async function submitNewOwnerPin() {
   const pin  = (pinEl?.value  || '').trim();
   const pin2 = (pin2El?.value || '').trim();
 
-  if (!/^\d{4}$/.test(pin)) { errEl.textContent = 'PIN must be exactly 4 digits.'; return; }
+  if (!/^\d{6}$/.test(pin)) { errEl.textContent = 'PIN must be exactly 6 digits.'; return; }
   if (pin !== pin2)          { errEl.textContent = 'PINs do not match.'; return; }
   errEl.textContent = '';
   if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
