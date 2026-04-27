@@ -104,10 +104,10 @@ function startClock() {
 let pinEntry = '';
 
 function pinPress(digit) {
-  if (pinEntry.length >= 4) return;
+  if (pinEntry.length >= 6) return;
   pinEntry += digit;
   renderPinDots();
-  if (pinEntry.length === 4) setTimeout(checkPinMultiStaff, 120);
+  if (pinEntry.length === 6) setTimeout(checkPinMultiStaff, 120);
 }
 
 function pinBackspace() {
@@ -117,7 +117,7 @@ function pinBackspace() {
 }
 
 function renderPinDots() {
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 6; i++) {
     const dot = document.getElementById(`pin-dot-${i}`);
     if (dot) dot.classList.toggle('filled', i < pinEntry.length);
   }
@@ -1309,7 +1309,7 @@ async function submitAddStaff() {
   const pin2 = (pin2El?.value || '').trim();
 
   if (!name)                   { errEl.textContent = 'Name is required.'; return; }
-  if (!/^\d{4}$/.test(pin))    { errEl.textContent = 'PIN must be exactly 4 digits.'; return; }
+  if (!/^\d{6}$/.test(pin))    { errEl.textContent = 'PIN must be exactly 6 digits.'; return; }
   if (pin !== pin2)             { errEl.textContent = 'PINs do not match.'; return; }
   errEl.textContent = '';
   if (btn) { btn.textContent = 'Adding…'; btn.disabled = true; }
@@ -1364,7 +1364,7 @@ async function submitEditStaff() {
 
   const updates = { name };
   if (pin) {
-    if (!/^\d{4}$/.test(pin)) { errEl.textContent = 'PIN must be exactly 4 digits.'; return; }
+    if (!/^\d{6}$/.test(pin)) { errEl.textContent = 'PIN must be exactly 6 digits.'; return; }
     if (pin !== pin2)          { errEl.textContent = 'PINs do not match.'; return; }
     updates.pinHash = await hashPin(pin);
   }
