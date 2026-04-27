@@ -156,6 +156,24 @@ function basketTotalPrice() {
   }, 0);
 }
 
+/**
+ * Patches just the qty controls for one desktop menu card in-place.
+ * Avoids rebuilding the whole grid + re-running initScrollReveal(),
+ * which caused all cards to flash on every qty tap.
+ */
+function patchDesktopMenuItemControls(id) {
+  const card = document.getElementById(`d-card-${id}`);
+  if (!card) return;
+  const el  = card.querySelector('.d-pizza-controls');
+  if (!el)   return;
+  const qty = basket[id] || 0;
+  el.innerHTML = qty > 0
+    ? `<button class="d-qty-btn"     data-id="${id}" data-delta="-1">−</button>
+       <span   class="d-qty-num">${qty}</span>
+       <button class="d-qty-btn add" data-id="${id}" data-delta="1">+</button>`
+    : `<button class="d-qty-btn add" data-id="${id}" data-delta="1">+</button>`;
+}
+
 function updateBasket(id, delta) {
   id = Number(id);
   basket[id] = Math.max(0, (basket[id] || 0) + delta);
@@ -163,7 +181,7 @@ function updateBasket(id, delta) {
     delete basket[id];
     delete basketNotes[id]; // clear note when item removed via qty controls
   }
-  renderDesktopMenu();
+  patchDesktopMenuItemControls(id); // surgical patch — no flash, no scroll reveal reset
   renderMobileMenu();
   refreshDesktopBasket();
   refreshMobileBadge();

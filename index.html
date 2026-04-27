@@ -845,6 +845,10 @@ html { scroll-behavior: smooth; }
   -webkit-backdrop-filter: blur(6px);
   animation: cookieSlideUp 0.4s cubic-bezier(0.16,1,0.3,1);
 }
+@media (max-width: 767px) {
+  /* Sit above the mobile nav bar (72px) + safe area inset */
+  #cookie-notice { bottom: calc(72px + env(safe-area-inset-bottom)); }
+}
 @media (min-width: 768px) {
   #cookie-notice { padding: 14px 60px 18px; }
 }
@@ -1584,6 +1588,7 @@ html { scroll-behavior: smooth; }
         <div class="m-acct-logout-title">Your Account</div>
         <p class="m-acct-logout-sub">Sign in to track your orders, collect loyalty stamps, and access exclusive offers.</p>
         <button class="m-btn" style="margin:0;width:100%;max-width:280px;" onclick="accountSignIn()">Sign In</button>
+        <a href="privacy.html" style="display:block;margin-top:24px;font-size:12px;color:rgba(253,246,236,0.35);text-align:center;text-decoration:underline;text-underline-offset:3px;">Privacy policy</a>
       </div>
     </div>
     <div id="m-account-in" style="display:none;">
@@ -1610,6 +1615,7 @@ html { scroll-behavior: smooth; }
         No orders yet — your first pizza is waiting
       </div>
       <button class="m-signout-btn" onclick="accountSignOut()">Sign Out</button>
+      <a href="privacy.html" style="display:block;margin:8px 0 24px;font-size:12px;color:rgba(253,246,236,0.35);text-align:center;text-decoration:underline;text-underline-offset:3px;">Privacy policy</a>
     </div>
   </div>
 
