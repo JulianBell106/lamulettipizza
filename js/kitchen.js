@@ -1098,6 +1098,12 @@ function _playOrderBeeps(ctx) {
 function _managePendingAlert(hasPending) {
   if (hasPending && !pendingAlertInterval) {
     pendingAlertInterval = setInterval(playOrderAlert, 8000);
+    // If the audio context isn't running (e.g. after a screen-lock reload where
+    // no PIN gesture unlocked it), show the banner immediately so the first tap
+    // on screen restores audio — don't wait for visibilitychange to trigger it.
+    if (!kitchenAudioCtx || kitchenAudioCtx.state !== 'running') {
+      _showAudioRestorePrompt();
+    }
   } else if (!hasPending && pendingAlertInterval) {
     clearInterval(pendingAlertInterval);
     pendingAlertInterval = null;
