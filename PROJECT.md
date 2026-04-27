@@ -1,6 +1,6 @@
 # Stalliq — Project Bible
-> Last updated: April 2026 — Session 15b (Real Phone Auth go-live) COMPLETE ✅
-> **Next sprint:** Session 16 — Pitch deck update.
+> Last updated: April 2026 — Session 16a (Security hardening — anonymous auth ✅) IN PROGRESS
+> **Next sprint:** Session 16b — Complete security hardening (Firestore rules, PIN salting, cookie notice, privacy policy).
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -188,6 +188,7 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 14 | Live Location Broadcast | ✅ Done | Full stack complete. Kitchen broadcasts GPS; customer Find Us page shows live map, kitchen status, tagline. Find Us page redesigned (mobile + desktop). Kitchen legibility pass. |
 | 15 | Multi-Staff Kitchen PIN | ✅ Done | Multi-staff PIN login (SHA-256 hashed), lockout after 5 fails (15 min), staff management panel (add/rename/change PIN/deactivate), forgot PIN flow via Firebase Phone Auth. Session 15. |
 | 15a | Real Phone Auth Go-Live | ✅ Done | Blaze plan, App Check (reCAPTCHA v3), authorised domain confirmed, test numbers removed, old kitchen.pin removed. Session 15b. |
+| 15b | Security Hardening + GDPR | 🔄 In Progress | Anonymous auth ✅, Firestore rules ⏳, PIN salting ⏳, cookie notice ⏳, privacy policy ⏳. Session 16a/16b. |
 | 16 | SMS & WhatsApp Status Notifications | ⏳ Planned | Customer notified on order status changes — Twilio |
 | 17 | Geofence Notifications | ⏳ Planned | Van enters subscriber's area → phone buzzes |
 | 18 | Flash Sales & Broadcasts | ⏳ Planned | Vendor launches deal in seconds, broadcasts to subscribers |
@@ -211,7 +212,9 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 14 | Live location broadcast + Find Us redesign + kitchen legibility | ✅ Done |
 | 15 | Multi-staff kitchen PIN management | ✅ Done |
 | 15b | Real Firebase Phone Auth go-live | ✅ Done |
-| 16 | Pitch deck update | ⏳ |
+| 16a | Security hardening — anonymous auth | ✅ Done |
+| 16b | Security hardening — rules, salting, GDPR | ⏳ Next |
+| 17 | Pitch deck update | ⏳ |
 
 **What gets demoed live at the meeting:**
 - Premium desktop site shown first on laptop — sets the brand tone
@@ -256,7 +259,8 @@ vendors/{vendorId}/
 
   staff/{staffId} → (Session 15 — multi-staff PIN)
     name:      string
-    pinHash:   string  (SHA-256 hex of PIN — never store plaintext)
+    pinHash:   string  (SHA-256 hex of PIN+salt — never store plaintext)
+    pinSalt:   string  (random hex salt — added Session 16a, backward compat: missing = empty string)
     active:    boolean
     createdAt: timestamp
 
@@ -420,7 +424,7 @@ Before the "Forgot all PINs?" reset flow will work, Julian must manually set the
 5. Optionally rename the "Owner" entry to "Daniele" via the Edit button
 
 **Session startup:**
-> "New session — read the live PROJECT.md from GitHub: https://raw.githubusercontent.com/JulianBell106/lamulettipizza/refs/heads/main/PROJECT.md — today we're doing Session 16: pitch deck update."
+> "New session — read the live PROJECT.md from GitHub: https://raw.githubusercontent.com/JulianBell106/lamulettipizza/refs/heads/main/PROJECT.md — today we're doing Session 16b: complete the security hardening sprint (Firestore rules, PIN salting, cookie notice, privacy policy)."
 
 ---
 
@@ -444,15 +448,20 @@ Before the "Forgot all PINs?" reset flow will work, Julian must manually set the
 | # | Task | Status |
 |---|------|--------|
 | 1 | Firestore composite index | ✅ Created for La Muletti |
-| 2 | Firestore security rules | ⏳ |
-| 3 | Remove `noindex, nofollow` | ⏳ |
+| 2 | Firestore security rules | ⏳ Session 16b |
+| 3 | Remove `noindex, nofollow` from index.html | ⏳ Session 16b |
 | 4 | Firebase Phone Auth — real domain | ✅ |
 | 4a | Firebase App Check (reCAPTCHA v3) | ✅ |
 | 4b | Firebase Blaze plan | ✅ |
 | 5 | Remove Firebase test numbers | ✅ |
 | 6 | CONFIG.vendor.id confirmed | ⏳ |
 | 7 | CONFIG.domains updated | ⏳ |
-| 8 | Kitchen PIN system replaced with multi-staff PIN management | ⏳ Session 15 |
+| 8 | Kitchen PIN system replaced with multi-staff PIN management | ✅ Session 15 |
+| 8a | Anonymous Firebase auth for kitchen (enables security rules) | ✅ Session 16a |
+| 8b | PIN hash salting (per-staff random salt in Firestore) | ⏳ Session 16b |
+| 8c | Cookie/storage notice (PECR compliance) | ⏳ Session 16b |
+| 8d | Privacy policy page | ⏳ Session 16b |
+| 8e | ICO registration (Endoo Limited) | ⏳ Julian — ico.org.uk, ~£40/year |
 | 9 | noindex on kitchen.html | ✅ Present |
 | 10 | Google Sheet — protect header row | ⏳ |
 | 11 | Google Sheet — vendor 2FA | ⏳ |
@@ -555,6 +564,61 @@ Before the "Forgot all PINs?" reset flow will work, Julian must manually set the
 - Forgot PIN writes to a fixed `staff/owner` doc ID — easy to identify for later renaming
 - Settings panel re-auth required own PIN — prevents casual tampering on an unlocked tablet
 - Staff names with apostrophes are escaped (`safeName`) in the staff list render to avoid JS injection in inline `onclick` handlers
+
+---
+
+## 26. Security Hardening + GDPR Sprint — Session 16a/16b
+
+**Why this sprint exists:** Daniele may want to go live quickly after the demo. Julian was explicit: "I can't be reputationally compromised." The app was functionally complete but had open Firestore rules, unhashed PIN salts, no cookie notice, and no privacy policy.
+
+---
+
+### 26a. Session 16a — Anonymous Auth for Kitchen (COMPLETE ✅)
+
+**Problem:** Firestore security rules need `request.auth != null` to protect the staff collection. But the kitchen doesn't use Firebase Auth (just PINs). Chicken-and-egg: to read staff docs securely, you need auth; to get auth, you need to check a staff PIN.
+
+**Solution:** `signInAnonymously()` before querying the staff collection. Sign out immediately on wrong PIN or error. Keep the anonymous session alive on correct PIN match. This means the kitchen dashboard always has a valid Firebase Auth identity while active — enabling rules that require `request.auth != null`.
+
+**Changes to `js/kitchen.js` — `checkPinMultiStaff()`:**
+- Calls `await firebase.auth().signInAnonymously()` before Firestore staff query
+- Changed `snapshot.forEach` to `for...of` loop (required to `await hashPin()` inside the loop)
+- Uses `data.pinSalt || ''` for backward compat with existing unsalted staff docs
+- `firebase.auth().signOut()` on wrong PIN or error
+- Anonymous session retained on successful match
+
+---
+
+### 26b. Session 16b — Remaining Hardening (PENDING ⏳)
+
+**Task order:**
+
+| # | Task | Notes |
+|---|------|-------|
+| 1 | **Firestore security rules** | Most critical. Paste into Firebase Console → Firestore → Rules tab. |
+| 2 | **PIN hash salting** | Add `generateSalt()`, update `hashPin(pin, salt)`, write `pinSalt` alongside `pinHash` in submitAddStaff / submitEditStaff / submitNewOwnerPin. Backward compat: existing docs without salt treated as salt = ''. |
+| 3 | **Cookie/storage notice** | Small dismissible banner in `index.html` (PECR compliance). sessionStorage used = first-party, but phone number collection needs notice. |
+| 4 | **Remove noindex from index.html** | Currently `<meta name="robots" content="noindex, nofollow">` — remove before go-live |
+| 5 | **Privacy policy page** | Standalone page linked from footer. Covers: data collected, why, retention, ICO registration, contact. |
+
+**Operational tasks for Julian (not code):**
+- Register Endoo Limited with ICO: ico.org.uk → "Register with the ICO" → ~£40/year. Required before collecting personal data in production.
+- Data retention policy: decide how long to keep completed orders in Firestore (suggest: 90 days, then delete or archive)
+
+---
+
+### 26c. Planned Firestore Security Rules (to be written in 16b)
+
+Kitchen auth model:
+- Customer ordering flow: Firebase Phone Auth (`provider == 'phone'`)
+- Kitchen dashboard: Firebase Anonymous Auth (signed in on successful PIN)
+- Public: no auth (read-only for menu/status/location)
+
+Rules to implement:
+- `vendors/{vendorId}` — public read of `kitchenStatus`; anonymous/phone-auth write (kitchen only)
+- `vendors/{vendorId}/location/current` — public read; anonymous-auth write (kitchen broadcasts)
+- `vendors/{vendorId}/staff/{staffId}` — read/write requires `request.auth != null` (any authenticated session)
+- `orders/{orderId}` — create by phone-auth or anonymous-auth; customer reads own order (`resource.data.customerId == request.auth.uid`); anonymous-auth reads/updates all orders for their vendor
+- `users/{uid}` — read/write only by matching UID (`request.auth.uid == uid`)
 
 ---
 

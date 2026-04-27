@@ -185,23 +185,30 @@ async function checkPinMultiStaff() {
     return;
   }
 
-  const hash = await hashPin(pinEntry);
+  const enteredPin = pinEntry;
   pinEntry = '';
   renderPinDots();
 
   try {
+    // Sign in anonymously first so Firestore security rules allow the staff read.
+    // If the PIN is wrong we sign out immediately.
+    await firebase.auth().signInAnonymously();
+
     const snapshot = await db.collection('vendors').doc(CONFIG.vendor.id)
       .collection('staff')
       .where('active', '==', true)
       .get();
 
     let match = null;
-    snapshot.forEach(doc => {
-      if (doc.data().pinHash === hash) match = { id: doc.id, ...doc.data() };
-    });
+    for (const doc of snapshot.docs) {
+      const data  = doc.data();
+      const salt  = data.pinSalt || '';
+      const hash  = await hashPin(enteredPin, salt);
+      if (data.pinHash === hash) { match = { id: doc.id, ...data }; break; }
+    }
 
     if (match) {
-      // ✅ Correct PIN — grant access
+      // ✅ Correct PIN — keep the anonymous session, grant access
       failedPinAttempts = 0;
       pinLockedUntil    = null;
       sessionStorage.removeItem('pinFailCount');
@@ -215,7 +222,9 @@ async function checkPinMultiStaff() {
       startDashboard();
       showToast(`Welcome, ${match.name}!`);
     } else {
-      // ❌ Wrong PIN
+      // ❌ Wrong PIN — sign out to discard the anonymous session
+      firebase.auth().signOut().catch(() => {});
+
       failedPinAttempts++;
       sessionStorage.setItem('pinFailCount', String(failedPinAttempts));
 
@@ -231,6 +240,7 @@ async function checkPinMultiStaff() {
     }
   } catch (err) {
     console.error('[Stalliq] PIN check error:', err);
+    firebase.auth().signOut().catch(() => {});
     showPinError('Connection error — please try again');
     shakePinDots();
   }
