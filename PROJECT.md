@@ -1,6 +1,6 @@
 # Stalliq — Project Bible
-> Last updated: April 2026 — Session 15 (PIN management) COMPLETE ✅
-> **Next sprint:** Session 15b — Real Firebase Phone Auth go-live (Blaze plan, App Check, remove test numbers, production domain).
+> Last updated: April 2026 — Session 15b (Real Phone Auth go-live) COMPLETE ✅
+> **Next sprint:** Session 16 — Pitch deck update.
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -187,7 +187,7 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 13 | Customer Ready Beep | ✅ Done | Two beeps via Web Audio API (660 Hz) when status → ready. unlockAudio() on Place Order tap. firedReadyBeep guard prevents spurious beeps on load. Session 13 |
 | 14 | Live Location Broadcast | ✅ Done | Full stack complete. Kitchen broadcasts GPS; customer Find Us page shows live map, kitchen status, tagline. Find Us page redesigned (mobile + desktop). Kitchen legibility pass. |
 | 15 | Multi-Staff Kitchen PIN | ✅ Done | Multi-staff PIN login (SHA-256 hashed), lockout after 5 fails (15 min), staff management panel (add/rename/change PIN/deactivate), forgot PIN flow via Firebase Phone Auth. Session 15. |
-| 15a | Real Phone Auth Go-Live | ⏳ Next (Session 15b) | Blaze plan, App Check, authorised domains, remove test numbers. See Section 23. |
+| 15a | Real Phone Auth Go-Live | ✅ Done | Blaze plan, App Check (reCAPTCHA v3), authorised domain confirmed, test numbers removed, old kitchen.pin removed. Session 15b. |
 | 16 | SMS & WhatsApp Status Notifications | ⏳ Planned | Customer notified on order status changes — Twilio |
 | 17 | Geofence Notifications | ⏳ Planned | Van enters subscriber's area → phone buzzes |
 | 18 | Flash Sales & Broadcasts | ⏳ Planned | Vendor launches deal in seconds, broadcasts to subscribers |
@@ -210,7 +210,7 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 13 | Per-item notes + Ready beep | ✅ Done |
 | 14 | Live location broadcast + Find Us redesign + kitchen legibility | ✅ Done |
 | 15 | Multi-staff kitchen PIN management | ✅ Done |
-| 15b | Real Firebase Phone Auth go-live | ⏳ |
+| 15b | Real Firebase Phone Auth go-live | ✅ Done |
 | 16 | Pitch deck update | ⏳ |
 
 **What gets demoed live at the meeting:**
@@ -420,7 +420,7 @@ Before the "Forgot all PINs?" reset flow will work, Julian must manually set the
 5. Optionally rename the "Owner" entry to "Daniele" via the Edit button
 
 **Session startup:**
-> "New session — read the live PROJECT.md from GitHub: https://raw.githubusercontent.com/JulianBell106/lamulettipizza/refs/heads/main/PROJECT.md — today we're doing Session 15b: real Firebase Phone Auth go-live. See Section 23 for the checklist."
+> "New session — read the live PROJECT.md from GitHub: https://raw.githubusercontent.com/JulianBell106/lamulettipizza/refs/heads/main/PROJECT.md — today we're doing Session 16: pitch deck update."
 
 ---
 
@@ -446,10 +446,10 @@ Before the "Forgot all PINs?" reset flow will work, Julian must manually set the
 | 1 | Firestore composite index | ✅ Created for La Muletti |
 | 2 | Firestore security rules | ⏳ |
 | 3 | Remove `noindex, nofollow` | ⏳ |
-| 4 | Firebase Phone Auth — real domain | ⏳ Session 15 |
-| 4a | Firebase App Check (reCAPTCHA Enterprise) | ⏳ Session 15 |
-| 4b | Firebase Blaze plan | ⏳ Session 15 |
-| 5 | Remove Firebase test numbers | ⏳ Session 15 |
+| 4 | Firebase Phone Auth — real domain | ✅ |
+| 4a | Firebase App Check (reCAPTCHA v3) | ✅ |
+| 4b | Firebase Blaze plan | ✅ |
+| 5 | Remove Firebase test numbers | ✅ |
 | 6 | CONFIG.vendor.id confirmed | ⏳ |
 | 7 | CONFIG.domains updated | ⏳ |
 | 8 | Kitchen PIN system replaced with multi-staff PIN management | ⏳ Session 15 |
