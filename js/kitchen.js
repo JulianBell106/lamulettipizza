@@ -41,6 +41,7 @@ let broadcastIntervalId = null;
 // Audio state — shared AudioContext unlocked on PIN entry (iOS requires gesture)
 let kitchenAudioCtx      = null;
 let pendingAlertInterval = null;   // repeating beep while pending orders exist
+let pendingBeepOnTouch   = false;  // true when a beep is waiting for the next touch gesture
 
 // Screen Wake Lock — keeps iPad/iOS screen on during a kitchen session
 let wakeLockSentinel = null;
@@ -338,13 +339,27 @@ document.addEventListener('visibilitychange', () => {
     pendingAlertInterval = null;
   }
 
-  // If pending orders still exist, beep immediately and restart the interval.
   const hasPending = Object.values(currentOrders).some(o => o.status === 'pending');
   if (hasPending) {
+    // Try immediately — works when iOS treats visibilitychange as close enough
+    // to a gesture (often true for the first lock/unlock in a session).
     playOrderAlert();
+    // Set the touch flag as a guaranteed fallback: if the immediate attempt
+    // was silently blocked (iOS is strict after repeated locks), the next
+    // screen touch — a real gesture — will fire the beep.
+    pendingBeepOnTouch = true;
     _managePendingAlert(true);
   }
 });
+
+// Guaranteed audio fallback — fires on the first touch after returning from
+// a screen lock when iOS has blocked the visibilitychange attempt.
+document.addEventListener('touchstart', () => {
+  if (!pendingBeepOnTouch || !loggedInStaffId) return;
+  pendingBeepOnTouch = false;
+  _unlockKitchenAudio(); // refresh the context within the gesture
+  playOrderAlert();
+}, { passive: true });
 
 
 /* ============================================================================
@@ -978,12 +993,15 @@ function clearElapsedTimers() {
 
 function playOrderAlert() {
   try {
-    // Reuse the shared context unlocked at PIN entry; fall back to a fresh one
-    // on desktop where gesture timing doesn't matter.
+    // iOS can put the context into 'closed' state after a screen lock — it
+    // cannot be resumed, so discard it and create a fresh one.
+    if (kitchenAudioCtx && kitchenAudioCtx.state === 'closed') {
+      kitchenAudioCtx = null;
+    }
     const ctx = kitchenAudioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (!kitchenAudioCtx) kitchenAudioCtx = ctx;
+
     if (ctx.state === 'suspended') {
-      // Resume first (succeeds because the context was already unlocked by a
-      // prior gesture), then schedule the beeps once running.
       ctx.resume().then(() => _playOrderBeeps(ctx)).catch(() => {});
     } else {
       _playOrderBeeps(ctx);
