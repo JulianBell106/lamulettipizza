@@ -1,7 +1,7 @@
 # Stalliq — Project Bible
-> Last updated: April 2026 — Session 17 (Pitch deck v4 delivered ✅)
-> **Next sprint:** Session 18 — Retest customer order placement + auth flow, then go live with Daniele.
-> **Pending test:** Customer order placement + auth flow — Firebase phone auth was rate-limited during testing. Retest before go-live. Also retest ready beep after 16d fix.
+> Last updated: April 2026 — Session 18 (iOS/Android hardening, UX fixes, GDPR retention ✅)
+> **Next sprint:** Session 19 — Go live with Daniele. Complete remaining go-live checklist items (ICO registration, Google Sheet protection, allergen disclaimer, Firestore TTL activation).
+> **Pending (Julian):** ICO registration (ico.org.uk, ~£40/year) · Activate Firestore TTL policy (Firebase Console → Firestore → TTL → collection: `orders`, field: `deleteAt`) · Google Sheet header row protection · Allergen disclaimer in onboarding doc.
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -218,7 +218,8 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 16c | Kitchen UI polish + bug fixes | ✅ Done |
 | 16d | Mobile performance + ready beep fix | ✅ Done |
 | 17 | Pitch deck v4 — 8-slide, text-stripped, redesigned Offer | ✅ Done |
-| 18 | Retest auth flow + go live with Daniele | ⏳ Next |
+| 18 | iOS/Android hardening, UX fixes, GDPR retention | ✅ Done |
+| 19 | Go live with Daniele | ⏳ Next |
 
 **What gets demoed live at the meeting:**
 - Premium desktop site shown first on laptop — sets the brand tone
@@ -474,6 +475,10 @@ Before the "Forgot all PINs?" reset flow will work, Julian must manually set the
 | 11 | Google Sheet — vendor 2FA | ⏳ |
 | 12 | Allergen disclaimer in onboarding doc | ⏳ |
 | 13 | Events + offers sheet URLs in CONFIG | ✅ |
+| 14 | GDPR data retention — `deleteAt` field on orders | ✅ Session 18 (code done) |
+| 14a | Activate Firestore TTL policy | ⏳ Julian — Firebase Console → Firestore → TTL → collection: `orders`, field: `deleteAt` |
+| 15 | Customer order placement + auth flow end-to-end retest | ✅ Session 18 |
+| 16 | iOS screen lock recovery (auto-reload + session restore) | ✅ Session 18 |
 
 ---
 
@@ -726,6 +731,67 @@ Fix: `playReadyBeep()` is now `async` and calls `await ctx.resume()` before sche
 - Gold accents on ALL light slides — red is reserved for dark slides only (How It Works circles, "WHAT WE ASK" eyebrow on Offer)
 - Title: cream OVAL + "S" text (not red/gold ovals from v1/v2)
 - Icons: gold `#D4A043`, rendered via react-icons + sharp
+
+---
+
+## 28. Session 18 — iOS/Android Hardening + UX Fixes (COMPLETE ✅)
+
+**Files changed:** `js/kitchen.js`, `js/app.js`, `index.html`
+
+### Auth flow retest
+Customer order placement + Firebase Phone Auth confirmed working on real device. Session 18 unblocked.
+
+### iOS/Android bug fixes
+
+**Location broadcast permission (kitchen.js)**
+`startLocationBroadcast()` now catches Geolocation API errors and shows a descriptive toast (permission denied / position unavailable / timeout) instead of failing silently. The toggle no longer appears to do nothing if permission is blocked.
+
+**Kitchen order beep — iOS (kitchen.js)**
+- Shared `kitchenAudioCtx` created and unlocked synchronously in `pinPress()` (inside the user gesture) — guarantees iOS audio is unlocked at login
+- `playOrderAlert()` split into `_playOrderBeeps()` helper; handles closed context (iOS closes AudioContext after extended lock)
+- Repeating alert: `_managePendingAlert(hasPending)` starts an 8-second interval while any pending orders exist, stops when all accepted
+- `pendingAlertInterval` cleared on logout
+
+**Kitchen screen lock — iOS (kitchen.js)**
+Full sequence to recover from iOS screen lock (which freezes JS regardless of wake lock):
+- `sessionStorage` persists `kitchenStaffId` / `kitchenStaffName` on login, cleared on logout
+- `visibilitychange` records `kitchenHiddenAt` on hide
+- On return: if away >60s → `location.reload()` for a guaranteed clean Firebase state
+- On reload: `onAuthStateChanged` detects saved session → auto-restores dashboard, skips PIN, shows "Welcome back" toast
+- If away <60s: incremental reconnect — `firebase.firestore().enableNetwork()` + `listenOrders()` restart
+- `_managePendingAlert()` now shows `_showAudioRestorePrompt()` banner whenever pending orders exist but AudioContext isn't running (covers post-reload case where no PIN gesture has unlocked audio)
+
+**Audio restore banner (kitchen.js)**
+Pulsing red fixed banner "🔔 New order — tap to restore sound alerts". Guaranteed iOS audio unlock via explicit tap gesture. Auto-dismissed when all pending orders accepted.
+
+**Screen Wake Lock (kitchen.js)**
+`navigator.wakeLock.request('screen')` acquired on `startDashboard()`, released on logout. Re-acquired on `visibilitychange`. Supported iOS 16.4+; silent fallback on older devices. Prevents screen sleeping during service without user pressing power button.
+
+**GPS broadcast fixes (kitchen.js)**
+- `listenBroadcastState()` now calls `pushLocation()` immediately when it detects `active: true` — covers page load, reload, and Firestore reconnect. Previously waited a full interval before the first push, causing stale maps
+- `visibilitychange` handler also does an immediate `pushLocation()` when restarting the broadcast interval after a short absence
+- Broadcast interval reduced from 10 minutes → 2 minutes
+- GPS/broadcast interval force-cleared and restarted on every `visibilitychange` (iOS may suspend setInterval silently during screen lock)
+
+**Customer ready beep — Android (app.js)**
+- `unlockAudio()` and `playReadyBeep()` both handle closed `audioCtx` (create fresh on closed)
+- Snapshot handlers check `document.visibilityState` before setting `firedReadyBeep = true` — if backgrounded, flag stays unset so beep fires on return
+- `visibilitychange` listener scans `orderCache` and fires missed beeps on return
+- Green pulsing banner "🟢 Your order is ready — tap here" shown when returning with a ready order — guaranteed audio unlock + visual fallback. Dismissed on tap or when order collected.
+
+### UX improvements
+
+**Account order history — live update (app.js)**
+When kitchen marks order as Collected, order now appears in History immediately without page refresh. `_prependToHistory(order)` inserts at top of history list and updates `historyAllOrders`.
+
+**Show less history (app.js)**
+Expanded "Show N more" list now has a "Show less" button to collapse back to 3. Extracted `_renderHistoryList(showAll)` helper used by both `showMoreHistory()` and new `showLessHistory()`. `historyAllOrders` persists full list for accurate re-render either way.
+
+**Empty basket button (index.html)**
+Ghost-style "Clear basket" button added below "Place Order" on mobile basket page. Wires to existing `clearBasket()`.
+
+### GDPR — data retention (app.js, kitchen.js)
+`deleteAt` field (90 days from `createdAt`) added to every order document — both customer-placed and walk-in. **Julian still needs to activate the TTL policy in Firebase Console:** Firestore → TTL → Add policy → Collection: `orders`, Field: `deleteAt`. This is a one-time console action that switches on automatic deletion.
 
 ---
 
