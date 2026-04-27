@@ -1,6 +1,6 @@
 # Stalliq — Project Bible
-> Last updated: April 2026 — Session 16d (Mobile performance + ready beep fix ✅)
-> **Next sprint:** Session 17 — Pitch deck update.
+> Last updated: April 2026 — Session 17 (Pitch deck v4 delivered ✅)
+> **Next sprint:** Session 18 — Retest customer order placement + auth flow, then go live with Daniele.
 > **Pending test:** Customer order placement + auth flow — Firebase phone auth was rate-limited during testing. Retest before go-live. Also retest ready beep after 16d fix.
 > Read this file at the start of every session to get fully up to speed.
 
@@ -217,7 +217,8 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 16b | Security hardening — rules, salting, GDPR | ✅ Done |
 | 16c | Kitchen UI polish + bug fixes | ✅ Done |
 | 16d | Mobile performance + ready beep fix | ✅ Done |
-| 17 | Pitch deck update | ⏳ Next |
+| 17 | Pitch deck v4 — 8-slide, text-stripped, redesigned Offer | ✅ Done |
+| 18 | Retest auth flow + go live with Daniele | ⏳ Next |
 
 **What gets demoed live at the meeting:**
 - Premium desktop site shown first on laptop — sets the brand tone
@@ -430,7 +431,7 @@ Before the "Forgot all PINs?" reset flow will work, Julian must manually set the
 > Customer order placement + phone auth — Firebase was rate-limiting during Session 16c testing. Test fresh: place an order as a customer (real phone, real SMS), confirm it lands in kitchen, accept it, advance to Ready, check Account page shows the order.
 
 **Session startup:**
-> "New session — read the live PROJECT.md from GitHub: https://raw.githubusercontent.com/JulianBell106/lamulettipizza/refs/heads/main/PROJECT.md — today we're doing Session 17: pitch deck update."
+> "New session — read the live PROJECT.md from GitHub: https://raw.githubusercontent.com/JulianBell106/lamulettipizza/refs/heads/main/PROJECT.md — today we're doing Session 18: retest auth flow and go live with Daniele."
 
 ---
 
@@ -686,6 +687,45 @@ Fix: both are now called before the `await Promise.all(...)`. Only `renderMobile
 Fix: `playReadyBeep()` is now `async` and calls `await ctx.resume()` before scheduling oscillators if the context is in the `'suspended'` state. The resume succeeds because the context was already unlocked earlier in the same session via the user gesture.
 
 **Note:** Web Audio follows the device's media volume, not notification volume. If the device is on silent/media muted, the beep will still be silent regardless of this fix.
+
+---
+
+## 27. Session 17 — Pitch Deck v4 (COMPLETE ✅)
+
+**Delivered file:** `Stalliq_LaMuletti_Pitch_v4.pptx` (in `La Muletti/` workspace folder)
+
+**Build toolchain:**
+- PptxGenJS (Node.js) — coords in inches, 10"×5.625" LAYOUT_16x9
+- react-icons (fa + md) + sharp — SVG icons rasterised to PNG, embedded as base64
+- Icon packages installed at `/tmp/iconpkg/node_modules/` (require with absolute paths)
+- Scripts: `build_deck_v2.js`, `build_deck_v3.js`, `build_deck_v4.js` in outputs folder
+- ⚠️ Write tool appends null bytes — always strip before running: `tr -d '\000' < file > clean`
+- ⚠️ Must run from outputs dir — pptxgenjs resolves from there
+
+**Version history:**
+- **v2** — 10 slides. Added "How It Works" step-flow slide. Improved Offer language.
+- **v3** — 10 slides. Applied Julian's visual overrides: gold accents on all light slides, S-circle on title, real icons replacing emoji.
+- **v4** — 8 slides (current). Stripped all body paragraphs to one-liners. Dropped two redundant slides. Redesigned Offer as a deal panel.
+
+**v4 slide structure (8 slides):**
+
+| # | Title | Notes |
+|---|-------|-------|
+| 1 | Title | S-circle (cream oval + "S" text), dark background, Stalliq/La Muletti sub |
+| 2 | The Challenge | 3 icon cards — one punchy one-liner each (orders lost, wait time, no repeat customers) |
+| 3 | The Solution | STALLIQ hero headline + 0% commission panel vs Just Eat/Deliveroo |
+| 4 | How It Works | 4-step flow — red numbered circles, step label, one-line description, italic footer |
+| 5 | Kitchen Management | 4 features — inline icon left of title, one-line body each |
+| 6 | Customer Experience | Hero italic sub, 4 title-only lines (no body), larger phone mockup |
+| 7 | The Offer | £708 deal panel left (gold border, 12 months free, 50% off for life), ask list right (red eyebrow), founding rate footer bar |
+| 8 | Next Steps | 3 actions (demo, agree partnership, go live) + contact card (STALLIQ logo, Julian Bell, Endoo Limited) |
+
+**Brand / visual rules (all applied in v4):**
+- Palette: dark `1A0A00`, red `C4271A`, gold `D4A043`, cream `FDF6EC`, offWhite `F5F0E8`
+- Fonts: Georgia (headings), Calibri (body)
+- Gold accents on ALL light slides — red is reserved for dark slides only (How It Works circles, "WHAT WE ASK" eyebrow on Offer)
+- Title: cream OVAL + "S" text (not red/gold ovals from v1/v2)
+- Icons: gold `#D4A043`, rendered via react-icons + sharp
 
 ---
 
