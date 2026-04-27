@@ -1090,6 +1090,33 @@ html { scroll-behavior: smooth; }
 .m-offer-title { font-size: 15px; font-weight: 700; color: var(--cream); margin-bottom: 3px; }
 .m-offer-desc { font-size: 12px; color: rgba(255,255,255,0.6); line-height: 1.4; }
 .m-offer-badge { font-size: 10px; padding: 3px 8px; border-radius: 20px; flex-shrink: 0; background: rgba(196,39,26,0.18); border: 1px solid rgba(196,39,26,0.35); color: var(--ember); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* ─── BASKET DISCOUNT / OFFERS PICKER ─── */
+.bsk-offers-wrap { margin: 12px 16px 0; }
+.bsk-offers-label { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); font-weight: 700; margin-bottom: 8px; }
+.bsk-offer-row { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(212,160,67,0.18); border-radius: 12px; padding: 10px 14px; margin-bottom: 6px; transition: border-color 0.2s, background 0.2s; }
+.bsk-offer-row.selected { background: rgba(212,160,67,0.08); border-color: rgba(212,160,67,0.45); }
+.bsk-offer-info { flex: 1; }
+.bsk-offer-name { font-size: 13px; font-weight: 600; color: var(--cream); margin-bottom: 2px; }
+.bsk-offer-val { font-size: 11px; color: rgba(255,255,255,0.5); }
+.bsk-offer-btn { font-size: 12px; font-weight: 700; padding: 5px 14px; border-radius: 20px; border: 1px solid var(--gold); background: transparent; color: var(--gold); cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: background 0.15s, color 0.15s; }
+.bsk-offer-btn.applied { background: var(--gold); color: var(--dark); }
+.bsk-discount-row { display: flex; justify-content: space-between; align-items: center; margin: 8px 16px 0; padding: 9px 14px; background: rgba(120,220,120,0.07); border: 1px solid rgba(120,220,120,0.22); border-radius: 12px; }
+.bsk-discount-label { font-size: 13px; color: #8de88d; }
+.bsk-discount-amount { font-size: 14px; font-weight: 700; color: #8de88d; font-family: 'Playfair Display', serif; }
+.bsk-loyalty-reward { display: flex; align-items: center; gap: 10px; margin: 12px 16px 0; padding: 11px 14px; background: rgba(212,160,67,0.10); border: 1px solid rgba(212,160,67,0.35); border-radius: 12px; }
+.bsk-reward-icon { font-size: 20px; flex-shrink: 0; }
+.bsk-reward-text { flex: 1; font-size: 13px; font-weight: 600; color: var(--gold); }
+.bsk-reward-amount { font-size: 14px; font-weight: 700; color: var(--gold); font-family: 'Playfair Display', serif; flex-shrink: 0; }
+/* Desktop basket discount section — matches panel footer padding */
+#d-basket-discount-section .bsk-offers-wrap { margin: 0 0 10px; }
+#d-basket-discount-section .bsk-discount-row { margin: 0 0 10px; }
+#d-basket-discount-section .bsk-loyalty-reward { margin: 0 0 10px; }
+
+/* ─── ACCOUNT OFFER STATUS BADGES ─── */
+.m-offer-badge-available { font-size: 10px; padding: 3px 8px; border-radius: 20px; flex-shrink: 0; background: rgba(39,196,26,0.15); border: 1px solid rgba(39,196,26,0.35); color: #7de87d; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+.m-offer-badge-used { font-size: 10px; padding: 3px 8px; border-radius: 20px; flex-shrink: 0; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.4); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+.m-offer-badge-expired { font-size: 10px; padding: 3px 8px; border-radius: 20px; flex-shrink: 0; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.4); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
 .m-coc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .m-coc-ref { font-family: 'Playfair Display', serif; font-size: 15px; font-weight: 700; color: var(--gold); }
 .m-coc-total { font-family: 'Playfair Display', serif; font-size: 15px; font-weight: 700; color: var(--cream); }
@@ -1434,6 +1461,7 @@ html { scroll-behavior: smooth; }
     <div class="d-basket-panel-empty"><div>🍕</div>Your basket is empty.<br>Add pizzas from the menu above.</div>
   </div>
   <div class="d-basket-panel-footer" id="d-basket-footer" style="display:none;">
+    <div id="d-basket-discount-section"></div>
     <div class="d-basket-total-row">
       <span class="d-basket-total-label">Total</span>
       <span class="d-basket-total-val" id="d-basket-total">£0.00</span>
@@ -1469,9 +1497,8 @@ html { scroll-behavior: smooth; }
       <div class="m-stamp-card">
         <div class="m-stamp-card-header">
           <div class="m-stamp-card-title">La Muletti Loyalty</div>
-          <div class="m-coming-badge">Coming soon</div>
         </div>
-        <div class="m-stamp-sub">Buy 9 pizzas, get your 10th free</div>
+        <div class="m-stamp-sub" id="d-stamp-sub">Earn stamps with every order</div>
         <div class="m-stamps-grid" id="d-stamps-grid"></div>
         <div id="d-stamp-progress" class="m-stamp-progress">0 of 10 stamps collected</div>
       </div>
@@ -1535,6 +1562,7 @@ html { scroll-behavior: smooth; }
     <div id="m-basket-empty" class="m-basket-empty"><div class="ei">🍕</div><p>Your basket is empty.<br>Add some pizzas from the menu!</p></div>
     <div id="m-basket-content" style="display:none;">
       <div class="m-basket-list" id="m-basket-list"></div>
+      <div id="m-basket-discount-section"></div>
       <div class="m-basket-total">
         <span class="m-total-label">Total</span>
         <span class="m-total-amount" id="m-basket-total">£0.00</span>
@@ -1602,9 +1630,8 @@ html { scroll-behavior: smooth; }
       <div class="m-stamp-card">
         <div class="m-stamp-card-header">
           <div class="m-stamp-card-title">La Muletti Loyalty</div>
-          <div class="m-coming-badge">Coming soon</div>
         </div>
-        <div class="m-stamp-sub">Buy 9 pizzas, get your 10th free</div>
+        <div class="m-stamp-sub" id="m-stamp-sub">Earn stamps with every order</div>
         <div class="m-stamps-grid" id="m-stamps-grid"></div>
         <div id="m-stamp-progress" class="m-stamp-progress">0 of 10 stamps collected</div>
       </div>

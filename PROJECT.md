@@ -1,7 +1,7 @@
 # Stalliq — Project Bible
-> Last updated: April 2026 — Session 18 (iOS/Android hardening, UX fixes, GDPR retention ✅)
-> **Next sprint:** Session 19 — Go live with Daniele. Complete remaining go-live checklist items (ICO registration, Google Sheet protection, allergen disclaimer, Firestore TTL activation).
-> **Pending (Julian):** ICO registration (ico.org.uk, ~£40/year) · Activate Firestore TTL policy (Firebase Console → Firestore → TTL → collection: `orders`, field: `deleteAt`) · Google Sheet header row protection · Allergen disclaimer in onboarding doc.
+> Last updated: April 2026 — Session 19 (Loyalty stamp card + functional offers ✅)
+> **Next sprint:** Session 20 — Go live with Daniele. Complete remaining go-live checklist items (ICO registration, Google Sheet protection, allergen disclaimer, Firestore TTL activation).
+> **Pending (Julian):** ICO registration (ico.org.uk, ~£40/year) · Activate Firestore TTL policy (Firebase Console → Firestore → TTL → collection: `orders`, field: `deleteAt`) · Google Sheet header row protection · Allergen disclaimer in onboarding doc · **Publish updated Firestore rules** (firestore.rules — adds offerUsage sub-collection + stamp award write) · **Migrate offers sheet** to new schema (see Section 29).
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -804,3 +804,69 @@ Ghost-style "Clear basket" button added below "Place Order" on mobile basket pag
 **Always work inside the La Muletti Claude Project.**
 **One session = one focused task.**
 **For large files: use str_replace diffs, not full file output.**
+
+---
+
+## 29. Session 19 — Loyalty Stamp Card + Functional Offers (COMPLETE ✅)
+
+**Files changed:** `js/app.js`, `index.html`, `firestore.rules`
+
+### What was built
+
+**Loyalty stamp card (fully functional):**
+- Stamp count stored in `users/{uid}.stampCount` in Firestore
+- 1 stamp awarded per collected order — guarded by `orders/{orderId}.stampsAwarded: true` flag (idempotent, no double-awarding)
+- Stamp count loaded from Firestore on account page open, re-renders stamp grid live
+- At checkout: if stamps ≥ required, loyalty reward auto-applies — cheapest item in basket becomes free
+- On successful order with loyalty: stamp count resets to 0 in Firestore
+- Stamp card subtitle driven by `loyaltyConfig.stampsRequired` from sheet (no more hardcoded "Buy 9...")
+
+**Functional offers:**
+- Offer selection UI in both mobile basket and desktop basket sidebar
+- Available offers filtered by: date range (start/end), active flag, per-customer `max_uses`
+- Per-customer usage stored in `users/{uid}/offerUsage/{offerId}.count`
+- Only 1 offer per order; no stacking with loyalty (loyalty takes priority, hides offers)
+- Offer usage loaded on account page open, cached in `userOfferUsage` map
+- After order with offer: usage incremented in Firestore and local cache
+- Account page shows offers with Available / Used / Expired badges driven by real state
+
+**Discount at checkout:**
+- `getLoyaltyDiscount()` — cheapest item, returns null if not enough stamps
+- `getOfferDiscount()` — fixed £ or % off based on selected offer
+- `getActiveDiscount()` — loyalty takes priority, no stacking
+- `basketFinalTotal()` — total after discount, never negative
+- `discount` field stored on order doc: `{ type, description, amount, offerId? }`
+- `orderTotal` on order doc is the discounted total (what customer pays)
+
+### New sheet format (offers sheet)
+
+Replace the existing sheet with these columns (order-independent, matched by header name):
+
+| type | id | title | description | discount_type | discount_value | stamps_required | reward_type | max_uses | start_date | end_date | active |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+
+**type** = `loyalty` or `offer`
+**discount_type** = `fixed` (£) or `percent` (%)
+**max_uses** = 0 or blank = unlimited; 1 = once per customer; etc.
+**start_date / end_date** = `YYYY-MM-DD` format, or blank = always active
+**active** = `TRUE` / `FALSE`
+
+Example rows:
+```
+loyalty,loyalty_1,La Muletti Loyalty,Collect 8 stamps get your next pizza free,,,8,free_item,,,, TRUE
+offer,welcome10,Welcome offer,£2 off your first order,fixed,2,,,1,,,TRUE
+offer,july_promo,July special,15% off all weekend,percent,15,,,,,2025-07-06,TRUE
+```
+
+### Firestore rule changes
+
+Two additions to `firestore.rules` — must re-publish to Firebase Console:
+1. `users/{uid}/offerUsage/{offerId}` sub-collection — owner read/write
+2. `orders/{orderId}` customer narrow update — allows setting `stampsAwarded: true` only
+
+### Design decisions
+- **No stacking** — loyalty auto-applies and hides offer picker; offer applies only if no loyalty reward
+- **Cheapest item free** — loyalty reward = cheapest item in basket (vendor-friendly)
+- **Per-customer max_uses** — not global; each customer gets their own usage counter
+- **Stamp on collected** — stamp awarded when kitchen marks order as Collected, not at checkout
+- **`reward_type` field** — currently always `free_item`; column left in schema for future `fixed_discount` support without a rebuild

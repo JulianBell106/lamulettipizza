@@ -115,11 +115,36 @@ let menuData = null;
 let eventsData = null;
 
 /**
- * offersData — offers shown on the Account page.
- * Seeded from defaults in Section 23, replaced by sheet data if available.
- * Always use offersData in renderAccountOffers().
+ * offersData — functional offer rows from the offers sheet.
+ * Replaced by sheet data on load. Always use offersData, never CONFIG directly.
  */
-let offersData = null;
+let offersData = [];
+
+/**
+ * loyaltyConfig — loyalty programme settings parsed from the offers sheet.
+ * null = no loyalty programme configured.
+ * { title, description, stampsRequired, rewardType }
+ */
+let loyaltyConfig = null;
+
+/**
+ * selectedOffer — offer the customer has chosen to apply at checkout.
+ * null = no offer selected. Cleared after order placed.
+ */
+let selectedOffer = null;
+
+/**
+ * userStampCount — customer's current stamp count, loaded from Firestore.
+ * Updated live: incremented on collected, reset on loyalty redemption.
+ */
+let userStampCount = 0;
+
+/**
+ * userOfferUsage — map of offerId → number of times used by this customer.
+ * Loaded from users/{uid}/offerUsage sub-collection on account page load.
+ * Updated locally after offer used (Firestore write happens in submitOrder).
+ */
+let userOfferUsage = {};
 
 let vanLocationUnsubscribe = null; // real-time listener handle (Session 14)
 let vanLocationData        = null; // last received location doc (Session 14)
@@ -579,8 +604,13 @@ function refreshDesktopBasket() {
   }).join('');
 
   footer.style.display = 'block';
+
+  // ── Discount section ─────────────────────────────────────────────────────
+  const discSection = document.getElementById('d-basket-discount-section');
+  if (discSection) discSection.innerHTML = buildBasketDiscountHTML('d');
+
   const totalEl = document.getElementById('d-basket-total');
-  if (totalEl) totalEl.textContent = CONFIG.business.currency + total.toFixed(2);
+  if (totalEl) totalEl.textContent = CONFIG.business.currency + basketFinalTotal().toFixed(2);
 }
 
 function dToggleBasket() {
@@ -610,8 +640,16 @@ function dPlaceOrder() {
     const btn = document.querySelector('#d-basket-footer .d-btn-primary');
     if (btn) { btn.textContent = 'Placing order...'; btn.disabled = true; }
     try {
-      const { orderRef, orderId } = await submitOrderToFirestore();
+      const { orderRef, orderId, discount } = await submitOrderToFirestore();
       console.log(`[Stalliq] Order placed. orderId: ${orderId} | orderRef: ${orderRef}`);
+
+      // ── Post-order: record loyalty reset or offer usage ──────────────────
+      if (discount?.type === 'loyalty') {
+        await resetUserStamps();
+      } else if (discount?.type === 'offer') {
+        await recordOfferUsage(discount.offerId);
+      }
+      selectedOffer = null;
 
       const { rows } = buildOrderSummaryHTML('d-order-row');
       document.getElementById('d-order-ref').textContent   = 'Order ref ' + orderRef;
@@ -798,8 +836,13 @@ function renderMobileBasket() {
       </div>`;
   }).join('');
 
+  // ── Discount section ─────────────────────────────────────────────────────
+  const discSection = document.getElementById('m-basket-discount-section');
+  if (discSection) discSection.innerHTML = buildBasketDiscountHTML('m');
+
+  const finalTotal = basketFinalTotal();
   const totalEl = document.getElementById('m-basket-total');
-  if (totalEl) totalEl.textContent = CONFIG.business.currency + total.toFixed(2);
+  if (totalEl) totalEl.textContent = CONFIG.business.currency + finalTotal.toFixed(2);
 }
 
 function mRemoveItem(id) {
@@ -827,8 +870,16 @@ function mPlaceOrder() {
     const errEl = document.getElementById('m-order-err');
     if (errEl) errEl.textContent = '';
     try {
-      const { orderRef, orderId } = await submitOrderToFirestore();
+      const { orderRef, orderId, discount } = await submitOrderToFirestore();
       console.log(`[Stalliq] Order placed. orderId: ${orderId} | orderRef: ${orderRef}`);
+
+      // ── Post-order: record loyalty reset or offer usage ──────────────────
+      if (discount?.type === 'loyalty') {
+        await resetUserStamps();
+      } else if (discount?.type === 'offer') {
+        await recordOfferUsage(discount.offerId);
+      }
+      selectedOffer = null;
 
       const { rows } = buildOrderSummaryHTML('m-confirm-row');
       document.getElementById('m-confirm-ref').textContent   = 'Order ref ' + orderRef;
@@ -1177,56 +1228,96 @@ async function fetchEventsFromSheet() {
 /* ----------------------------------------------------------------------------
    22c. OFFERS FETCH
    ---------------------------------------------------------------------------- */
+/**
+ * Parses the offers/loyalty CSV into loyaltyConfig and offersData.
+ *
+ * Expected columns (order-independent, matched by header name):
+ *   type | id | title | description | discount_type | discount_value |
+ *   stamps_required | reward_type | max_uses | start_date | end_date | active
+ *
+ * Row types:
+ *   loyalty — sets loyaltyConfig (one row only; last one wins)
+ *   offer   — appended to offersData array
+ *
+ * Returns { loyalty, offers } or null on fatal parse error.
+ */
 function parseOffersCSV(csvText) {
   const lines = splitCSVLines(csvText);
-  if (lines.length < 1) return null;
+  if (lines.length < 2) return null;
 
-  const headers = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase());
+  const headers = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase().replace(/\s+/g, '_'));
+  const ci = name => headers.indexOf(name);
+
   const col = {
-    icon:   headers.findIndex(h => h === 'icon' || h === 'emoji'),
-    title:  headers.indexOf('title'),
-    desc:   headers.findIndex(h => h === 'description' || h === 'desc'),
-    badge:  headers.indexOf('badge'),
-    active: headers.findIndex(h => h === 'active' || h === 'avail')
+    type:          ci('type'),
+    id:            ci('id'),
+    title:         ci('title'),
+    desc:          ci('description'),
+    discountType:  ci('discount_type'),
+    discountValue: ci('discount_value'),
+    stampsReq:     ci('stamps_required'),
+    rewardType:    ci('reward_type'),
+    maxUses:       ci('max_uses'),
+    startDate:     ci('start_date'),
+    endDate:       ci('end_date'),
+    active:        ci('active'),
   };
 
-  if (col.title === -1) {
-    console.warn('[Stalliq] Offers sheet: Missing required column (title). Check sheet headers.');
+  if (col.type === -1 || col.title === -1) {
+    console.warn('[Stalliq] Offers sheet: Missing required columns (type, title). Check headers.');
     return null;
   }
 
-  const items = [];
+  const str = (cols, idx) => (idx >= 0 && cols[idx]) ? cols[idx].trim() : '';
+  const num = (cols, idx) => { const v = str(cols, idx); return v ? parseFloat(v) : 0; };
+  const isActive = (cols) => {
+    const v = str(cols, col.active).toUpperCase();
+    return !v || (v !== 'FALSE' && v !== 'N' && v !== 'NO' && v !== '0');
+  };
+
+  let loyalty = null;
+  const offers = [];
 
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
 
     const cols  = parseCSVLine(line);
-    const title = cols[col.title] ? cols[col.title].trim() : '';
+    const type  = str(cols, col.type).toLowerCase();
+    const title = str(cols, col.title);
     if (!title) continue;
+    if (!isActive(cols)) continue;
 
-    const icon  = col.icon  >= 0 && cols[col.icon]  ? cols[col.icon].trim()  : '🎁';
-    const desc  = col.desc  >= 0 && cols[col.desc]  ? cols[col.desc].trim()  : '';
-    const badge = col.badge >= 0 && cols[col.badge] ? cols[col.badge].trim() : '';
-
-    let active = true;
-    if (col.active >= 0 && cols[col.active]) {
-      const v = cols[col.active].trim().toUpperCase();
-      active = (v !== 'FALSE' && v !== 'N' && v !== 'NO' && v !== '0');
+    if (type === 'loyalty') {
+      loyalty = {
+        title,
+        description:    str(cols, col.desc),
+        stampsRequired: num(cols, col.stampsReq) || 10,
+        rewardType:     str(cols, col.rewardType) || 'free_item',
+      };
+    } else if (type === 'offer') {
+      const id = str(cols, col.id) || `offer_${i}`;
+      offers.push({
+        id,
+        title,
+        description:   str(cols, col.desc),
+        discountType:  str(cols, col.discountType),  // 'fixed' | 'percent'
+        discountValue: num(cols, col.discountValue),
+        maxUses:       num(cols, col.maxUses),        // 0 = unlimited
+        startDate:     str(cols, col.startDate),      // 'YYYY-MM-DD' or ''
+        endDate:       str(cols, col.endDate),        // 'YYYY-MM-DD' or ''
+      });
     }
-    if (!active) continue;
-
-    items.push({ icon, title, description: desc, badge });
   }
 
-  return items;
+  return { loyalty, offers };
 }
 
 async function fetchOffersFromSheet() {
   const url = CONFIG.offersSheetUrl;
 
   if (!url) {
-    console.log('[Stalliq] No offersSheetUrl in config — using default offers.');
+    console.log('[Stalliq] No offersSheetUrl in config — offers/loyalty disabled.');
     return false;
   }
 
@@ -1234,7 +1325,7 @@ async function fetchOffersFromSheet() {
     const response = await fetch(url);
 
     if (!response.ok) {
-      console.warn(`[Stalliq] Offers sheet fetch failed (HTTP ${response.status}) — using default offers.`);
+      console.warn(`[Stalliq] Offers sheet fetch failed (HTTP ${response.status}).`);
       return false;
     }
 
@@ -1242,16 +1333,17 @@ async function fetchOffersFromSheet() {
     const parsed  = parseOffersCSV(csvText);
 
     if (parsed === null) {
-      console.warn('[Stalliq] Offers sheet: parse error — using default offers.');
+      console.warn('[Stalliq] Offers sheet: parse error.');
       return false;
     }
 
-    offersData = parsed;
-    console.log(`[Stalliq] Offers loaded from sheet: ${parsed.length} item(s).`);
+    loyaltyConfig = parsed.loyalty;
+    offersData    = parsed.offers;
+    console.log(`[Stalliq] Offers loaded: ${offersData.length} offer(s), loyalty: ${loyaltyConfig ? 'yes' : 'no'}.`);
     return true;
 
   } catch (err) {
-    console.warn('[Stalliq] Offers sheet fetch error — using default offers.', err.message);
+    console.warn('[Stalliq] Offers sheet fetch error.', err.message);
     return false;
   }
 }
@@ -1396,6 +1488,256 @@ function renderFindUsKitchenStatus(status) {
 
 
 /* ============================================================================
+   22d. LOYALTY & OFFERS — DISCOUNT HELPERS
+   ============================================================================ */
+
+/**
+ * Returns the loyalty discount for the current basket, or null if not earned.
+ * Reward: one free dish — the cheapest item currently in the basket.
+ */
+function getLoyaltyDiscount() {
+  if (!loyaltyConfig || !auth.currentUser) return null;
+  if (userStampCount < loyaltyConfig.stampsRequired) return null;
+  if (basketTotalQty() === 0) return null;
+
+  let cheapest = null;
+  Object.keys(basket).forEach(id => {
+    const item = menuData.find(m => m.id === Number(id));
+    if (item && (!cheapest || item.price < cheapest.price)) cheapest = item;
+  });
+  if (!cheapest) return null;
+
+  return {
+    type:        'loyalty',
+    description: `Free ${cheapest.name} (loyalty reward)`,
+    amount:      cheapest.price,
+    itemId:      cheapest.id,
+  };
+}
+
+/**
+ * Returns the discount for the currently selectedOffer, or null.
+ */
+function getOfferDiscount() {
+  if (!selectedOffer) return null;
+  const raw = basketTotalPrice();
+  let amount;
+  if (selectedOffer.discountType === 'fixed') {
+    amount = Math.min(selectedOffer.discountValue, raw);
+  } else if (selectedOffer.discountType === 'percent') {
+    amount = parseFloat((raw * selectedOffer.discountValue / 100).toFixed(2));
+  } else {
+    return null;
+  }
+  return {
+    type:        'offer',
+    offerId:     selectedOffer.id,
+    description: selectedOffer.title,
+    amount,
+  };
+}
+
+/**
+ * Returns the active discount object (loyalty takes priority; no stacking).
+ */
+function getActiveDiscount() {
+  const loyalty = getLoyaltyDiscount();
+  if (loyalty) return loyalty;
+  return getOfferDiscount();
+}
+
+/** Final total after any discount. Never negative. */
+function basketFinalTotal() {
+  const disc = getActiveDiscount();
+  return Math.max(0, basketTotalPrice() - (disc ? disc.amount : 0));
+}
+
+/**
+ * Returns offers that are currently available to this customer:
+ *   — date range valid (or unset)
+ *   — per-customer use count < maxUses (0 = unlimited)
+ */
+function getAvailableOffers() {
+  if (!offersData || offersData.length === 0) return [];
+  const now = new Date();
+  return offersData.filter(offer => {
+    if (offer.startDate) {
+      const start = new Date(offer.startDate);
+      if (start > now) return false;
+    }
+    if (offer.endDate) {
+      const end = new Date(offer.endDate);
+      end.setHours(23, 59, 59, 999);
+      if (end < now) return false;
+    }
+    if (offer.maxUses > 0) {
+      const used = userOfferUsage[offer.id] || 0;
+      if (used >= offer.maxUses) return false;
+    }
+    return true;
+  });
+}
+
+function applyOffer(offerId) {
+  const offer = offersData.find(o => o.id === offerId);
+  if (!offer) return;
+  selectedOffer = offer;
+  renderMobileBasket();
+  refreshDesktopBasket();
+}
+
+function removeOffer() {
+  selectedOffer = null;
+  renderMobileBasket();
+  refreshDesktopBasket();
+}
+
+/**
+ * Builds the HTML for the discount section inside the basket.
+ * prefix = 'm' (mobile) | 'd' (desktop)
+ *
+ * Shows:
+ *  — Loyalty reward banner (auto) if stamps earned, suppressing offers
+ *  — Offers picker (manual) otherwise, if any available offers
+ *  — Discount row showing the saving in both cases
+ */
+function buildBasketDiscountHTML(prefix) {
+  if (basketTotalQty() === 0) return '';
+
+  const loyaltyDisc = getLoyaltyDiscount();
+  const c = CONFIG.business.currency;
+  let html = '';
+
+  if (loyaltyDisc) {
+    // Loyalty auto-applies — show locked reward banner
+    html += `
+      <div class="bsk-loyalty-reward">
+        <span class="bsk-reward-icon">🎉</span>
+        <span class="bsk-reward-text">${esc(loyaltyDisc.description)}</span>
+        <span class="bsk-reward-amount">−${c}${loyaltyDisc.amount.toFixed(2)}</span>
+      </div>`;
+  } else {
+    // Show offers picker if any are available
+    const available = getAvailableOffers();
+    if (available.length > 0) {
+      html += `<div class="bsk-offers-wrap">`;
+      html += `<div class="bsk-offers-label">Available offers</div>`;
+      available.forEach(offer => {
+        const isSelected = selectedOffer && selectedOffer.id === offer.id;
+        const valLabel = offer.discountType === 'percent'
+          ? `${offer.discountValue}% off`
+          : `${c}${offer.discountValue} off`;
+        html += `
+          <div class="bsk-offer-row${isSelected ? ' selected' : ''}">
+            <div class="bsk-offer-info">
+              <div class="bsk-offer-name">${esc(offer.title)}</div>
+              <div class="bsk-offer-val">${esc(valLabel)}</div>
+            </div>
+            ${isSelected
+              ? `<button class="bsk-offer-btn applied" onclick="removeOffer()">Remove</button>`
+              : `<button class="bsk-offer-btn" onclick="applyOffer('${esc(offer.id)}')">Apply</button>`
+            }
+          </div>`;
+      });
+      html += `</div>`;
+
+      // Discount row if an offer is selected
+      if (selectedOffer) {
+        const disc = getOfferDiscount();
+        if (disc) {
+          html += `
+            <div class="bsk-discount-row">
+              <span class="bsk-discount-label">🏷 ${esc(disc.description)}</span>
+              <span class="bsk-discount-amount">−${c}${disc.amount.toFixed(2)}</span>
+            </div>`;
+        }
+      }
+    }
+  }
+
+  return html;
+}
+
+/* ============================================================================
+   22e. LOYALTY & OFFERS — FIRESTORE HELPERS
+   ============================================================================ */
+
+/** Loads this customer's stamp count from Firestore into userStampCount. */
+async function loadUserStampCount(uid) {
+  try {
+    const doc = await db.collection('users').doc(uid).get();
+    userStampCount = (doc.exists && doc.data().stampCount) ? doc.data().stampCount : 0;
+  } catch (err) {
+    console.warn('[Stalliq] Could not load stamp count:', err.message);
+    userStampCount = 0;
+  }
+}
+
+/** Loads per-offer usage counts for this customer into userOfferUsage. */
+async function loadUserOfferUsage(uid) {
+  try {
+    const snapshot = await db.collection('users').doc(uid).collection('offerUsage').get();
+    userOfferUsage = {};
+    snapshot.forEach(doc => { userOfferUsage[doc.id] = doc.data().count || 0; });
+  } catch (err) {
+    console.warn('[Stalliq] Could not load offer usage:', err.message);
+  }
+}
+
+/**
+ * Awards one stamp for an order, guarded by stampsAwarded flag on the order doc.
+ * Called by the account order listener when status → collected.
+ */
+async function awardStamp(orderId) {
+  const user = auth.currentUser;
+  if (!user || !loyaltyConfig) return;
+
+  try {
+    await db.collection('orders').doc(orderId).update({ stampsAwarded: true });
+    await db.collection('users').doc(user.uid).set(
+      { stampCount: firebase.firestore.FieldValue.increment(1) },
+      { merge: true }
+    );
+    userStampCount++;
+    // Refresh stamp card if account page is visible
+    ['m', 'd'].forEach(p => renderStampCard(buildAccountIds(p)));
+    console.log(`[Stalliq] Stamp awarded for order ${orderId}. Total: ${userStampCount}`);
+  } catch (err) {
+    console.error('[Stalliq] Error awarding stamp:', err.message);
+  }
+}
+
+/** Resets customer's stamp count to 0 in Firestore after loyalty redemption. */
+async function resetUserStamps() {
+  const user = auth.currentUser;
+  if (!user) return;
+  try {
+    await db.collection('users').doc(user.uid).set({ stampCount: 0 }, { merge: true });
+    userStampCount = 0;
+    ['m', 'd'].forEach(p => renderStampCard(buildAccountIds(p)));
+  } catch (err) {
+    console.error('[Stalliq] Error resetting stamps:', err.message);
+  }
+}
+
+/** Increments per-customer offer usage in Firestore and local cache. */
+async function recordOfferUsage(offerId) {
+  const user = auth.currentUser;
+  if (!user) return;
+  try {
+    await db.collection('users').doc(user.uid)
+      .collection('offerUsage').doc(offerId)
+      .set(
+        { count: firebase.firestore.FieldValue.increment(1), lastUsedAt: firebase.firestore.FieldValue.serverTimestamp() },
+        { merge: true }
+      );
+    userOfferUsage[offerId] = (userOfferUsage[offerId] || 0) + 1;
+  } catch (err) {
+    console.error('[Stalliq] Error recording offer usage:', err.message);
+  }
+}
+
+/* ============================================================================
    23. INIT
    ============================================================================ */
 document.addEventListener('DOMContentLoaded', async function () {
@@ -1403,14 +1745,10 @@ document.addEventListener('DOMContentLoaded', async function () {
   bootstrapPage();
 
   // ── Seed all data vars with guaranteed fallbacks ─────────────────────────
-  menuData   = CONFIG.menu;
-  eventsData = CONFIG.events || [];
-  offersData = (CONFIG.offers && CONFIG.offers.length > 0)
-    ? CONFIG.offers
-    : [
-        { icon: '🎉', title: 'Welcome Offer',    description: '10% off your next order — launching soon',    badge: 'Coming soon' },
-        { icon: '🍕', title: 'Buy 9, Get 1 Free', description: 'Collect 9 stamps to unlock your free pizza', badge: 'Coming soon' }
-      ];
+  menuData      = CONFIG.menu;
+  eventsData    = CONFIG.events || [];
+  offersData    = [];
+  loyaltyConfig = null;
 
   // ── Static renders — no network dependency, fire immediately ────────────
   // renderMobileHome uses only CONFIG.homePills — no sheet data needed.
@@ -1695,6 +2033,10 @@ async function submitOrderToFirestore() {
     };
   });
 
+  // ── Discount (Session 19) ─────────────────────────────────────────────────
+  const activeDiscount = getActiveDiscount();
+  const finalTotal     = basketFinalTotal();
+
   const orderDoc = {
     orderRef,
     vendorId:      CONFIG.vendor.id,
@@ -1702,7 +2044,8 @@ async function submitOrderToFirestore() {
     customerName,
     customerPhone: user.phoneNumber,
     items,
-    orderTotal:    basketTotalPrice(),
+    orderTotal:    finalTotal,
+    discount:      activeDiscount || null,
     payment: {
       method: 'cash_on_collection',
       status: 'pending'
@@ -1716,7 +2059,7 @@ async function submitOrderToFirestore() {
   };
 
   const docRef = await db.collection('orders').add(orderDoc);
-  return { orderRef, orderId: docRef.id };
+  return { orderRef, orderId: docRef.id, discount: activeDiscount };
 }
 
 
@@ -2174,6 +2517,7 @@ function buildAccountIds(prefix) {
     currentList:    `${prefix}-current-orders-list`,
     stampsGrid:     `${prefix}-stamps-grid`,
     stampProgress:  `${prefix}-stamp-progress`,
+    stampSub:       `${prefix}-stamp-sub`,
     offersList:     `${prefix}-offers-list`,
     historyList:    `${prefix}-order-history-list`,
     historyEmpty:   `${prefix}-order-history-empty`,
@@ -2212,22 +2556,41 @@ function loadAccountPage(prefix = 'm') {
     nameEl.textContent = customerName ? `Hi, ${customerName}!` : 'Welcome back!';
   }
 
-  renderStampCard(3, 10, ids);
+  // Render immediately with cached data (0 stamps on first load), then refresh
+  // with real Firestore data once loaded.
+  renderStampCard(ids);
   renderAccountOffers(ids);
   loadUserOrders(user.uid, ids);
+
+  Promise.all([
+    loadUserStampCount(user.uid),
+    loadUserOfferUsage(user.uid),
+  ]).then(() => {
+    renderStampCard(ids);
+    renderAccountOffers(ids);
+  });
 }
 
-function renderStampCard(filled, total, ids) {
+function renderStampCard(ids) {
   const grid = document.getElementById(ids.stampsGrid);
   const prog = document.getElementById(ids.stampProgress);
+  const sub  = document.getElementById(ids.stampSub);
   if (!grid) return;
 
+  const total  = loyaltyConfig ? loyaltyConfig.stampsRequired : 10;
+  const filled = Math.min(userStampCount, total);
+
   grid.innerHTML = Array.from({ length: total }, (_, i) => {
+
     const isFilled = i < filled;
     return `<div class="m-stamp-dot${isFilled ? ' filled' : ''}">${isFilled ? '🍕' : ''}</div>`;
   }).join('');
 
   if (prog) prog.textContent = `${filled} of ${total} stamps collected`;
+
+  if (sub && loyaltyConfig) {
+    sub.textContent = `Buy ${total} pizzas, get your next one free`;
+  }
 }
 
 function renderAccountOffers(ids) {
@@ -2239,15 +2602,44 @@ function renderAccountOffers(ids) {
     return;
   }
 
-  list.innerHTML = offersData.map(offer => `
-    <div class="m-offer-card">
-      <div class="m-offer-icon">${esc(offer.icon)}</div>
-      <div class="m-offer-body">
-        <div class="m-offer-title">${esc(offer.title)}</div>
-        <div class="m-offer-desc">${esc(offer.description)}</div>
-      </div>
-      ${offer.badge ? `<div class="m-offer-badge">${esc(offer.badge)}</div>` : ''}
-    </div>`).join('');
+  const now = new Date();
+  const c   = CONFIG.business.currency;
+
+  list.innerHTML = offersData.map(offer => {
+    // Determine status
+    let status = 'available';
+    if (offer.endDate) {
+      const end = new Date(offer.endDate);
+      end.setHours(23, 59, 59, 999);
+      if (end < now) status = 'expired';
+    }
+    if (status === 'available' && offer.maxUses > 0) {
+      const used = userOfferUsage[offer.id] || 0;
+      if (used >= offer.maxUses) status = 'used';
+    }
+
+    const valLabel = offer.discountType === 'percent'
+      ? `${offer.discountValue}% off`
+      : `${c}${offer.discountValue} off`;
+
+    const badgeHtml = status === 'available'
+      ? `<div class="m-offer-badge-available">Available</div>`
+      : status === 'used'
+        ? `<div class="m-offer-badge-used">Used</div>`
+        : `<div class="m-offer-badge-expired">Expired</div>`;
+
+    const dimStyle = status !== 'available' ? ' style="opacity:0.45;"' : '';
+
+    return `
+      <div class="m-offer-card"${dimStyle}>
+        <div class="m-offer-icon">🏷</div>
+        <div class="m-offer-body">
+          <div class="m-offer-title">${esc(offer.title)}</div>
+          <div class="m-offer-desc">${esc(offer.description || valLabel)}</div>
+        </div>
+        ${badgeHtml}
+      </div>`;
+  }).join('');
 }
 
 function loadUserOrders(uid, ids) {
@@ -2508,6 +2900,14 @@ function startAccountOrderListener(orderId) {
         if (accountOrderListeners[orderId]) {
           accountOrderListeners[orderId]();
           delete accountOrderListeners[orderId];
+        }
+
+        // Award loyalty stamp on collection (guarded by stampsAwarded flag)
+        if (status === 'collected') {
+          const cachedOrder = orderCache[orderId];
+          if (cachedOrder && !cachedOrder.stampsAwarded) {
+            awardStamp(orderId);
+          }
         }
 
         // Move order into history immediately — no reload needed
