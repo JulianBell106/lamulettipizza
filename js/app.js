@@ -151,6 +151,7 @@ let vanLocationData        = null; // last received location doc (Session 14)
 let locationAgeInterval    = null; // setInterval id for "Updated X mins ago" (Session 14)
 let userProfileUnsubscribe    = null; // real-time user document listener (Session 21)
 let userOfferUsageUnsubscribe = null; // real-time offer usage listener (Session 21)
+let userOrdersQueryUnsubscribe = null; // live orders query listener (Session 21)
 
 
 /* ============================================================================
@@ -1900,9 +1901,10 @@ document.addEventListener('DOMContentLoaded', async function () {
       loadAccountPage('d');
       loadUserOrders(user.uid);
     } else {
-      // User signed out — stop real-time listeners
-      if (userProfileUnsubscribe)    { userProfileUnsubscribe();    userProfileUnsubscribe    = null; }
-      if (userOfferUsageUnsubscribe) { userOfferUsageUnsubscribe(); userOfferUsageUnsubscribe = null; }
+      // User signed out — stop all real-time listeners
+      if (userProfileUnsubscribe)     { userProfileUnsubscribe();     userProfileUnsubscribe     = null; }
+      if (userOfferUsageUnsubscribe)  { userOfferUsageUnsubscribe();  userOfferUsageUnsubscribe  = null; }
+      if (userOrdersQueryUnsubscribe) { userOrdersQueryUnsubscribe(); userOrdersQueryUnsubscribe = null; }
     }
   });
 });
@@ -2750,69 +2752,73 @@ function renderAccountOffers(ids) {
 }
 
 function loadUserOrders(uid) {
-  // Session 21 refactor: renders into BOTH 'm' and 'd' containers simultaneously
-  // using prefix-aware card IDs ({prefix}-coc-{id}). Called once from
-  // onAuthStateChanged — single listener set, no duplicate-ID races.
+  // Session 21 refactor: live onSnapshot query so new orders placed on mobile
+  // appear instantly on desktop. Uses docChanges() type === 'added' to inject
+  // cards without disturbing existing cards managed by startAccountOrderListener.
+  // Renders into BOTH 'm' and 'd' containers with prefix-aware IDs.
+  if (userOrdersQueryUnsubscribe) { userOrdersQueryUnsubscribe(); userOrdersQueryUnsubscribe = null; }
   stopAllAccountListeners();
   historyRemainder = [];
 
   ['m', 'd'].forEach(p => {
+    const cs = document.getElementById(`${p}-current-orders-section`);
+    const cl = document.getElementById(`${p}-current-orders-list`);
     const hl = document.getElementById(`${p}-order-history-list`);
+    if (cs) cs.style.display = 'none';
+    if (cl) cl.innerHTML = '';
     if (hl) hl.innerHTML = '<div class="m-account-loading">Loading your orders…</div>';
   });
 
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 90);
 
-  db.collection('orders')
+  userOrdersQueryUnsubscribe = db.collection('orders')
     .where('customerId', '==', uid)
     .where('createdAt', '>=', cutoff)
     .orderBy('createdAt', 'desc')
     .limit(50)
-    .get()
-    .then(snapshot => {
-      const orders = [];
-      snapshot.forEach(doc => {
-        const order = { id: doc.id, ...doc.data() };
-        // Session 13: pre-flag already-ready orders so beep only fires on transition
-        if (order.status === 'ready') order.firedReadyBeep = true;
-        orders.push(order);
-        orderCache[order.id] = order;
-      });
-
+    .onSnapshot(snapshot => {
       const activeStatuses   = ['pending', 'accepted', 'preparing', 'ready'];
       const terminalStatuses = ['collected', 'cancelled'];
-      const liveOrders       = orders.filter(o => activeStatuses.includes(o.status));
-      const historyOrders    = orders.filter(o => terminalStatuses.includes(o.status));
 
-      // Live orders: render card into BOTH m and d containers
-      ['m', 'd'].forEach(prefix => {
-        const currentSection = document.getElementById(`${prefix}-current-orders-section`);
-        const currentList    = document.getElementById(`${prefix}-current-orders-list`);
-        if (liveOrders.length > 0) {
+      // Only process newly-added documents — existing cards are managed by
+      // startAccountOrderListener, which handles status updates and removal.
+      snapshot.docChanges().forEach(change => {
+        if (change.type !== 'added') return;
+        const order = { id: change.doc.id, ...change.doc.data() };
+        // Pre-flag already-ready orders so beep only fires on transition (Session 13)
+        if (order.status === 'ready') order.firedReadyBeep = true;
+        orderCache[order.id] = order;
+
+        if (!activeStatuses.includes(order.status)) return;
+
+        // Inject card into both surfaces if not already present
+        ['m', 'd'].forEach(prefix => {
+          const currentSection = document.getElementById(`${prefix}-current-orders-section`);
+          const currentList    = document.getElementById(`${prefix}-current-orders-list`);
           if (currentSection) currentSection.style.display = 'block';
-          if (currentList) {
-            currentList.innerHTML = '';
-            liveOrders.forEach(order => {
-              const wrapper = document.createElement('div');
-              wrapper.id        = `${prefix}-coc-${order.id}`;
-              wrapper.className = 'm-current-order-card';
-              wrapper.setAttribute('onclick', `openOrderDetail('${order.id}')`);
-              wrapper.innerHTML = buildCurrentOrderCardHTML(order, prefix);
-              currentList.appendChild(wrapper);
-            });
+          if (currentList && !document.getElementById(`${prefix}-coc-${order.id}`)) {
+            const wrapper = document.createElement('div');
+            wrapper.id        = `${prefix}-coc-${order.id}`;
+            wrapper.className = 'm-current-order-card';
+            wrapper.setAttribute('onclick', `openOrderDetail('${order.id}')`);
+            wrapper.innerHTML = buildCurrentOrderCardHTML(order, prefix);
+            currentList.appendChild(wrapper);
           }
-        } else {
-          if (currentSection) currentSection.style.display = 'none';
-          if (currentList) currentList.innerHTML = '';
-        }
+        });
+        // One status-update listener per order (not per prefix)
+        startAccountOrderListener(order.id);
       });
 
-      // One listener per live order (not per prefix)
-      liveOrders.forEach(order => startAccountOrderListener(order.id));
-
-      // Order history
+      // Rebuild history from full snapshot on every fire so collected/cancelled
+      // orders appear immediately after the per-order listener removes the live card.
+      const historyOrders = [];
+      snapshot.forEach(doc => {
+        const order = { id: doc.id, ...doc.data() };
+        if (terminalStatuses.includes(order.status)) historyOrders.push(order);
+      });
       historyAllOrders = historyOrders;
+
       if (historyOrders.length === 0) {
         ['m', 'd'].forEach(p => {
           const hl = document.getElementById(`${p}-order-history-list`);
@@ -2827,8 +2833,7 @@ function loadUserOrders(uid) {
         });
         _renderHistoryList(false);
       }
-    })
-    .catch(err => {
+    }, err => {
       console.error('[Stalliq] Account orders load error:', err.code, err.message);
       if (err.code === 'failed-precondition') {
         console.warn('[Stalliq] Composite index required. Check Firestore console for a direct creation link.');
@@ -3086,8 +3091,9 @@ function dAccountSignIn() {
 
 function accountSignOut(prefix = 'm') {
   stopAllAccountListeners();
-  if (userProfileUnsubscribe)    { userProfileUnsubscribe();    userProfileUnsubscribe    = null; }
-  if (userOfferUsageUnsubscribe) { userOfferUsageUnsubscribe(); userOfferUsageUnsubscribe = null; }
+  if (userProfileUnsubscribe)     { userProfileUnsubscribe();     userProfileUnsubscribe     = null; }
+  if (userOfferUsageUnsubscribe)  { userOfferUsageUnsubscribe();  userOfferUsageUnsubscribe  = null; }
+  if (userOrdersQueryUnsubscribe) { userOrdersQueryUnsubscribe(); userOrdersQueryUnsubscribe = null; }
   userStampCount = 0;
   userOfferUsage = {};
   // Clear order containers on both surfaces

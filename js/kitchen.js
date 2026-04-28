@@ -1,5 +1,21 @@
 /**
  * kitchen.js — La Muletti Pizza Kitchen Dashboard
+ *
+ * Session 21: Uses a dedicated Firebase app instance ('kitchen') so kitchen
+ * auth (anonymous) is completely isolated from customer auth (phone).
+ * They write to different localStorage keys and never interfere.
+ */
+
+// ── Dedicated Firebase app for the kitchen ───────────────────────────────────
+// Same project config as the default app, but a separate named instance.
+// This gives the kitchen its own auth + Firestore client — no shared state.
+const _kitchenApp  = firebase.apps.find(a => a.name === 'kitchen') ||
+                     firebase.initializeApp(firebase.app().options, 'kitchen');
+const kitchenAuth  = firebase.auth(_kitchenApp);
+const kitchenDb    = firebase.firestore(_kitchenApp);
+
+/**
+ * kitchen.js — La Muletti Pizza Kitchen Dashboard
  * ============================================================================
  * Sections:
  *   1.  State
@@ -230,11 +246,11 @@ async function checkPinMultiStaff() {
   renderPinDots();
 
   try {
-    // Sign in anonymously first so Firestore security rules allow the staff read.
-    // If the PIN is wrong we sign out immediately.
-    await firebase.auth().signInAnonymously();
+    // Sign in anonymously using the kitchen's dedicated Firebase app —
+    // completely isolated from customer auth (Session 21).
+    await kitchenAuth.signInAnonymously();
 
-    const snapshot = await db.collection('vendors').doc(CONFIG.vendor.id)
+    const snapshot = await kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
       .collection('staff')
       .where('active', '==', true)
       .get();
@@ -269,7 +285,7 @@ async function checkPinMultiStaff() {
       showToast(`Welcome, ${match.name}!`);
     } else {
       // ❌ Wrong PIN — sign out to discard the anonymous session
-      firebase.auth().signOut().catch(() => {});
+      kitchenAuth.signOut().catch(() => {});
 
       failedPinAttempts++;
       sessionStorage.setItem('pinFailCount', String(failedPinAttempts));
@@ -286,7 +302,7 @@ async function checkPinMultiStaff() {
     }
   } catch (err) {
     console.error('[Stalliq] PIN check error:', err);
-    firebase.auth().signOut().catch(() => {});
+    kitchenAuth.signOut().catch(() => {});
     showPinError('Connection error — please try again');
     shakePinDots();
   }
@@ -432,7 +448,7 @@ function _dismissAudioRestorePrompt() {
    5. KITCHEN STATUS
    ============================================================================ */
 function listenKitchenStatus() {
-  db.collection('vendors').doc(CONFIG.vendor.id)
+  kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
     .onSnapshot(doc => {
       kitchenStatus = (doc.exists && doc.data().kitchenStatus) || 'open';
       renderKitchenStatusBtn();
@@ -455,7 +471,7 @@ function renderKitchenStatusBtn() {
 
 async function setKitchenStatus(status) {
   try {
-    await db.collection('vendors').doc(CONFIG.vendor.id)
+    await kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
       .set({ kitchenStatus: status }, { merge: true });
   } catch (err) {
     console.error('[Stalliq] Set kitchen status error:', err);
@@ -507,7 +523,7 @@ function renderBroadcastBtn() {
  * if another device toggles the broadcast state.
  */
 function listenBroadcastState() {
-  const locRef = db.collection('vendors').doc(CONFIG.vendor.id)
+  const locRef = kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
                    .collection('location').doc('current');
 
   locRef.onSnapshot(snap => {
@@ -585,7 +601,7 @@ function pushLocation() {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         try {
-          await db.collection('vendors').doc(CONFIG.vendor.id)
+          await kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
                   .collection('location').doc('current')
                   .set({
                     active:    true,
@@ -625,7 +641,7 @@ async function stopLocationBroadcast() {
     console.log('[Stalliq] Location ping interval stopped.');
   }
   try {
-    await db.collection('vendors').doc(CONFIG.vendor.id)
+    await kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
             .collection('location').doc('current')
             .set({ active: false }, { merge: true });
     console.log('[Stalliq] Broadcast set inactive in Firestore.');
@@ -641,7 +657,7 @@ async function stopLocationBroadcast() {
 function listenOrders() {
   if (ordersUnsubscribe) ordersUnsubscribe();
 
-  const q = db.collection('orders')
+  const q = kitchenDb.collection('orders')
     .where('vendorId', '==', CONFIG.vendor.id)
     .where('status', 'in', ['pending', 'accepted', 'preparing', 'ready']);
 
@@ -870,7 +886,7 @@ async function confirmAccept() {
   if (btn) { btn.textContent = 'Accepting…'; btn.disabled = true; }
 
   try {
-    await db.collection('orders').doc(pendingAcceptId).update({
+    await kitchenDb.collection('orders').doc(pendingAcceptId).update({
       status:    'accepted',
       waitMins:  selectedWaitMins,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -888,7 +904,7 @@ async function confirmAccept() {
    ============================================================================ */
 async function advanceStatus(orderId, newStatus) {
   try {
-    await db.collection('orders').doc(orderId).update({
+    await kitchenDb.collection('orders').doc(orderId).update({
       status:    newStatus,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
@@ -899,7 +915,7 @@ async function advanceStatus(orderId, newStatus) {
 
 async function markCollected(orderId) {
   try {
-    await db.collection('orders').doc(orderId).update({
+    await kitchenDb.collection('orders').doc(orderId).update({
       status:    'collected',
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
@@ -1203,7 +1219,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const savedStaffId   = sessionStorage.getItem('kitchenStaffId');
   const savedStaffName = sessionStorage.getItem('kitchenStaffName');
   if (savedStaffId && savedStaffName) {
-    const unsubAuth = firebase.auth().onAuthStateChanged(user => {
+    const unsubAuth = kitchenAuth.onAuthStateChanged(user => {
       unsubAuth(); // only need this once
       if (user) {
         loggedInStaffId   = savedStaffId;
@@ -1229,11 +1245,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function getNextOrderRef() {
   const today      = new Date().toISOString().slice(0, 10);
-  const counterRef = db.collection('vendors').doc(CONFIG.vendor.id)
+  const counterRef = kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
                        .collection('counters').doc('daily');
   let orderNumber  = 1;
 
-  await db.runTransaction(async tx => {
+  await kitchenDb.runTransaction(async tx => {
     const snap = await tx.get(counterRef);
     if (snap.exists && snap.data().date === today) {
       orderNumber = (snap.data().count || 0) + 1;
@@ -1387,7 +1403,7 @@ async function submitWalkinOrder() {
   try {
     const orderRef = await getNextOrderRef();
 
-    await db.collection('orders').add({
+    await kitchenDb.collection('orders').add({
       vendorId:      CONFIG.vendor.id,
       orderRef,
       source:        'walkin',
@@ -1459,7 +1475,7 @@ async function logoutStaff() {
   sessionStorage.removeItem('kitchenStaffName');
 
   // Sign out from Firebase Auth
-  try { await firebase.auth().signOut(); } catch (_) {}
+  try { await kitchenAuth.signOut(); } catch (_) {}
 
   // Clear staff state
   loggedInStaffId   = null;
@@ -1548,7 +1564,7 @@ async function confirmStaffIdentity() {
 
   try {
     // Load the logged-in staff doc to get their salt, then hash the entered PIN with it
-    const doc = await db.collection('vendors').doc(CONFIG.vendor.id)
+    const doc = await kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
                         .collection('staff').doc(loggedInStaffId).get();
     if (doc.exists) {
       const data = doc.data();
@@ -1574,7 +1590,7 @@ async function confirmStaffIdentity() {
 // ── Staff list ───────────────────────────────────────────────────────────────
 
 async function loadStaffList() {
-  const snapshot = await db.collection('vendors').doc(CONFIG.vendor.id)
+  const snapshot = await kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
                             .collection('staff')
                             .where('active', '==', true)
                             .get();
@@ -1620,7 +1636,7 @@ async function loadStaffList() {
 async function deactivateStaff(staffId, name) {
   if (!confirm(`Remove ${name} from the kitchen? They will no longer be able to log in.`)) return;
   try {
-    await db.collection('vendors').doc(CONFIG.vendor.id)
+    await kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
             .collection('staff').doc(staffId)
             .update({ active: false });
     showToast(`${name} removed.`);
@@ -1664,7 +1680,7 @@ async function submitAddStaff() {
   try {
     const pinSalt = generateSalt();
     const pinHash = await hashPin(pin, pinSalt);
-    await db.collection('vendors').doc(CONFIG.vendor.id)
+    await kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
             .collection('staff').add({
               name,
               pinHash,
@@ -1724,7 +1740,7 @@ async function submitEditStaff() {
   if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
 
   try {
-    await db.collection('vendors').doc(CONFIG.vendor.id)
+    await kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
             .collection('staff').doc(editingStaffId)
             .update(updates);
     if (editingStaffId === loggedInStaffId) loggedInStaffName = name;
@@ -1807,7 +1823,7 @@ async function submitForgotPhone() {
 
   try {
     // Verify the entered number matches the stored owner phone
-    const vendorDoc  = await db.collection('vendors').doc(CONFIG.vendor.id).get();
+    const vendorDoc  = await kitchenDb.collection('vendors').doc(CONFIG.vendor.id).get();
     const ownerPhone = vendorDoc.exists ? toE164UK(String(vendorDoc.data().ownerPhone || '')) : null;
 
     if (!ownerPhone || ownerPhone !== phone) {
@@ -1824,7 +1840,7 @@ async function submitForgotPhone() {
       });
     }
 
-    forgotConfirmationResult = await firebase.auth().signInWithPhoneNumber(phone, forgotPhoneVerifier);
+    forgotConfirmationResult = await kitchenAuth.signInWithPhoneNumber(phone, forgotPhoneVerifier);
     showForgotScreen('forgot-code-screen');
     setTimeout(() => { const el = document.getElementById('forgot-code-input'); if (el) el.focus(); }, 200);
   } catch (err) {
@@ -1881,7 +1897,7 @@ async function submitNewOwnerPin() {
     const pinSalt = generateSalt();
     const pinHash = await hashPin(pin, pinSalt);
     // Upsert the owner staff document (fixed ID 'owner' for easy identification)
-    await db.collection('vendors').doc(CONFIG.vendor.id)
+    await kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
             .collection('staff').doc('owner')
             .set({
               name:      'Owner',
