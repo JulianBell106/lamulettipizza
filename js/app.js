@@ -1876,19 +1876,17 @@ document.addEventListener('DOMContentLoaded', async function () {
         } catch (_) {}
       }
 
-      // ── Real-time listeners replace one-shot loads. Each fires immediately
-      //    with current Firestore data AND stays subscribed — so stamp count
-      //    and offer usage stay in sync across devices/tabs without a sign-out.
+      // ── Real-time listeners — fire immediately with current Firestore data
+      //    AND stay subscribed for cross-device updates (stamps, offer usage).
       listenUserProfile(user.uid);
       listenUserOfferUsage(user.uid);
 
-      // ── Update name greeting immediately (stamp card + offers are driven
-      //    by the listener callbacks above).
-      ['m', 'd'].forEach(prefix => {
-        const ids = buildAccountIds(prefix);
-        const nameEl = document.getElementById(ids.name);
-        if (nameEl) nameEl.textContent = customerName ? `Hi, ${customerName}!` : 'Welcome back!';
-      });
+      // ── Refresh full account state on both surfaces: loads orders, sets up
+      //    live order listeners, renders name/stamps/offers. This runs on every
+      //    page load for signed-in users so the account panel is always ready,
+      //    not just when the user manually opens or navigates to it.
+      loadAccountPage('m');
+      loadAccountPage('d');
     } else {
       // User signed out — stop real-time listeners
       if (userProfileUnsubscribe)    { userProfileUnsubscribe();    userProfileUnsubscribe    = null; }
