@@ -641,10 +641,9 @@ function dToggleBasket() {
 function dToggleAccount() {
   const panel = document.getElementById('d-account-panel');
   if (!panel) return;
+  const opening = !panel.classList.contains('open');
   panel.classList.toggle('open');
-  // No loadAccountPage call needed — name/stamps/offers are kept live by
-  // listenUserProfile and listenUserOfferUsage; orders by loadUserOrders
-  // called from onAuthStateChanged (Session 21).
+  if (opening) loadAccountPage('d');
 }
 
 
@@ -1715,16 +1714,8 @@ function listenUserProfile(uid) {
   if (userProfileUnsubscribe) { userProfileUnsubscribe(); userProfileUnsubscribe = null; }
   userProfileUnsubscribe = db.collection('users').doc(uid).onSnapshot(doc => {
     if (!doc.exists) return;
-    const profileData = doc.data();
-    userStampCount = profileData.stampCount ?? 0;
-    // Keep customerName in sync — fixes name showing "Welcome back!" if panel
-    // opened before onAuthStateChanged's Firestore fetch completed (Session 21).
-    if (!customerName && profileData.firstName) customerName = profileData.firstName;
-    ['m', 'd'].forEach(p => {
-      const nameEl = document.getElementById(`${p}-account-name`);
-      if (nameEl) nameEl.textContent = customerName ? `Hi, ${customerName}!` : 'Welcome back!';
-      renderStampCard(buildAccountIds(p));
-    });
+    userStampCount = doc.data().stampCount ?? 0;
+    ['m', 'd'].forEach(p => renderStampCard(buildAccountIds(p)));
     // Refresh basket — loyalty reward eligibility may have changed
     const discM = document.getElementById('m-basket-discount-section');
     if (discM) discM.innerHTML = buildBasketDiscountHTML('m');
@@ -1890,13 +1881,16 @@ document.addEventListener('DOMContentLoaded', async function () {
       listenUserProfile(user.uid);
       listenUserOfferUsage(user.uid);
 
-      // ── Render both account surfaces immediately (Session 21).
-      //    loadAccountPage renders name/stamps/offers for each prefix.
-      //    loadUserOrders is called once — it populates both m and d containers
-      //    with prefix-aware card IDs so there are no duplicate-ID races.
+      // ── Eager-load the mobile account page. This populates the account tab
+      //    content and sets up live order listeners on page load, so the user
+      //    sees correct state without having to tap the Account nav item first.
+      //
+      //    Desktop account panel is NOT loaded here — it starts closed on any
+      //    page load, so dToggleAccount() will call loadAccountPage('d') when
+      //    the user opens it. By that point the real-time listeners above will
+      //    already have fired, so customerName, userStampCount, and
+      //    userOfferUsage will all be correct on first open.
       loadAccountPage('m');
-      loadAccountPage('d');
-      loadUserOrders(user.uid);
     } else {
       // User signed out — stop real-time listeners
       if (userProfileUnsubscribe)    { userProfileUnsubscribe();    userProfileUnsubscribe    = null; }
@@ -2670,8 +2664,7 @@ function loadAccountPage(prefix = 'm') {
   // with real Firestore data once loaded.
   renderStampCard(ids);
   renderAccountOffers(ids);
-  // Orders are loaded centrally by loadUserOrders(uid) called from
-  // onAuthStateChanged and pendingOrderFn — not per-prefix here (Session 21).
+  loadUserOrders(user.uid, ids);
 
   Promise.all([
     loadUserStampCount(user.uid),
@@ -2753,17 +2746,18 @@ function renderAccountOffers(ids) {
   }).join('');
 }
 
-function loadUserOrders(uid) {
-  // Session 21 refactor: renders into BOTH 'm' and 'd' containers simultaneously
-  // using prefix-aware card IDs ({prefix}-coc-{id}). Called once from
-  // onAuthStateChanged — single listener set, no duplicate-ID races.
+function loadUserOrders(uid, ids) {
   stopAllAccountListeners();
   historyRemainder = [];
 
-  ['m', 'd'].forEach(p => {
-    const hl = document.getElementById(`${p}-order-history-list`);
-    if (hl) hl.innerHTML = '<div class="m-account-loading">Loading your orders…</div>';
-  });
+  const currentSection = document.getElementById(ids.currentSection);
+  const currentList    = document.getElementById(ids.currentList);
+  const historyList    = document.getElementById(ids.historyList);
+  const historyEmpty   = document.getElementById(ids.historyEmpty);
+
+  if (historyList) {
+    historyList.innerHTML = `<div class="m-account-loading">Loading your orders…</div>`;
+  }
 
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 90);
@@ -2789,46 +2783,32 @@ function loadUserOrders(uid) {
       const liveOrders       = orders.filter(o => activeStatuses.includes(o.status));
       const historyOrders    = orders.filter(o => terminalStatuses.includes(o.status));
 
-      // Live orders: render card into BOTH m and d containers
-      ['m', 'd'].forEach(prefix => {
-        const currentSection = document.getElementById(`${prefix}-current-orders-section`);
-        const currentList    = document.getElementById(`${prefix}-current-orders-list`);
-        if (liveOrders.length > 0) {
-          if (currentSection) currentSection.style.display = 'block';
-          if (currentList) {
-            currentList.innerHTML = '';
-            liveOrders.forEach(order => {
-              const wrapper = document.createElement('div');
-              wrapper.id        = `${prefix}-coc-${order.id}`;
-              wrapper.className = 'm-current-order-card';
-              wrapper.setAttribute('onclick', `openOrderDetail('${order.id}')`);
-              wrapper.innerHTML = buildCurrentOrderCardHTML(order, prefix);
-              currentList.appendChild(wrapper);
-            });
-          }
-        } else {
-          if (currentSection) currentSection.style.display = 'none';
-          if (currentList) currentList.innerHTML = '';
+      // ── Live orders ──────────────────────────────────────────────────────
+      if (liveOrders.length > 0) {
+        if (currentSection) currentSection.style.display = 'block';
+        if (currentList) {
+          currentList.innerHTML = '';
+          liveOrders.forEach(order => {
+            const wrapper = document.createElement('div');
+            wrapper.id        = `m-coc-${order.id}`;
+            wrapper.className = 'm-current-order-card';
+            wrapper.setAttribute('onclick', `openOrderDetail('${order.id}')`);
+            wrapper.innerHTML = buildCurrentOrderCardHTML(order);
+            currentList.appendChild(wrapper);
+            startAccountOrderListener(order.id);
+          });
         }
-      });
+      } else {
+        if (currentSection) currentSection.style.display = 'none';
+      }
 
-      // One listener per live order (not per prefix)
-      liveOrders.forEach(order => startAccountOrderListener(order.id));
-
-      // Order history
+      // ── Order history — collected/cancelled only ─────────────────────────
       historyAllOrders = historyOrders;
       if (historyOrders.length === 0) {
-        ['m', 'd'].forEach(p => {
-          const hl = document.getElementById(`${p}-order-history-list`);
-          const he = document.getElementById(`${p}-order-history-empty`);
-          if (hl) hl.innerHTML = '';
-          if (he) he.style.display = 'block';
-        });
+        if (historyList)  historyList.innerHTML = '';
+        if (historyEmpty) historyEmpty.style.display = 'block';
       } else {
-        ['m', 'd'].forEach(p => {
-          const he = document.getElementById(`${p}-order-history-empty`);
-          if (he) he.style.display = 'none';
-        });
+        if (historyEmpty) historyEmpty.style.display = 'none';
         _renderHistoryList(false);
       }
     })
@@ -2837,14 +2817,13 @@ function loadUserOrders(uid) {
       if (err.code === 'failed-precondition') {
         console.warn('[Stalliq] Composite index required. Check Firestore console for a direct creation link.');
       }
-      ['m', 'd'].forEach(p => {
-        const hl = document.getElementById(`${p}-order-history-list`);
-        if (hl) hl.innerHTML = '<div class="m-account-loading">Could not load orders — please try again.</div>';
-      });
+      if (historyList) {
+        historyList.innerHTML = `<div class="m-account-loading">Could not load orders — please try again.</div>`;
+      }
     });
 }
 
-function buildCurrentOrderCardHTML(order, prefix = 'm') {
+function buildCurrentOrderCardHTML(order) {
   const cfg          = ORDER_STATUS_CONFIG[order.status] || ORDER_STATUS_CONFIG.pending;
   const itemsSummary = order.items
     ? order.items.map(i => `${esc(i.name)} × ${i.quantity}`).join(', ')
@@ -2862,7 +2841,7 @@ function buildCurrentOrderCardHTML(order, prefix = 'm') {
       <div class="m-coc-total">${total}</div>
     </div>
     <div class="m-coc-items">${itemsSummary}</div>
-    <div class="m-coc-status" id="${prefix}-coc-status-${order.id}">
+    <div class="m-coc-status" id="m-coc-status-${order.id}">
       <div class="m-coc-status-icon">${cfg.icon}</div>
       <div class="m-coc-status-body">
         <div class="m-coc-status-text">${cfg.label}</div>
@@ -2996,21 +2975,19 @@ function startAccountOrderListener(orderId) {
         orderCache[orderId] = { ...orderCache[orderId], ...data };
       }
 
-      // Update status element in BOTH m and d containers (Session 21 prefix-aware IDs)
-      const cfg      = ORDER_STATUS_CONFIG[status] || ORDER_STATUS_CONFIG.pending;
-      const waitLine = (status === 'accepted' && waitMins)
-        ? `<div class="m-coc-wait">~${waitMins} mins estimated</div>`
-        : '';
-      const statusHTML = `
+      const statusEl = document.getElementById(`m-coc-status-${orderId}`);
+      if (statusEl) {
+        const cfg      = ORDER_STATUS_CONFIG[status] || ORDER_STATUS_CONFIG.pending;
+        const waitLine = (status === 'accepted' && waitMins)
+          ? `<div class="m-coc-wait">~${waitMins} mins estimated</div>`
+          : '';
+        statusEl.innerHTML = `
           <div class="m-coc-status-icon">${cfg.icon}</div>
           <div class="m-coc-status-body">
             <div class="m-coc-status-text">${cfg.label}</div>
             ${waitLine}
           </div>`;
-      ['m', 'd'].forEach(p => {
-        const statusEl = document.getElementById(`${p}-coc-status-${orderId}`);
-        if (statusEl) statusEl.innerHTML = statusHTML;
-      });
+      }
 
       // Session 13: fire ready beep on transition to ready
       if (status === 'ready') {
@@ -3045,22 +3022,21 @@ function startAccountOrderListener(orderId) {
         if (finalOrder) _prependToHistory(finalOrder);
         _dismissCustomerReadyPrompt();
 
-        // Fade and remove card from BOTH m and d containers
-        ['m', 'd'].forEach(p => {
-          const cardEl = document.getElementById(`${p}-coc-${orderId}`);
-          if (cardEl) {
-            cardEl.style.transition = 'opacity 0.4s';
-            cardEl.style.opacity    = '0';
-            setTimeout(() => {
-              cardEl.remove();
-              const section = document.getElementById(`${p}-current-orders-section`);
-              const list    = document.getElementById(`${p}-current-orders-list`);
+        const cardEl = document.getElementById(`m-coc-${orderId}`);
+        if (cardEl) {
+          cardEl.style.transition = 'opacity 0.4s';
+          cardEl.style.opacity    = '0';
+          setTimeout(() => {
+            cardEl.remove();
+            ['m', 'd'].forEach(prefix => {
+              const section = document.getElementById(`${prefix}-current-orders-section`);
+              const list    = document.getElementById(`${prefix}-current-orders-list`);
               if (section && list && list.children.length === 0) {
                 section.style.display = 'none';
               }
-            }, 400);
-          }
-        });
+            });
+          }, 400);
+        }
         console.log(`[Stalliq] Account listener stopped for ${orderId} (${status}).`);
       }
     },
@@ -3073,7 +3049,7 @@ function startAccountOrderListener(orderId) {
 }
 
 function accountSignIn() {
-  pendingOrderFn = () => { const u = auth.currentUser; loadAccountPage('m'); loadAccountPage('d'); if (u) loadUserOrders(u.uid); };
+  pendingOrderFn = () => loadAccountPage('m');
   document.getElementById('auth-title').textContent = 'Sign in to your account';
   document.getElementById('auth-sub-text').textContent = 'Enter your mobile number to sign in';
   authClearErrors();
@@ -3081,7 +3057,7 @@ function accountSignIn() {
 }
 
 function dAccountSignIn() {
-  pendingOrderFn = () => { const u = auth.currentUser; loadAccountPage('d'); loadAccountPage('m'); if (u) loadUserOrders(u.uid); };
+  pendingOrderFn = () => loadAccountPage('d');
   document.getElementById('auth-title').textContent = 'Sign in to your account';
   document.getElementById('auth-sub-text').textContent = 'Enter your mobile number to sign in';
   authClearErrors();
@@ -3094,22 +3070,10 @@ function accountSignOut(prefix = 'm') {
   if (userOfferUsageUnsubscribe) { userOfferUsageUnsubscribe(); userOfferUsageUnsubscribe = null; }
   userStampCount = 0;
   userOfferUsage = {};
-  // Clear order containers on both surfaces
-  ['m', 'd'].forEach(p => {
-    const cl = document.getElementById(`${p}-current-orders-list`);
-    const cs = document.getElementById(`${p}-current-orders-section`);
-    const hl = document.getElementById(`${p}-order-history-list`);
-    if (cl) cl.innerHTML = '';
-    if (cs) cs.style.display = 'none';
-    if (hl) hl.innerHTML = '';
-  });
-  historyAllOrders = [];
-
   auth.signOut()
     .then(() => {
       customerName = null;
-      loadAccountPage('m');
-      loadAccountPage('d');
+      loadAccountPage(prefix);
     })
     .catch(err => {
       console.error('[Stalliq] Sign out error:', err);
