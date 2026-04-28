@@ -1,6 +1,6 @@
 # Stalliq — Project Bible
-> Last updated: April 2026 — Session 21 (Bug fixes: order detail discount breakdown, stamp/offer lazy-load, basket discount spacing, session-reload account state, loyalty stamp guard)
-> **Next sprint:** Session 22 — Go live with Daniele.
+> Last updated: April 2026 — Session 22 (Real-time sync architecture: live order query, stamp race fix, belt-and-suspenders status updates)
+> **Next sprint:** Session 23 — Go live with Daniele.
 > **⚠️ Manual data fix needed:** James's stamp count in Firestore is currently 1 (awarded incorrectly on the free pizza order). Set `users/{jamesUid}/stampCount` to 0 in Firebase Console.
 > **Pending (Julian):** ICO registration (ico.org.uk, ~£40/year) · Activate Firestore TTL policy (Firebase Console → Firestore → TTL → collection: `orders`, field: `deleteAt`) · Google Sheet header row protection · Allergen disclaimer in onboarding doc · **Publish updated Firestore rules** (firestore.rules — adds offerUsage sub-collection + stamp award write) · **Migrate offers sheet** to new schema (see Section 29).
 > Read this file at the start of every session to get fully up to speed.
@@ -194,7 +194,7 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 16 | SMS & WhatsApp Status Notifications | ⏳ Planned | Customer notified on order status changes — Twilio |
 | 17 | Geofence Notifications | ⏳ Planned | Van enters subscriber's area → phone buzzes |
 | 18 | Flash Sales & Broadcasts | ⏳ Planned | Vendor launches deal in seconds, broadcasts to subscribers |
-| 19 | Loyalty Stamp Card | ⏳ Planned | Digital stamp card — no paper needed |
+| 19 | Loyalty Stamp Card | ✅ Done | Stamp card (8 stamps → free pizza), per-order guard, cross-device sync, transaction-safe award |
 | 20 | Flash Offers by Geolocation | ⏳ Planned | Customer in area gets notified of live deal |
 | 21 | Pre-order Time Slots | ⏳ Planned | Order now, collect at chosen time |
 | 22 | Vendor Self-Service | ⏳ Planned | Vendor manages own menu, events, location — full self-service portal |
@@ -762,3 +762,72 @@ See Section 31 for fix details.
 | 5 | Hard reload shows "Welcome back!" instead of "Hi [name]!" — customerName only set during live auth flow, lost on page reload | onAuthStateChanged now loads firstName from `users/{uid}` if customerName is not already set. |
 | 6 | Hard reload shows stale stamp count and offers on account page — stamp/offer data loaded but account sections never re-rendered | After loading data, onAuthStateChanged calls `renderStampCard` and `renderAccountOffers` on both m and d surfaces immediately. |
 | 7 | Loyalty stamp awarded on free-pizza (loyalty-redeemed) orders — customer got 1 stamp back instead of staying at 0 | Added guard to awardStamp call: skips if `cachedOrder.discount?.type === 'loyalty'`. ⚠️ James's stampCount in Firestore needs manual reset to 0 in Firebase Console. |
+
+## 32. Session 22 — Real-Time Sync Architecture + Stamp Race Fix (COMPLETE ✅)
+
+**Files changed:** `js/app.js`
+
+### Context
+
+Session 22 completed the architectural work begun in Session 21. After Session 21 shipped the desktop account panel sync, three remaining bugs were found in live testing with real devices.
+
+---
+
+### Bugs fixed
+
+| # | Bug | Root Cause | Fix |
+|---|-----|-----------|-----|
+| 1 | Pending order placed on mobile never appeared in desktop account panel without a page reload | `loadUserOrders` used a one-shot `.get()` call — no live listener | Refactored to `.onSnapshot()` with `docChanges()`. `type === 'added'` injects cards and starts per-order listeners. Query stays open for the session lifetime. |
+| 2 | Loyalty stamp count doubled (2 stamps per order instead of 1) | Race condition: mobile tab and desktop tab both run `startAccountOrderListener` on the same order. Both check `cachedOrder.stampsAwarded` simultaneously — both see `false` before either write lands — both call `awardStamp()` → double `FieldValue.increment(1)` | Wrapped `awardStamp` in a Firestore transaction. Transaction atomically reads `stampsAwarded` from the order doc; if already `true`, aborts without incrementing. Second client always loses the race cleanly. |
+| 3 | Live order card stuck at "pending" on desktop even after kitchen collected it — without a page refresh | `loadUserOrders` query `onSnapshot` was silently discarding `type === 'modified'` events. Relied entirely on `startAccountOrderListener` (individual document listener) for status updates — if that listener failed for any reason, the card never updated | Added `type === 'modified'` handling directly in the query `onSnapshot`. Status badge updated inline for active statuses; card faded and removed for terminal statuses. Acts as belt-and-suspenders alongside `startAccountOrderListener`. |
+
+---
+
+### Architecture — `loadUserOrders` (current state)
+
+```
+onAuthStateChanged → loadUserOrders(uid)
+  │
+  ├─ Stops previous query listener (userOrdersQueryUnsubscribe)
+  ├─ Stops all per-order listeners (stopAllAccountListeners)
+  ├─ Resets history state
+  │
+  └─ db.collection('orders').where(...).onSnapshot(snapshot => {
+       docChanges().forEach(change => {
+         'added'    → render card on both m+d surfaces → startAccountOrderListener(id)
+         'modified' → update status badge (active) or fade+remove card (terminal)
+       })
+       full snapshot → rebuild historyAllOrders → _renderHistoryList()
+     })
+```
+
+**`startAccountOrderListener(orderId)`** — per-order document listener:
+- Updates status badge on both surfaces on every status change
+- On `collected`: runs `awardStamp(orderId)` (transactional) + fades/removes card + prepends to history
+- On `cancelled`: fades/removes card + prepends to history
+- Guard: `if (accountOrderListeners[orderId]) return` prevents duplicate listeners
+
+**`awardStamp(orderId)`** — transactional stamp award:
+```js
+db.runTransaction(async txn => {
+  const orderSnap = await txn.get(orderRef);
+  if (!orderSnap.exists || orderSnap.data().stampsAwarded) return; // already awarded
+  txn.update(orderRef, { stampsAwarded: true });
+  txn.set(userRef, { stampCount: FieldValue.increment(1) }, { merge: true });
+});
+// listenUserProfile fires automatically → updates stamp card on both surfaces
+```
+
+---
+
+### State variables (all three in play)
+
+| Variable | Purpose |
+|----------|---------|
+| `userProfileUnsubscribe` | Listens to `users/{uid}` — drives name, stampCount, stamp card render |
+| `userOfferUsageUnsubscribe` | Listens to `users/{uid}/offerUsage` — drives offer badge (AVAILABLE/USED) |
+| `userOrdersQueryUnsubscribe` | Query listener — `orders` collection filtered by `customerId` + 90-day window |
+| `accountOrderListeners{}` | Per-order document listeners started by the query listener |
+
+All four are stopped on sign-out and on `loadUserOrders` re-entry.
+
