@@ -1816,10 +1816,26 @@ document.addEventListener('DOMContentLoaded', async function () {
   // Fixes: stamp count and offer usage reset on page reload if Account page
   // was not visited first. Both now load as soon as Firebase Auth is ready,
   // regardless of which page the user lands on.
-  auth.onAuthStateChanged(user => {
+  auth.onAuthStateChanged(async user => {
     if (user && user.uid) {
-      loadUserStampCount(user.uid);
-      loadUserOfferUsage(user.uid);
+      // Await both so the basket re-render below sees the correct values.
+      await Promise.all([
+        loadUserStampCount(user.uid),
+        loadUserOfferUsage(user.uid),
+      ]);
+      // Re-render the basket discount section + total now that stamp count
+      // and offer usage are loaded. Fixes: loyalty banner not appearing when
+      // the user reached the basket before the Firestore reads completed.
+      const discM = document.getElementById('m-basket-discount-section');
+      if (discM) discM.innerHTML = buildBasketDiscountHTML('m');
+      const totalMEl = document.getElementById('m-basket-total');
+      if (totalMEl && basketTotalQty() > 0)
+        totalMEl.textContent = CONFIG.business.currency + basketFinalTotal().toFixed(2);
+      const discD = document.getElementById('d-basket-discount-section');
+      if (discD) discD.innerHTML = buildBasketDiscountHTML('d');
+      const totalDEl = document.getElementById('d-basket-total');
+      if (totalDEl && basketTotalQty() > 0)
+        totalDEl.textContent = CONFIG.business.currency + basketFinalTotal().toFixed(2);
     }
   });
 });
