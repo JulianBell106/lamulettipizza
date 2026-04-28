@@ -1767,16 +1767,23 @@ async function awardStamp(orderId) {
   const user = auth.currentUser;
   if (!user || !loyaltyConfig) return;
 
+  // Use a Firestore transaction to atomically check-and-set stampsAwarded.
+  // This prevents a race where both mobile and desktop tabs call awardStamp
+  // simultaneously (both see stampsAwarded:false before either write lands),
+  // which would increment stampCount twice. The transaction serialises the
+  // check: the second client to run finds stampsAwarded:true and aborts.
   try {
-    await db.collection('orders').doc(orderId).update({ stampsAwarded: true });
-    await db.collection('users').doc(user.uid).set(
-      { stampCount: firebase.firestore.FieldValue.increment(1) },
-      { merge: true }
-    );
-    userStampCount++;
-    // Refresh stamp card if account page is visible
-    ['m', 'd'].forEach(p => renderStampCard(buildAccountIds(p)));
-    console.log(`[Stalliq] Stamp awarded for order ${orderId}. Total: ${userStampCount}`);
+    const orderRef = db.collection('orders').doc(orderId);
+    const userRef  = db.collection('users').doc(user.uid);
+    await db.runTransaction(async txn => {
+      const orderSnap = await txn.get(orderRef);
+      if (!orderSnap.exists || orderSnap.data().stampsAwarded) return; // already awarded
+      txn.update(orderRef, { stampsAwarded: true });
+      txn.set(userRef, { stampCount: firebase.firestore.FieldValue.increment(1) }, { merge: true });
+    });
+    // listenUserProfile fires automatically when stampCount changes in Firestore
+    // and updates userStampCount + renders the stamp card on both surfaces.
+    console.log(`[Stalliq] Stamp awarded for order ${orderId}.`);
   } catch (err) {
     console.error('[Stalliq] Error awarding stamp:', err.message);
   }
@@ -2781,33 +2788,80 @@ function loadUserOrders(uid) {
       const activeStatuses   = ['pending', 'accepted', 'preparing', 'ready'];
       const terminalStatuses = ['collected', 'cancelled'];
 
-      // Only process newly-added documents — existing cards are managed by
-      // startAccountOrderListener, which handles status updates and removal.
       snapshot.docChanges().forEach(change => {
-        if (change.type !== 'added') return;
         const order = { id: change.doc.id, ...change.doc.data() };
-        // Pre-flag already-ready orders so beep only fires on transition (Session 13)
-        if (order.status === 'ready') order.firedReadyBeep = true;
-        orderCache[order.id] = order;
 
-        if (!activeStatuses.includes(order.status)) return;
+        if (change.type === 'added') {
+          // New document: render live card and start per-order listener.
+          // Pre-flag already-ready orders so beep only fires on transition (Session 13).
+          if (order.status === 'ready') order.firedReadyBeep = true;
+          orderCache[order.id] = order;
 
-        // Inject card into both surfaces if not already present
-        ['m', 'd'].forEach(prefix => {
-          const currentSection = document.getElementById(`${prefix}-current-orders-section`);
-          const currentList    = document.getElementById(`${prefix}-current-orders-list`);
-          if (currentSection) currentSection.style.display = 'block';
-          if (currentList && !document.getElementById(`${prefix}-coc-${order.id}`)) {
-            const wrapper = document.createElement('div');
-            wrapper.id        = `${prefix}-coc-${order.id}`;
-            wrapper.className = 'm-current-order-card';
-            wrapper.setAttribute('onclick', `openOrderDetail('${order.id}')`);
-            wrapper.innerHTML = buildCurrentOrderCardHTML(order, prefix);
-            currentList.appendChild(wrapper);
+          if (!activeStatuses.includes(order.status)) return;
+
+          // Inject card into both surfaces if not already present
+          ['m', 'd'].forEach(prefix => {
+            const currentSection = document.getElementById(`${prefix}-current-orders-section`);
+            const currentList    = document.getElementById(`${prefix}-current-orders-list`);
+            if (currentSection) currentSection.style.display = 'block';
+            if (currentList && !document.getElementById(`${prefix}-coc-${order.id}`)) {
+              const wrapper = document.createElement('div');
+              wrapper.id        = `${prefix}-coc-${order.id}`;
+              wrapper.className = 'm-current-order-card';
+              wrapper.setAttribute('onclick', `openOrderDetail('${order.id}')`);
+              wrapper.innerHTML = buildCurrentOrderCardHTML(order, prefix);
+              currentList.appendChild(wrapper);
+            }
+          });
+          // One per-order status listener (not per prefix)
+          startAccountOrderListener(order.id);
+        }
+
+        if (change.type === 'modified') {
+          // Status update from kitchen. The per-order document listener
+          // (startAccountOrderListener) handles this too, but we also handle
+          // it here as a belt-and-suspenders guarantee — the query listener
+          // fires reliably for every field change on documents in its result set.
+          orderCache[order.id] = { ...(orderCache[order.id] || {}), ...change.doc.data() };
+          const { status, waitMins } = order;
+
+          if (activeStatuses.includes(status)) {
+            // Update status badge on both surfaces
+            const cfg      = ORDER_STATUS_CONFIG[status] || ORDER_STATUS_CONFIG.pending;
+            const waitLine = (status === 'accepted' && waitMins)
+              ? `<div class="m-coc-wait">~${waitMins} mins estimated</div>`
+              : '';
+            const statusHTML = `
+                <div class="m-coc-status-icon">${cfg.icon}</div>
+                <div class="m-coc-status-body">
+                  <div class="m-coc-status-text">${cfg.label}</div>
+                  ${waitLine}
+                </div>`;
+            ['m', 'd'].forEach(p => {
+              const statusEl = document.getElementById(`${p}-coc-status-${order.id}`);
+              if (statusEl) statusEl.innerHTML = statusHTML;
+            });
           }
-        });
-        // One status-update listener per order (not per prefix)
-        startAccountOrderListener(order.id);
+
+          if (terminalStatuses.includes(status)) {
+            // Fade and remove card from both surfaces (mirrors startAccountOrderListener)
+            ['m', 'd'].forEach(p => {
+              const cardEl = document.getElementById(`${p}-coc-${order.id}`);
+              if (cardEl) {
+                cardEl.style.transition = 'opacity 0.4s';
+                cardEl.style.opacity    = '0';
+                setTimeout(() => {
+                  cardEl.remove();
+                  const section = document.getElementById(`${p}-current-orders-section`);
+                  const list    = document.getElementById(`${p}-current-orders-list`);
+                  if (section && list && list.children.length === 0) {
+                    section.style.display = 'none';
+                  }
+                }, 400);
+              }
+            });
+          }
+        }
       });
 
       // Rebuild history from full snapshot on every fire so collected/cancelled
