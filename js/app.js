@@ -1811,6 +1811,17 @@ document.addEventListener('DOMContentLoaded', async function () {
 
   // Van location — real-time listener (Section 20a)
   listenVanLocation();
+
+  // ── Auth state — load stamp count + offer usage at auth time (Session 21) ─
+  // Fixes: stamp count and offer usage reset on page reload if Account page
+  // was not visited first. Both now load as soon as Firebase Auth is ready,
+  // regardless of which page the user lands on.
+  auth.onAuthStateChanged(user => {
+    if (user && user.uid) {
+      loadUserStampCount(user.uid);
+      loadUserOfferUsage(user.uid);
+    }
+  });
 });
 
 
@@ -3058,17 +3069,41 @@ function renderOrderDetail(order) {
     }).join('');
   }
 
-  const payEl = document.getElementById('od-payment');
-  if (payEl) {
+  // ── Totals — rebuild with discount breakdown when applicable (Session 21) ──
+  const totalsEl = document.getElementById('od-totals');
+  if (totalsEl) {
+    const c      = CONFIG.business.currency;
+    const disc   = order.discount;
     const method = order.payment && order.payment.method === 'cash_on_collection'
       ? 'Cash on collection'
       : (order.payment && order.payment.method) || 'Cash on collection';
-    payEl.textContent = method;
-  }
 
-  const totalEl = document.getElementById('od-total');
-  if (totalEl && order.orderTotal != null) {
-    totalEl.textContent = CONFIG.business.currency + Number(order.orderTotal).toFixed(2);
+    let totalsHTML = `
+      <div class="order-detail-total-row">
+        <span>Payment</span>
+        <span>${method}</span>
+      </div>`;
+
+    if (disc && disc.amount > 0) {
+      const subtotal = Number(order.orderTotal) + Number(disc.amount);
+      totalsHTML += `
+      <div class="order-detail-total-row" style="margin-top:4px;">
+        <span>Subtotal</span>
+        <span>${c}${subtotal.toFixed(2)}</span>
+      </div>
+      <div class="order-detail-total-row" style="color:#8de88d;">
+        <span>🎉 ${esc(disc.description)}</span>
+        <span>−${c}${Number(disc.amount).toFixed(2)}</span>
+      </div>`;
+    }
+
+    totalsHTML += `
+      <div class="order-detail-total-row main">
+        <span>Total</span>
+        <span>${c}${Number(order.orderTotal).toFixed(2)}</span>
+      </div>`;
+
+    totalsEl.innerHTML = totalsHTML;
   }
 
   const reorderWrap = document.getElementById('od-reorder-wrap');

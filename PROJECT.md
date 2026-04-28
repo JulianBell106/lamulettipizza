@@ -1,11 +1,7 @@
 # Stalliq — Project Bible
-> Last updated: April 2026 — Session 20 (Bug fixes: index.html restore, order submission, discount display, desktop nav)
-> **Next sprint:** Session 21 — Fix customer order detail modal discount display. Go live with Daniele.
+> Last updated: April 2026 — Session 21 (Bug fixes: order detail discount breakdown, stamp/offer lazy-load, basket discount spacing)
+> **Next sprint:** Session 22 — Go live with Daniele.
 > **Pending (Julian):** ICO registration (ico.org.uk, ~£40/year) · Activate Firestore TTL policy (Firebase Console → Firestore → TTL → collection: `orders`, field: `deleteAt`) · Google Sheet header row protection · Allergen disclaimer in onboarding doc · **Publish updated Firestore rules** (firestore.rules — adds offerUsage sub-collection + stamp award write) · **Migrate offers sheet** to new schema (see Section 29).
-> **Known bugs (Session 20):**
-> 1. Customer order detail modal (account page → tap a past order) does not show discount/subtotal breakdown — shows Total only.
-> 2. Stamp count + offer usage reset on page reload if user hasn't visited Account page first — both are loaded lazily; need to load at auth time instead. Until fixed, a redeploy could make a used offer reappear or hide an earned loyalty reward.
-> Fix both in Session 21.
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -745,9 +741,18 @@ The Edit tool continues to truncate large files (app.js ~3100 lines, index.html 
 2. Verify with `node --check` (JS) or line count + `tail` check (HTML)
 3. Never use the Edit tool directly on files >1000 lines
 
-### Known bugs — carried to Session 21
+### Bugs carried forward — all fixed in Session 21 ✅
 
-**Bug 1 — Customer order detail modal does not show discount.** When a customer opens a past order from their account page history, the modal shows items + Total only — no subtotal or green discount line. The kitchen detail modal (`kitchen.js`) was fixed in Session 19 and correctly shows the breakdown. The customer-side equivalent (likely `buildOrderDetailHTML` or similar in `app.js`) needs the same treatment: recalculate subtotal as `orderTotal + discount.amount`, add the discount row, show final total.
+See Section 31 for fix details.
 
-**Bug 2 — Stamp count and offer usage reset on page reload.** `userStampCount` and `userOfferUsage` are loaded lazily inside `loadAccountPage()`. After a redeploy or hard reload, if the user goes straight to the basket without opening the Account page, both values are at their defaults (`0` and `{}`). This causes: (a) an earned loyalty reward not appearing at checkout, and (b) a previously-used offer reappearing as available. Fix: call `loadUserStampCount()` and `loadUserOfferUsage()` inside the `onAuthStateChanged` callback (or equivalent auth-ready hook) so they load as soon as the user is authenticated, regardless of which page they land on.
+## 31. Session 21 — Bug Fixes (COMPLETE ✅)
 
+**Files changed:** `js/app.js`, `index.html`
+
+### Bugs fixed
+
+| # | Bug | Fix |
+|---|-----|-----|
+| 1 | Customer order detail modal (Account page → tap a past order) showed Total only — no subtotal or discount line | `renderOrderDetail()` in `app.js` now rebuilds `#od-totals` dynamically. When `order.discount` is present: recalculates subtotal as `orderTotal + discount.amount`, renders a Payment row, Subtotal row, green discount row (🎉 description + amount), and main Total row. Added `id="od-totals"` to the static div in `index.html` as the JS target. |
+| 2 | Stamp count and offer usage reset on page reload if user went straight to basket without opening Account page first — could expose used offers or hide earned loyalty rewards | Added `auth.onAuthStateChanged` in `DOMContentLoaded`. Calls `loadUserStampCount(uid)` and `loadUserOfferUsage(uid)` as soon as Firebase Auth resolves, regardless of which page the user lands on. `loadAccountPage()` still calls both for the immediate re-render it needs. |
+| 3 | No spacing between offer code row, green discount-applied box, and total on basket page after applying a voucher | Changed `.m-basket-total { margin: 0 16px 0 }` → `margin: 12px 16px 0` in `index.html`. Adds 12px top gap above the total box in all states. |
