@@ -480,6 +480,7 @@ Before the "Forgot all PINs?" reset flow will work, Julian must manually set the
 | 14a | Activate Firestore TTL policy | ⏳ Julian — Firebase Console → Firestore → TTL → collection: `orders`, field: `deleteAt` |
 | 15 | Customer order placement + auth flow end-to-end retest | ✅ Session 18 |
 | 16 | iOS screen lock recovery (auto-reload + session restore) | ✅ Session 18 |
+| 17 | Wipe test data from Firestore — delete all docs in `orders` and `users` collections. Keep `vendors/{vendorId}/staff/` (Daniele's PIN), `kitchenStatus`, `location`, `counters`. | ⏳ Julian — Firebase Console |
 
 ---
 
