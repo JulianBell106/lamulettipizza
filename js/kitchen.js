@@ -6,6 +6,25 @@ const _kitchenApp  = firebase.apps.find(a => a.name === 'kitchen') ||
 const kitchenAuth  = firebase.auth(_kitchenApp);
 const kitchenDb    = firebase.firestore(_kitchenApp);
 
+/* ============================================================================
+   UTILITIES
+   ============================================================================ */
+
+/**
+ * Escapes a string for safe HTML insertion.
+ * Mirrors the same helper in app.js — kitchen.js is a separate page so it
+ * cannot share app.js globals and needs its own copy.
+ */
+function esc(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+
 /**
  * kitchen.js — La Muletti Pizza Kitchen Dashboard
  * ============================================================================
