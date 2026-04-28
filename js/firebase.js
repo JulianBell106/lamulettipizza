@@ -23,9 +23,7 @@ const auth = firebase.auth();
 
 // ── App Check (Session 15b) ───────────────────────────────────────────────────
 // Protects Firestore + Auth from abuse. Using reCAPTCHA v3.
-// ⚠️  Replace PASTE_SITE_KEY_HERE with the reCAPTCHA v3 site key from
-//     https://www.google.com/recaptcha/admin once registered.
-// Do NOT enforce in Firebase console until this is tested on the live domain.
+// Live and enforced on stalliq.firebaseapp.com as of Session 15b.
 // ─────────────────────────────────────────────────────────────────────────────
 const _appCheckSiteKey = '6LdpxcwsAAAAAG16kVWZ7ZURiKERr6S8k3HBnZF-';
 if (_appCheckSiteKey !== 'PASTE_SITE_KEY_HERE') {

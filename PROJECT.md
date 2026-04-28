@@ -1,6 +1,6 @@
 # Stalliq — Project Bible
-> Last updated: April 2026 — Session 22 (Real-time sync architecture: live order query, stamp race fix, belt-and-suspenders status updates)
-> **Next sprint:** Session 23 — Go live with Daniele.
+> Last updated: April 2026 — Session 23 (Walk-in order account integration: phoneIndex lookup, walk-in claiming, firestore rules)
+> **Next sprint:** Session 24 — Go live with Daniele.
 > **⚠️ Manual data fix needed:** James's stamp count in Firestore is currently 1 (awarded incorrectly on the free pizza order). Set `users/{jamesUid}/stampCount` to 0 in Firebase Console.
 > **Pending (Julian):** ICO registration (ico.org.uk, ~£40/year) · Activate Firestore TTL policy (Firebase Console → Firestore → TTL → collection: `orders`, field: `deleteAt`) · Google Sheet header row protection · Allergen disclaimer in onboarding doc · **Publish updated Firestore rules** (firestore.rules — adds offerUsage sub-collection + stamp award write) · **Migrate offers sheet** to new schema (see Section 29).
 > Read this file at the start of every session to get fully up to speed.
@@ -183,7 +183,7 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 07 | Google Sheets Menu Management | ✅ Done | menuSheetUrl in config.js, CSV fetch on load, graceful fallback, XSS defence via esc() |
 | 08 | News & Locations Feed | ✅ Done | eventsSheetUrl in config.js, CSV fetch, Find Us page (mobile + desktop), graceful fallback |
 | 09 | Offers | ✅ Done | offersSheetUrl in config.js, CSV fetch, Account page Offers section (mobile + desktop), graceful fallback |
-| 10 | Walk-in Manual Order Entry | ✅ Done | "➕ New Order" on kitchen dashboard — vendor enters walk-up orders, drops into Pending column |
+| 10 | Walk-in Manual Order Entry | ✅ Done | "➕ New Order" on kitchen dashboard — vendor enters walk-up orders, drops into Pending column. Phone number resolves to existing account (phoneIndex) or is claimed on next customer sign-in. Session 23. |
 | 11 | Colour & UX Overhaul | ✅ Done | True red token, dietary CSS badges, deeper menu section, card left accent — Session 12 |
 | 12 | Per-item Notes | ✅ Done | "Add customisation" toggle on basket lines (mobile + desktop). Notes in Firestore, kanban card, detail modal, customer order detail, walk-in modal. Session 13 |
 | 13 | Customer Ready Beep | ✅ Done | Two beeps via Web Audio API (660 Hz) when status → ready. unlockAudio() on Place Order tap. firedReadyBeep guard prevents spurious beeps on load. Session 13 |
@@ -220,7 +220,8 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 16d | Mobile performance + ready beep fix | ✅ Done |
 | 17 | Pitch deck v4 — 8-slide, text-stripped, redesigned Offer | ✅ Done |
 | 18 | iOS/Android hardening, UX fixes, GDPR retention | ✅ Done |
-| 19 | Go live with Daniele | ⏳ Pending |
+| 22 | Walk-in order account integration | ✅ Done |
+| 23 | Go live with Daniele | ⏳ Pending |
 
 **What gets demoed live at the meeting:**
 - Premium desktop site shown first on laptop — sets the brand tone
@@ -831,3 +832,50 @@ db.runTransaction(async txn => {
 
 All four are stopped on sign-out and on `loadUserOrders` re-entry.
 
+
+## 33. Session 23 — Walk-in Order Account Integration (COMPLETE ✅)
+
+**Files changed:** `js/app.js`, `js/kitchen.js`, `firestore.rules`
+
+### Context
+
+The walk-in order feature (kitchen ➕ New Order) was creating tickets on the kanban only. The optional phone number field had no effect — orders always wrote `customerId: null` and were never linked to a customer account.
+
+### What was built
+
+**`phoneIndex` collection (new)**
+
+A lightweight lookup table: `phoneIndex/{e164Phone}` → `{ uid, firstName }`. Written by the customer app on every successful Phone Auth sign-in (new account and returning). Read by the kitchen to resolve a walk-in phone number to an existing account UID at order creation time. No sensitive data — uid and first name only.
+
+**`kitchen.js` — `submitWalkinOrder()`**
+- `normalizePhone(raw)` added — converts any UK format to E.164 (`+44XXXXXXXXXX`)
+- Before writing the order, looks up `phoneIndex/{normalizedPhone}` via `kitchenDb`
+- If found: writes `customerId` to the resolved UID → order appears live in the customer's account immediately
+- If not found: writes `customerId: null` → order is claimed the next time the customer signs in
+
+**`app.js` — three new helpers (Section 28a)**
+- `normalizePhone(raw)` — same normalisation logic, standalone copy
+- `writePhoneIndex(uid, phone, firstName)` — writes/refreshes the customer's phoneIndex entry; called on every sign-in
+- `linkWalkinOrders(uid, phone)` — queries orders where `customerPhone == phone AND customerId == null AND source == 'walkin'`, batch-updates them with the customer's UID
+
+Called from:
+- `authVerifyCode()` — existing account, signing back in
+- `authSaveName()` — new account just created
+- `onAuthStateChanged` — silent session restore on page load (catches orders placed while logged out)
+
+**`firestore.rules`**
+- `phoneIndex` collection added: read by any authenticated session (anonymous kitchen + phone customer); write by phone-auth only
+- Orders `read` rule extended: customers can now read orders matched by `customerPhone` (not just `customerId`) — needed for the `linkWalkinOrders` query
+- New narrow `update` rule: phone-auth customer can claim a `customerId: null` walk-in order that has their phone number — only `customerId` field may change, and only to the requesting user's own UID
+
+### Key design decisions
+
+- `customerName` on the order is a kitchen-facing operational label only (can be a nickname, description, "Blue jacket" etc.) — it is never surfaced back to the customer. The customer always sees their own `firstName` from their profile.
+- Loyalty stamps apply to walk-in orders the same as app orders, as long as `customerId` is resolved
+- `normalizePhone` duplicated in both files — they load independently, no shared module
+- All failures in `writePhoneIndex` and `linkWalkinOrders` are non-fatal (warn + continue) — a lookup failure must never block an order being placed
+- Phone normalization handles: `07700 900000`, `+44 7700 900000`, `07700900000` → all → `+447700900000`
+
+### Pending (Julian)
+- Publish updated `firestore.rules` to Firebase Console
+- After go-live: create composite Firestore index for `linkWalkinOrders` query — browser console will show the auto-generated link on first customer sign-in

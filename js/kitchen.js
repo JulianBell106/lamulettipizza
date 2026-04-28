@@ -1,11 +1,3 @@
-/**
- * kitchen.js — La Muletti Pizza Kitchen Dashboard
- *
- * Session 21: Uses a dedicated Firebase app instance ('kitchen') so kitchen
- * auth (anonymous) is completely isolated from customer auth (phone).
- * They write to different localStorage keys and never interfere.
- */
-
 // ── Dedicated Firebase app for the kitchen ───────────────────────────────────
 // Same project config as the default app, but a separate named instance.
 // This gives the kitchen its own auth + Firestore client — no shared state.
@@ -589,7 +581,7 @@ function _startLocationPing() {
       console.warn('[Stalliq] Location ping failed (will retry next interval):', err.message);
     });
   }, BROADCAST_INTERVAL_MS);
-  console.log('[Stalliq] Location ping interval started (10-min cadence).');
+  console.log('[Stalliq] Location ping interval started (2-min cadence).');
 }
 
 /**
@@ -597,7 +589,7 @@ function _startLocationPing() {
  * Returns a Promise that resolves when the write completes (or on any error).
  */
 function pushLocation() {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         try {
@@ -760,7 +752,7 @@ function orderCardHTML(order) {
 
   const itemsHTML = (order.items || []).map(item => {
     const noteEl = item.notes
-      ? `<li class="k-card-item-note">📝 ${item.notes}</li>`
+      ? `<li class="k-card-item-note">📝 ${esc(item.notes)}</li>`
       : '';
     return `
       <li class="k-card-item">
@@ -988,7 +980,7 @@ function openDetailModal(orderId) {
 
   const itemsHTML = (order.items || []).map(item => {
     const noteEl = item.notes
-      ? `<div class="k-detail-item-note">📝 ${item.notes}</div>`
+      ? `<div class="k-detail-item-note">📝 ${esc(item.notes)}</div>`
       : '';
     return `
       <div class="k-detail-item">
@@ -1029,15 +1021,14 @@ function openDetailModal(orderId) {
     <div class="k-detail-section">
       <div class="k-detail-label">Items</div>
       <div class="k-detail-items">${itemsHTML}</div>
+    </div>
+
     <div class="k-detail-section k-detail-totals">
       ${order.discount ? `
         <div class="k-detail-row"><span>Subtotal</span><strong>${currency}${((order.orderTotal || 0) + (order.discount.amount || 0)).toFixed(2)}</strong></div>
-        <div class="k-detail-row" style="color:#8de88d;"><span>🎉 ${order.discount.description}</span><strong>−${currency}${(order.discount.amount || 0).toFixed(2)}</strong></div>
+        <div class="k-detail-row" style="color:#8de88d;"><span>🎉 ${esc(order.discount.description)}</span><strong>−${currency}${(order.discount.amount || 0).toFixed(2)}</strong></div>
       ` : ''}
       <div class="k-detail-row"><span>Total</span><strong>${currency}${(order.orderTotal || 0).toFixed(2)}</strong></div>
-
-    <div class="k-detail-section k-detail-totals">
-      <div class="k-detail-row"><span>Order total</span><strong>${currency}${(order.orderTotal || 0).toFixed(2)}</strong></div>
       <div class="k-detail-row"><span>Payment</span><strong>${paymentNote}</strong></div>
       ${waitEl}
       ${sourceEl}
@@ -1298,6 +1289,9 @@ function closeWalkinModal() {
 }
 
 function renderWalkinItems() {
+  // NOTE (multi-tenancy): The kitchen does not fetch the Google Sheet menu feed,
+  // so we always use the static CONFIG.menu here. If dynamic pricing/availability
+  // from the sheet is needed in future, pass menuData down from startDashboard().
   const menu     = (CONFIG.menu || []).filter(item => item.available !== false);
   const currency = CONFIG.business.currency || '£';
   const el       = document.getElementById('walkin-items');
@@ -1351,6 +1345,7 @@ function saveWalkinNote(itemId, value) {
 }
 
 function updateWalkinTotal() {
+  // NOTE (multi-tenancy): Uses CONFIG.menu (static) — same reason as renderWalkinItems().
   const currency = CONFIG.business.currency || '£';
   const menu     = CONFIG.menu || [];
   let total      = 0;

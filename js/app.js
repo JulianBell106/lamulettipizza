@@ -1684,28 +1684,6 @@ function buildBasketDiscountHTML(prefix) {
    22e. LOYALTY & OFFERS — FIRESTORE HELPERS
    ============================================================================ */
 
-/** Loads this customer's stamp count from Firestore into userStampCount. */
-async function loadUserStampCount(uid) {
-  try {
-    const doc = await db.collection('users').doc(uid).get();
-    userStampCount = (doc.exists && doc.data().stampCount) ? doc.data().stampCount : 0;
-  } catch (err) {
-    console.warn('[Stalliq] Could not load stamp count:', err.message);
-    userStampCount = 0;
-  }
-}
-
-/** Loads per-offer usage counts for this customer into userOfferUsage. */
-async function loadUserOfferUsage(uid) {
-  try {
-    const snapshot = await db.collection('users').doc(uid).collection('offerUsage').get();
-    userOfferUsage = {};
-    snapshot.forEach(doc => { userOfferUsage[doc.id] = doc.data().count || 0; });
-  } catch (err) {
-    console.warn('[Stalliq] Could not load offer usage:', err.message);
-  }
-}
-
 /**
  * Opens a real-time Firestore listener on the customer's user document.
  * Fires immediately with current data AND subscribes for cross-device changes
@@ -2265,8 +2243,8 @@ function applyKitchenStatus(status) {
       mBanner = document.createElement('div');
       mBanner.id = 'm-kitchen-closed-banner';
       mBanner.style.cssText = [
-        'background:#C8410B',
-        'color:#FDF6EC',
+        'background:var(--fire)',
+        'color:var(--cream)',
         'padding:12px 16px',
         'text-align:center',
         'font-size:14px',
@@ -2304,9 +2282,9 @@ function applyKitchenStatus(status) {
         'left:0',
         'right:0',
         'width:100%',
-        'background:#1A0A00',
-        'color:#FDF6EC',
-        'border-bottom:3px solid #C8410B',
+        'background:var(--dark)',
+        'color:var(--cream)',
+        'border-bottom:3px solid var(--fire)',
         'padding:16px 24px',
         'text-align:center',
         'font-size:17px',
@@ -2695,6 +2673,7 @@ function buildAccountIds(prefix) {
     name:           `${prefix}-account-name`,
     currentSection: `${prefix}-current-orders-section`,
     currentList:    `${prefix}-current-orders-list`,
+    stampTitle:     `${prefix}-stamp-title`,
     stampsGrid:     `${prefix}-stamps-grid`,
     stampProgress:  `${prefix}-stamp-progress`,
     stampSub:       `${prefix}-stamp-sub`,
@@ -2747,10 +2726,18 @@ function loadAccountPage(prefix = 'm') {
 }
 
 function renderStampCard(ids) {
-  const grid = document.getElementById(ids.stampsGrid);
-  const prog = document.getElementById(ids.stampProgress);
-  const sub  = document.getElementById(ids.stampSub);
+  const title = document.getElementById(ids.stampTitle);
+  const grid  = document.getElementById(ids.stampsGrid);
+  const prog  = document.getElementById(ids.stampProgress);
+  const sub   = document.getElementById(ids.stampSub);
   if (!grid) return;
+
+  // Set the card heading dynamically so it follows CONFIG / sheet across tenants
+  if (title) {
+    title.textContent = (loyaltyConfig && loyaltyConfig.title)
+      ? loyaltyConfig.title
+      : (CONFIG.loyalty && CONFIG.loyalty.title) || `${CONFIG.business.name} Loyalty`;
+  }
 
   const total  = loyaltyConfig ? loyaltyConfig.stampsRequired : 10;
   const filled = Math.min(userStampCount, total);
