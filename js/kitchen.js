@@ -1241,7 +1241,19 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ============================================================================
    16. WALK-IN ORDER MODAL
    Session 13: per-item notes (walkinNotes{}) added alongside walkinQty{}.
+   Session 23: phoneIndex lookup added — resolves phone number to customerId.
    ============================================================================ */
+
+/** Normalise a raw UK phone string to E.164 format (+44XXXXXXXXXX).
+ *  Returns null if the input cannot be parsed.
+ *  Duplicated from app.js — both files load independently. */
+function normalizePhone(raw) {
+  if (!raw) return null;
+  const digits = raw.replace(/[\s\-\(\)]/g, '');
+  if (digits.startsWith('+44')) return '+44' + digits.slice(3).replace(/\D/g, '');
+  if (digits.startsWith('0'))   return '+44' + digits.slice(1).replace(/\D/g, '');
+  return null;
+}
 
 async function getNextOrderRef() {
   const today      = new Date().toISOString().slice(0, 10);
@@ -1394,11 +1406,31 @@ async function submitWalkinOrder() {
 
   const orderTotal  = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const phoneRaw    = (document.getElementById('walkin-phone')?.value || '').trim();
-  const phone       = phoneRaw || null;
+  const phone       = normalizePhone(phoneRaw);  // E.164 or null
   const paymentNote = CONFIG.ordering.paymentNote || 'Cash on collection';
 
   const btn = document.getElementById('walkin-submit-btn');
   if (btn) { btn.textContent = 'Placing…'; btn.disabled = true; }
+
+  // ── Phone lookup — resolve customerId from phoneIndex if phone was entered ──
+  // If the customer already has an account, link the order to their UID
+  // immediately so it appears in their live account the moment they open the app.
+  // If no account exists, customerId stays null and will be claimed by
+  // linkWalkinOrders() in app.js the next time they sign in.
+  let resolvedCustomerId = null;
+  if (phone) {
+    try {
+      const idxDoc = await kitchenDb.collection('phoneIndex').doc(phone).get();
+      if (idxDoc.exists) {
+        resolvedCustomerId = idxDoc.data().uid;
+        console.log('[Stalliq] Walk-in phone matched existing account:', resolvedCustomerId);
+      } else {
+        console.log('[Stalliq] Walk-in phone not in index — order will be claimed on customer sign-in.');
+      }
+    } catch (err) {
+      console.warn('[Stalliq] phoneIndex lookup failed (non-critical):', err);
+    }
+  }
 
   try {
     const orderRef = await getNextOrderRef();
@@ -1407,7 +1439,7 @@ async function submitWalkinOrder() {
       vendorId:      CONFIG.vendor.id,
       orderRef,
       source:        'walkin',
-      customerId:    null,
+      customerId:    resolvedCustomerId,
       customerName:  name,
       customerPhone: phone,
       items,

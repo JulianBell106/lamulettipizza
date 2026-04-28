@@ -1,6 +1,7 @@
 // ============================================================================
 // Stalliq — Firestore Security Rules
 // Session 16b — April 2026 | Updated Session 19 — loyalty stamps + offer usage
+// Updated Session 23 — phoneIndex collection + walk-in order account linking
 //
 // Auth model:
 //   Customer ordering: Firebase Phone Auth  (provider == 'phone')
@@ -101,9 +102,14 @@ service cloud.firestore {
     match /orders/{orderId} {
       allow create: if isAuthenticated();
 
+      // Kitchen reads all orders.
+      // Customer reads orders linked to their UID, OR walk-in orders placed
+      // against their phone number (for back-linking before customerId is set).
       allow read: if isAnonymousAuth()
                   || (isPhoneAuth()
-                      && resource.data.customerId == request.auth.uid);
+                      && resource.data.customerId == request.auth.uid)
+                  || (isPhoneAuth()
+                      && resource.data.customerPhone == request.auth.token.phone_number);
 
       // Kitchen full update
       allow update: if isAnonymousAuth();
@@ -113,6 +119,15 @@ service cloud.firestore {
                     && resource.data.customerId == request.auth.uid
                     && request.resource.data.diff(resource.data).affectedKeys()
                          .hasOnly(['stampsAwarded']);
+
+      // Customer claims an unlinked walk-in order placed against their phone.
+      // Only customerId may change, and only to the requesting user's own UID.
+      allow update: if isPhoneAuth()
+                    && resource.data.customerPhone == request.auth.token.phone_number
+                    && resource.data.customerId    == null
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['customerId'])
+                    && request.resource.data.customerId == request.auth.uid;
 
       allow delete: if false;
     }
@@ -135,6 +150,21 @@ service cloud.firestore {
       match /offerUsage/{offerId} {
         allow read, write: if isOwner(uid);
       }
+    }
+
+
+    // ── Phone index ──────────────────────────────────────────────────────────
+    //
+    // phoneIndex/{normalizedPhone}
+    //   Maps a customer's E.164 phone number → { uid, firstName }.
+    //   Written by the customer app on every successful Phone Auth sign-in.
+    //   Read by the kitchen (anonymous auth) to resolve a walk-in phone number
+    //   to an existing account UID at order submission time.
+    //   No sensitive data stored here — uid + firstName only.
+
+    match /phoneIndex/{phone} {
+      allow read:  if isAuthenticated();
+      allow write: if isPhoneAuth();
     }
 
 

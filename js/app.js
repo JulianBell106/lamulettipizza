@@ -1897,6 +1897,8 @@ document.addEventListener('DOMContentLoaded', async function () {
 
       // ── Real-time listeners — fire immediately with current Firestore data
       //    AND stay subscribed for cross-device updates (stamps, offer usage).
+      // Claim any walk-in orders placed against this number since last login.
+      if (user.phoneNumber) linkWalkinOrders(user.uid, user.phoneNumber);
       listenUserProfile(user.uid);
       listenUserOfferUsage(user.uid);
 
@@ -2054,6 +2056,9 @@ async function authVerifyCode() {
     const userDoc = await db.collection('users').doc(user.uid).get();
     if (userDoc.exists && userDoc.data().firstName) {
       customerName = userDoc.data().firstName;
+      // Keep phone index current and claim any walk-in orders for this number.
+      writePhoneIndex(user.uid, user.phoneNumber, customerName);
+      linkWalkinOrders(user.uid, user.phoneNumber);
       document.getElementById('auth-overlay').classList.remove('show');
       if (pendingOrderFn) pendingOrderFn();
     } else {
@@ -2094,6 +2099,9 @@ async function authSaveName() {
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     customerName = firstName;
+    // Register in phone index and claim any walk-in orders for this number.
+    writePhoneIndex(user.uid, user.phoneNumber, firstName);
+    linkWalkinOrders(user.uid, user.phoneNumber);
     document.getElementById('auth-overlay').classList.remove('show');
     if (pendingOrderFn) pendingOrderFn();
   } catch (err) {
@@ -2102,6 +2110,57 @@ async function authSaveName() {
   } finally {
     btn.textContent = 'Continue →';
     btn.disabled    = false;
+  }
+}
+
+
+/* ============================================================================
+   28a. AUTH — PHONE INDEX + WALK-IN ORDER LINKING
+   ============================================================================
+   These three helpers wire up the phoneIndex collection and enable walk-in
+   orders placed by the kitchen to be claimed by an existing or new account.
+   ============================================================================ */
+
+/** Normalise a raw UK phone string to E.164 format (+44XXXXXXXXXX).
+ *  Returns null if the input cannot be parsed as a UK number. */
+function normalizePhone(raw) {
+  if (!raw) return null;
+  const digits = raw.replace(/[\s\-\(\)]/g, '');
+  if (digits.startsWith('+44')) return '+44' + digits.slice(3).replace(/\D/g, '');
+  if (digits.startsWith('0'))   return '+44' + digits.slice(1).replace(/\D/g, '');
+  return null;
+}
+
+/** Write/update the customer's entry in the phoneIndex lookup collection.
+ *  Called on every successful sign-in so the index stays current.
+ *  The kitchen reads this collection to resolve a walk-in phone → UID. */
+async function writePhoneIndex(uid, phone, firstName) {
+  if (!phone) return;
+  try {
+    await db.collection('phoneIndex').doc(phone).set({ uid, firstName }, { merge: true });
+  } catch (err) {
+    console.warn('[Stalliq] phoneIndex write failed (non-critical):', err);
+  }
+}
+
+/** After sign-in, claim any walk-in orders placed against this customer's
+ *  phone number that were not yet linked to an account (customerId == null).
+ *  Uses a batch write so all orders are claimed atomically. */
+async function linkWalkinOrders(uid, phone) {
+  if (!phone) return;
+  try {
+    const snapshot = await db.collection('orders')
+      .where('customerPhone', '==', phone)
+      .where('customerId',    '==', null)
+      .where('source',        '==', 'walkin')
+      .get();
+    if (snapshot.empty) return;
+    const batch = db.batch();
+    snapshot.forEach(doc => batch.update(doc.ref, { customerId: uid }));
+    await batch.commit();
+    console.log('[Stalliq] Linked ' + snapshot.size + ' walk-in order(s) to account ' + uid);
+  } catch (err) {
+    console.warn('[Stalliq] linkWalkinOrders failed (non-critical):', err);
   }
 }
 
