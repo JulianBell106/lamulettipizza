@@ -1818,14 +1818,37 @@ document.addEventListener('DOMContentLoaded', async function () {
   // regardless of which page the user lands on.
   auth.onAuthStateChanged(async user => {
     if (user && user.uid) {
-      // Await both so the basket re-render below sees the correct values.
+      // ── Load customer name for persisted sessions (page reload when already
+      //    signed in — auth flow never runs again so customerName stays null).
+      if (!customerName) {
+        try {
+          const userDoc = await db.collection('users').doc(user.uid).get();
+          if (userDoc.exists && userDoc.data().firstName) {
+            customerName = userDoc.data().firstName;
+          }
+        } catch (_) {}
+      }
+
+      // Await both so every re-render below sees the correct values.
       await Promise.all([
         loadUserStampCount(user.uid),
         loadUserOfferUsage(user.uid),
       ]);
-      // Re-render the basket discount section + total now that stamp count
-      // and offer usage are loaded. Fixes: loyalty banner not appearing when
-      // the user reached the basket before the Firestore reads completed.
+
+      // ── Re-render account page sections on both surfaces so stamp card,
+      //    offers, and name greeting are correct from the moment data is ready,
+      //    regardless of which page the user is on.
+      ['m', 'd'].forEach(prefix => {
+        const ids = buildAccountIds(prefix);
+        const nameEl = document.getElementById(ids.name);
+        if (nameEl) nameEl.textContent = customerName ? `Hi, ${customerName}!` : 'Welcome back!';
+        renderStampCard(ids);
+        renderAccountOffers(ids);
+      });
+
+      // ── Re-render basket discount section + total so loyalty banner and
+      //    correct price appear even if the user reached the basket before
+      //    the Firestore reads completed.
       const discM = document.getElementById('m-basket-discount-section');
       if (discM) discM.innerHTML = buildBasketDiscountHTML('m');
       const totalMEl = document.getElementById('m-basket-total');
@@ -2947,10 +2970,13 @@ function startAccountOrderListener(orderId) {
           delete accountOrderListeners[orderId];
         }
 
-        // Award loyalty stamp on collection (guarded by stampsAwarded flag)
+        // Award loyalty stamp on collection (guarded by stampsAwarded flag).
+        // Skip if the order itself redeemed a loyalty reward — the customer
+        // already received their benefit and stamps were reset on submission.
         if (status === 'collected') {
           const cachedOrder = orderCache[orderId];
-          if (cachedOrder && !cachedOrder.stampsAwarded) {
+          if (cachedOrder && !cachedOrder.stampsAwarded &&
+              cachedOrder.discount?.type !== 'loyalty') {
             awardStamp(orderId);
           }
         }

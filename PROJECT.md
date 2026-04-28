@@ -1,6 +1,7 @@
 # Stalliq — Project Bible
-> Last updated: April 2026 — Session 21 (Bug fixes: order detail discount breakdown, stamp/offer lazy-load, basket discount spacing)
+> Last updated: April 2026 — Session 21 (Bug fixes: order detail discount breakdown, stamp/offer lazy-load, basket discount spacing, session-reload account state, loyalty stamp guard)
 > **Next sprint:** Session 22 — Go live with Daniele.
+> **⚠️ Manual data fix needed:** James's stamp count in Firestore is currently 1 (awarded incorrectly on the free pizza order). Set `users/{jamesUid}/stampCount` to 0 in Firebase Console.
 > **Pending (Julian):** ICO registration (ico.org.uk, ~£40/year) · Activate Firestore TTL policy (Firebase Console → Firestore → TTL → collection: `orders`, field: `deleteAt`) · Google Sheet header row protection · Allergen disclaimer in onboarding doc · **Publish updated Firestore rules** (firestore.rules — adds offerUsage sub-collection + stamp award write) · **Migrate offers sheet** to new schema (see Section 29).
 > Read this file at the start of every session to get fully up to speed.
 
@@ -756,3 +757,7 @@ See Section 31 for fix details.
 | 1 | Customer order detail modal (Account page → tap a past order) showed Total only — no subtotal or discount line | `renderOrderDetail()` in `app.js` now rebuilds `#od-totals` dynamically. When `order.discount` is present: recalculates subtotal as `orderTotal + discount.amount`, renders a Payment row, Subtotal row, green discount row (🎉 description + amount), and main Total row. Added `id="od-totals"` to the static div in `index.html` as the JS target. |
 | 2 | Stamp count and offer usage reset on page reload if user went straight to basket without opening Account page first — could expose used offers or hide earned loyalty rewards | Added `auth.onAuthStateChanged` in `DOMContentLoaded`. Calls `loadUserStampCount(uid)` and `loadUserOfferUsage(uid)` as soon as Firebase Auth resolves, regardless of which page the user lands on. `loadAccountPage()` still calls both for the immediate re-render it needs. |
 | 3 | No spacing between offer code row, green discount-applied box, and total on basket page after applying a voucher | Changed `.m-basket-total { margin: 0 16px 0 }` → `margin: 12px 16px 0` in `index.html`. Adds 12px top gap above the total box in all states. |
+| 4 | Loyalty reward banner missing from basket if user reached basket before onAuthStateChanged Firestore reads completed (total was correct at submission but banner absent) | Made onAuthStateChanged callback `async`; awaits both loads before refreshing basket UI. |
+| 5 | Hard reload shows "Welcome back!" instead of "Hi [name]!" — customerName only set during live auth flow, lost on page reload | onAuthStateChanged now loads firstName from `users/{uid}` if customerName is not already set. |
+| 6 | Hard reload shows stale stamp count and offers on account page — stamp/offer data loaded but account sections never re-rendered | After loading data, onAuthStateChanged calls `renderStampCard` and `renderAccountOffers` on both m and d surfaces immediately. |
+| 7 | Loyalty stamp awarded on free-pizza (loyalty-redeemed) orders — customer got 1 stamp back instead of staying at 0 | Added guard to awardStamp call: skips if `cachedOrder.discount?.type === 'loyalty'`. ⚠️ James's stampCount in Firestore needs manual reset to 0 in Firebase Console. |
