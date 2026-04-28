@@ -1717,9 +1717,9 @@ function listenUserProfile(uid) {
     if (!doc.exists) return;
     const profileData = doc.data();
     userStampCount = profileData.stampCount ?? 0;
-    // Keep customerName in sync — fixes name showing "Welcome back!" if panel
-    // opened before onAuthStateChanged's Firestore fetch completed (Session 21).
-    if (!customerName && profileData.firstName) customerName = profileData.firstName;
+    // Always sync customerName from Firestore so any auth refresh self-heals
+    // (Session 21). Don't gate on !customerName — stale null must be overwritten.
+    if (profileData.firstName) customerName = profileData.firstName;
     ['m', 'd'].forEach(p => {
       const nameEl = document.getElementById(`${p}-account-name`);
       if (nameEl) nameEl.textContent = customerName ? `Hi, ${customerName}!` : 'Welcome back!';
@@ -1873,7 +1873,9 @@ document.addEventListener('DOMContentLoaded', async function () {
   // was not visited first. Both now load as soon as Firebase Auth is ready,
   // regardless of which page the user lands on.
   auth.onAuthStateChanged(async user => {
-    if (user && user.uid) {
+    // Ignore anonymous users — the kitchen signs in anonymously on the same
+    // origin and would otherwise wipe the customer's account state (Session 21).
+    if (user && user.uid && !user.isAnonymous) {
       // ── Load customer name for persisted sessions (page reload when already
       //    signed in — auth flow never runs again so customerName stays null).
       if (!customerName) {
@@ -2666,20 +2668,14 @@ function loadAccountPage(prefix = 'm') {
     nameEl.textContent = customerName ? `Hi, ${customerName}!` : 'Welcome back!';
   }
 
-  // Render immediately with cached data (0 stamps on first load), then refresh
-  // with real Firestore data once loaded.
+  // Render with currently cached data. listenUserProfile and listenUserOfferUsage
+  // (set up in onAuthStateChanged) are the single source of truth for stamps and
+  // offers — they fire immediately on setup and on every cross-device change.
+  // We do NOT use one-shot Firestore reads here: they can fail during Firebase
+  // session refresh (cross-device re-auth) and overwrite correct live state
+  // with empty/stale data (Session 21 fix).
   renderStampCard(ids);
   renderAccountOffers(ids);
-  // Orders are loaded centrally by loadUserOrders(uid) called from
-  // onAuthStateChanged and pendingOrderFn — not per-prefix here (Session 21).
-
-  Promise.all([
-    loadUserStampCount(user.uid),
-    loadUserOfferUsage(user.uid),
-  ]).then(() => {
-    renderStampCard(ids);
-    renderAccountOffers(ids);
-  });
 }
 
 function renderStampCard(ids) {
