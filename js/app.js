@@ -1881,12 +1881,16 @@ document.addEventListener('DOMContentLoaded', async function () {
       listenUserProfile(user.uid);
       listenUserOfferUsage(user.uid);
 
-      // ── Refresh full account state on both surfaces: loads orders, sets up
-      //    live order listeners, renders name/stamps/offers. This runs on every
-      //    page load for signed-in users so the account panel is always ready,
-      //    not just when the user manually opens or navigates to it.
+      // ── Eager-load the mobile account page. This populates the account tab
+      //    content and sets up live order listeners on page load, so the user
+      //    sees correct state without having to tap the Account nav item first.
+      //
+      //    Desktop account panel is NOT loaded here — it starts closed on any
+      //    page load, so dToggleAccount() will call loadAccountPage('d') when
+      //    the user opens it. By that point the real-time listeners above will
+      //    already have fired, so customerName, userStampCount, and
+      //    userOfferUsage will all be correct on first open.
       loadAccountPage('m');
-      loadAccountPage('d');
     } else {
       // User signed out — stop real-time listeners
       if (userProfileUnsubscribe)    { userProfileUnsubscribe();    userProfileUnsubscribe    = null; }
