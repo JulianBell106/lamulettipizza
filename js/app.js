@@ -149,6 +149,8 @@ let userOfferUsage = {};
 let vanLocationUnsubscribe = null; // real-time listener handle (Session 14)
 let vanLocationData        = null; // last received location doc (Session 14)
 let locationAgeInterval    = null; // setInterval id for "Updated X mins ago" (Session 14)
+let userProfileUnsubscribe    = null; // real-time user document listener (Session 21)
+let userOfferUsageUnsubscribe = null; // real-time offer usage listener (Session 21)
 
 
 /* ============================================================================
@@ -1703,6 +1705,51 @@ async function loadUserOfferUsage(uid) {
 }
 
 /**
+ * Opens a real-time Firestore listener on the customer's user document.
+ * Fires immediately with current data AND subscribes for cross-device changes
+ * (e.g. stamps awarded on mobile while desktop is open).
+ * Replaces the one-shot loadUserStampCount call in onAuthStateChanged.
+ */
+function listenUserProfile(uid) {
+  if (userProfileUnsubscribe) { userProfileUnsubscribe(); userProfileUnsubscribe = null; }
+  userProfileUnsubscribe = db.collection('users').doc(uid).onSnapshot(doc => {
+    if (!doc.exists) return;
+    userStampCount = doc.data().stampCount ?? 0;
+    ['m', 'd'].forEach(p => renderStampCard(buildAccountIds(p)));
+    // Refresh basket — loyalty reward eligibility may have changed
+    const discM = document.getElementById('m-basket-discount-section');
+    if (discM) discM.innerHTML = buildBasketDiscountHTML('m');
+    const totalMEl = document.getElementById('m-basket-total');
+    if (totalMEl && basketTotalQty() > 0)
+      totalMEl.textContent = CONFIG.business.currency + basketFinalTotal().toFixed(2);
+    const discD = document.getElementById('d-basket-discount-section');
+    if (discD) discD.innerHTML = buildBasketDiscountHTML('d');
+    const totalDEl = document.getElementById('d-basket-total');
+    if (totalDEl && basketTotalQty() > 0)
+      totalDEl.textContent = CONFIG.business.currency + basketFinalTotal().toFixed(2);
+  }, err => console.error('[Stalliq] User profile listener error:', err.message));
+}
+
+/**
+ * Opens a real-time Firestore listener on the customer's offerUsage sub-collection.
+ * Fires immediately with current data AND subscribes for cross-device changes
+ * (e.g. offer used on mobile while desktop is open).
+ * Replaces the one-shot loadUserOfferUsage call in onAuthStateChanged.
+ */
+function listenUserOfferUsage(uid) {
+  if (userOfferUsageUnsubscribe) { userOfferUsageUnsubscribe(); userOfferUsageUnsubscribe = null; }
+  userOfferUsageUnsubscribe = db.collection('users').doc(uid).collection('offerUsage').onSnapshot(snapshot => {
+    userOfferUsage = {};
+    snapshot.forEach(doc => { userOfferUsage[doc.id] = doc.data().count || 0; });
+    ['m', 'd'].forEach(p => renderAccountOffers(buildAccountIds(p)));
+    const discM = document.getElementById('m-basket-discount-section');
+    if (discM) discM.innerHTML = buildBasketDiscountHTML('m');
+    const discD = document.getElementById('d-basket-discount-section');
+    if (discD) discD.innerHTML = buildBasketDiscountHTML('d');
+  }, err => console.error('[Stalliq] Offer usage listener error:', err.message));
+}
+
+/**
  * Awards one stamp for an order, guarded by stampsAwarded flag on the order doc.
  * Called by the account order listener when status → collected.
  */
@@ -1829,36 +1876,23 @@ document.addEventListener('DOMContentLoaded', async function () {
         } catch (_) {}
       }
 
-      // Await both so every re-render below sees the correct values.
-      await Promise.all([
-        loadUserStampCount(user.uid),
-        loadUserOfferUsage(user.uid),
-      ]);
+      // ── Real-time listeners replace one-shot loads. Each fires immediately
+      //    with current Firestore data AND stays subscribed — so stamp count
+      //    and offer usage stay in sync across devices/tabs without a sign-out.
+      listenUserProfile(user.uid);
+      listenUserOfferUsage(user.uid);
 
-      // ── Re-render account page sections on both surfaces so stamp card,
-      //    offers, and name greeting are correct from the moment data is ready,
-      //    regardless of which page the user is on.
+      // ── Update name greeting immediately (stamp card + offers are driven
+      //    by the listener callbacks above).
       ['m', 'd'].forEach(prefix => {
         const ids = buildAccountIds(prefix);
         const nameEl = document.getElementById(ids.name);
         if (nameEl) nameEl.textContent = customerName ? `Hi, ${customerName}!` : 'Welcome back!';
-        renderStampCard(ids);
-        renderAccountOffers(ids);
       });
-
-      // ── Re-render basket discount section + total so loyalty banner and
-      //    correct price appear even if the user reached the basket before
-      //    the Firestore reads completed.
-      const discM = document.getElementById('m-basket-discount-section');
-      if (discM) discM.innerHTML = buildBasketDiscountHTML('m');
-      const totalMEl = document.getElementById('m-basket-total');
-      if (totalMEl && basketTotalQty() > 0)
-        totalMEl.textContent = CONFIG.business.currency + basketFinalTotal().toFixed(2);
-      const discD = document.getElementById('d-basket-discount-section');
-      if (discD) discD.innerHTML = buildBasketDiscountHTML('d');
-      const totalDEl = document.getElementById('d-basket-total');
-      if (totalDEl && basketTotalQty() > 0)
-        totalDEl.textContent = CONFIG.business.currency + basketFinalTotal().toFixed(2);
+    } else {
+      // User signed out — stop real-time listeners
+      if (userProfileUnsubscribe)    { userProfileUnsubscribe();    userProfileUnsubscribe    = null; }
+      if (userOfferUsageUnsubscribe) { userOfferUsageUnsubscribe(); userOfferUsageUnsubscribe = null; }
     }
   });
 });
@@ -3030,6 +3064,10 @@ function dAccountSignIn() {
 
 function accountSignOut(prefix = 'm') {
   stopAllAccountListeners();
+  if (userProfileUnsubscribe)    { userProfileUnsubscribe();    userProfileUnsubscribe    = null; }
+  if (userOfferUsageUnsubscribe) { userOfferUsageUnsubscribe(); userOfferUsageUnsubscribe = null; }
+  userStampCount = 0;
+  userOfferUsage = {};
   auth.signOut()
     .then(() => {
       customerName = null;
