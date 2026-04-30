@@ -62,9 +62,9 @@ const CONFIG = {
      Change these to retheme the whole site for a new customer.
   -------------------------------------------------------------------------- */
   theme: {
-    primary:      '#C8410B',
-    primaryHover: '#E85D2A',
-    primaryDark:  '#A83200',
+    primary:      '#C4271A',   // true red (updated Session 12 — was #C8410B orange)
+    primaryHover: '#D93B25',   // ember hover (updated Session 12 — was #E85D2A)
+    primaryDark:  '#8B1810',
     accent:       '#D4A043',
     dark:         '#1A0A00',
     darkMid:      '#2C1A0A',
@@ -196,7 +196,8 @@ const CONFIG = {
      Leave empty [] to show "no upcoming events" message.
   -------------------------------------------------------------------------- */
   events: [
-    { day: '10', month: 'Mar', name: 'Tuesday Pop-Up', location: 'Airfields, Apollo Avenue, Milton Keynes' },
+    // Fallback only — events are driven by eventsSheetUrl above.
+    // Leave empty until Google Sheet is populated with upcoming dates.
   ],
 
   /* --------------------------------------------------------------------------

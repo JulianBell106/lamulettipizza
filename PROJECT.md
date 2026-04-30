@@ -1,8 +1,8 @@
 # Stalliq — Project Bible
-> Last updated: April 2026 — Session 23 (Walk-in order account integration: phoneIndex lookup, walk-in claiming, firestore rules)
-> **Next sprint:** Session 24 — Go live with Daniele.
+> Last updated: April 2026 — Session 24 tidy-up (config.js colours synced, stale event cleared, allergen disclaimer doc created, Section 29 offers schema documented)
+> **Next sprint:** Go live with Daniele (pushed back — Julian unwell).
 > **⚠️ Manual data fix needed:** James's stamp count in Firestore is currently 1 (awarded incorrectly on the free pizza order). Set `users/{jamesUid}/stampCount` to 0 in Firebase Console.
-> **Pending (Julian):** ICO registration (ico.org.uk, ~£40/year) · Activate Firestore TTL policy (Firebase Console → Firestore → TTL → collection: `orders`, field: `deleteAt`) · Google Sheet header row protection · Allergen disclaimer in onboarding doc · **Publish updated Firestore rules** (firestore.rules — adds offerUsage sub-collection + stamp award write) · **Migrate offers sheet** to new schema (see Section 29).
+> **Pending (Julian):** Push these changes (GitHub Desktop → Netlify) · ICO registration (ico.org.uk, ~£40/year) · Activate Firestore TTL policy (Firebase Console → Firestore → TTL → collection: `orders`, field: `deleteAt`) · Google Sheet header row protection · Verify Firestore rules in Firebase Console (check phoneIndex section is present) · **Update offers sheet** to match Section 29 schema — especially set `stamps_required = 8` · Wipe test data before go-live (delete all docs in `orders` and `users` — keep staff PINs, kitchenStatus, location, counters) · After go-live: click composite index link in browser console on first customer sign-in.
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -723,6 +723,49 @@ Fix: `playReadyBeep()` is now `async` and calls `await ctx.resume()` before sche
 
 ---
 
+## 29. Offers Sheet Schema
+
+The `offersSheetUrl` Google Sheet drives both the loyalty stamp card and any discount offers. The app parses it via `parseOffersCSV()` in `app.js`. **Column headers must match exactly (case-insensitive, spaces replaced with underscores).**
+
+### Required columns
+
+| Column | Values | Notes |
+|--------|--------|-------|
+| `type` | `loyalty` or `offer` | One loyalty row only; multiple offer rows allowed |
+| `title` | Any string | Displayed to customer |
+| `active` | `TRUE` / `FALSE` | Leave blank or `TRUE` to show; `FALSE` to hide without deleting |
+
+### Optional columns
+
+| Column | Values | Notes |
+|--------|--------|-------|
+| `id` | Unique string e.g. `welcome10` | Auto-generated as `offer_N` if blank |
+| `description` | Any string | Sub-text shown on offer card |
+| `discount_type` | `fixed` or `percent` | e.g. `fixed` = £2 off; `percent` = 10% off |
+| `discount_value` | Number | e.g. `2` for £2 off, `10` for 10% off |
+| `stamps_required` | Number | **Loyalty row only** — number of stamps for free item (default: 10) |
+| `reward_type` | `free_item` | **Loyalty row only** — currently only `free_item` supported |
+| `max_uses` | Number | Per-customer limit; `0` or blank = unlimited |
+| `start_date` | `YYYY-MM-DD` | Offer not shown before this date |
+| `end_date` | `YYYY-MM-DD` | Offer not shown after this date |
+
+### Example sheet layout
+
+```
+type     | id          | title                  | description                          | discount_type | discount_value | stamps_required | reward_type | active
+---------|-------------|------------------------|--------------------------------------|---------------|----------------|-----------------|-------------|-------
+loyalty  |             | La Muletti Loyalty     | Collect 8 stamps, get a free pizza   |               |                | 8               | free_item   | TRUE
+offer    | welcome10   | Welcome Offer          | £2 off your first order              | fixed         | 2              |                 |             | TRUE
+```
+
+### Pending action (Julian)
+The current offers sheet needs to be checked/updated to match this schema before go-live. In particular:
+- Confirm `stamps_required` is set to **8** (app default is 10 — must be explicit)
+- Add `id` values to any offer rows so they're stable across sheet edits
+- Set `active = FALSE` on any offers not yet ready to launch
+
+---
+
 ## 30. Session 20 — Bug Fixes (COMPLETE ✅)
 
 **Files changed:** `js/app.js`, `index.html`
@@ -879,3 +922,50 @@ Called from:
 ### Pending (Julian)
 - Publish updated `firestore.rules` to Firebase Console
 - After go-live: create composite Firestore index for `linkWalkinOrders` query — browser console will show the auto-generated link on first customer sign-in
+
+## 34. Session 24 — Production Code Review + Bug Fixes (COMPLETE ✅)
+
+**Files changed:** `js/kitchen.js`, `js/app.js`, `index.html`, `js/firebase.js`, `firestore.rules`
+
+### Context
+
+Full 4-pass production readiness review before go-live with Daniele. Reviewed entire codebase for code quality, security, multi-tenancy isolation, and functional integrity. All identified issues fixed in the same session.
+
+### Critical fixes
+
+**`firestore.rules` — truncated working copy restored**
+The local working copy was truncated at line 136 (41 lines missing) — the `users/{uid}`, `phoneIndex`, and catch-all sections were absent. If published in this state, stamp counts, offer usage, and walk-in order linking would all be denied by Firestore. Restored from git HEAD. File now matches the committed Session 23 version (175 lines).
+
+**`kitchen.js` — `esc()` function missing**
+`esc()` only exists in `app.js`. Session 23 XSS hardening added `esc()` calls to `kitchen.js`, but kitchen is a separate page that cannot access `app.js` globals. Result: two silent failures:
+- Any desktop order with a discount → `openDetailModal` threw `ReferenceError: esc is not defined` → modal would not open
+- Any order (walk-in or desktop) with item notes → `orderCardHTML` threw → card rendered as empty dark area ("dark cards" bug)
+Fix: `esc()` now defined at the top of `kitchen.js`.
+
+**`kitchen.js` — `pushLocation()` missing `reject` parameter**
+Promise constructor was `(resolve)` only. The geolocation error callback called `reject(err)` which was undefined → `ReferenceError` on any GPS failure. Fixed to `(resolve, reject)`.
+
+**`kitchen.js` — `openDetailModal()` broken HTML structure**
+Items `<div>` was never closed before the totals section. Two duplicate `k-detail-section k-detail-totals` divs existed (first showed discount + total, second duplicated total + payment + wait + source). Fixed: items section properly closed, merged into one clean totals section.
+
+### Security fixes
+
+- `esc()` added to `item.notes` in `orderCardHTML` and `openDetailModal`
+- `esc()` added to `order.discount.description` in `openDetailModal`
+
+### Code quality fixes
+
+- `kitchen.js`: duplicate brief file header removed (full structured header kept)
+- `kitchen.js`: `_startLocationPing` log message corrected from "10-min" to "2-min" cadence
+- `app.js`: dead functions `loadUserStampCount` and `loadUserOfferUsage` removed (replaced by real-time listeners `listenUserProfile`/`listenUserOfferUsage` in Session 21, never called)
+
+### Multi-tenancy fixes
+
+- `app.js` + `index.html`: stamp card title was hardcoded "La Muletti Loyalty" in HTML. Now driven dynamically by `renderStampCard()` — reads `loyaltyConfig.title` (sheet) → `CONFIG.loyalty.title` → `${CONFIG.business.name} Loyalty` fallback chain. IDs `d-stamp-title` and `m-stamp-title` added to HTML elements.
+- `app.js`: `applyKitchenStatus()` closed-banner inline styles used hardcoded hex (`#C8410B`, `#FDF6EC`, `#1A0A00`) → now use `var(--fire)`, `var(--cream)`, `var(--dark)`
+- `kitchen.js`: `renderWalkinItems()` and `updateWalkinTotal()` annotated to explain why `CONFIG.menu` (static) is used instead of the sheet feed
+- `firebase.js`: stale App Check comment ("Do NOT enforce until tested on live domain") replaced with accurate state ("Live and enforced as of Session 15b")
+
+### Key rule established
+
+**CSS vars must be used in all JS inline styles** — never hardcode hex values that exist as theme tokens. CSS custom properties resolve correctly inside `style.cssText` strings.
