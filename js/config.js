@@ -84,6 +84,7 @@ const CONFIG = {
     facebookUrl:  'https://www.facebook.com/profile.php?id=61586834009357',
     instagram:    '@la_muletti_pizza',
     instagramUrl: 'https://www.instagram.com/la_muletti_pizza',
+    messengerUrl: 'https://m.me/61586834009357',
   },
 
   /* --------------------------------------------------------------------------
