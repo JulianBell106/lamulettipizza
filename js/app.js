@@ -516,6 +516,7 @@ const SVG_ICONS = {
   email: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>`,
   web:   `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>`,
   social:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>`
+,instagram:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>`
 };
 
 function renderDesktopContact() {
@@ -539,7 +540,8 @@ function renderDesktopContact() {
       <a href="${c.facebookUrl}" target="_blank" rel="noopener" class="d-contact-card">
         <div class="d-contact-icon">${SVG_ICONS.social}</div>
         <div><div class="d-contact-label">Facebook</div><div class="d-contact-value">${c.facebook}</div></div>
-      </a>`;
+      </a>
+      ${c.instagramUrl ? `<a href="${c.instagramUrl}" target="_blank" rel="noopener" class="d-contact-card"><div class="d-contact-icon">${SVG_ICONS.instagram}</div><div><div class="d-contact-label">Instagram</div><div class="d-contact-value">${c.instagram}</div></div></a>` : ''}`;
   }
 
   // id-based selector for new HTML; class-based for old
@@ -989,7 +991,8 @@ function renderMobileFindUs() {
       <a href="tel:${c.phone.replace(/\s/g,'')}" class="m-contact-card"><div class="m-ci">📞</div><div><div class="m-cl">Phone</div><div class="m-cv">${c.phone}</div></div><div class="m-ca">›</div></a>
       <a href="mailto:${c.email}" class="m-contact-card"><div class="m-ci">✉️</div><div><div class="m-cl">Email</div><div class="m-cv">${c.email}</div></div><div class="m-ca">›</div></a>
       <a href="${c.websiteUrl}" target="_blank" rel="noopener" class="m-contact-card"><div class="m-ci">🌐</div><div><div class="m-cl">Website</div><div class="m-cv">${c.website}</div></div><div class="m-ca">›</div></a>
-      <a href="${c.facebookUrl}" target="_blank" rel="noopener" class="m-contact-card"><div class="m-ci">📘</div><div><div class="m-cl">Facebook / Socials</div><div class="m-cv">${c.facebook}</div></div><div class="m-ca">›</div></a>`;
+      <a href="${c.facebookUrl}" target="_blank" rel="noopener" class="m-contact-card"><div class="m-ci">📘</div><div><div class="m-cl">Facebook</div><div class="m-cv">${c.facebook}</div></div><div class="m-ca">›</div></a>
+      ${c.instagramUrl ? `<a href="${c.instagramUrl}" target="_blank" rel="noopener" class="m-contact-card"><div class="m-ci">📷</div><div><div class="m-cl">Instagram</div><div class="m-cv">${c.instagram}</div></div><div class="m-ca">›</div></a>` : ''}`;
   }
 
   renderEventsList('.m-popup-list', 'm-popup-card', 'm-popup-date', 'm-popup-day', 'm-popup-month', 'm-popup-ename', 'm-popup-loc');

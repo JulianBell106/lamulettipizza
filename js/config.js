@@ -76,12 +76,14 @@ const CONFIG = {
      CONTACT DETAILS
   -------------------------------------------------------------------------- */
   contact: {
-    phone:       '07951 050383',
-    email:       'hello@lamulettipizza.co.uk',
-    website:     'lamulettipizza.co.uk',
-    websiteUrl:  'https://www.lamulettipizza.co.uk',
-    facebook:    '@lamulettipizza',
-    facebookUrl: 'https://facebook.com/lamulettipizza',
+    phone:        '07951 050383',
+    email:        'lamulettipizza@outlook.com',
+    website:      'lamulettipizza.co.uk',
+    websiteUrl:   'https://www.lamulettipizza.co.uk',
+    facebook:     '@lamulettipizza',
+    facebookUrl:  'https://www.facebook.com/profile.php?id=61586834009357',
+    instagram:    '@la_muletti_pizza',
+    instagramUrl: 'https://www.instagram.com/la_muletti_pizza',
   },
 
   /* --------------------------------------------------------------------------

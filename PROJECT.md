@@ -464,8 +464,8 @@ Before the "Forgot all PINs?" reset flow will work, Julian must manually set the
 | 4a | Firebase App Check (reCAPTCHA v3) | ✅ |
 | 4b | Firebase Blaze plan | ✅ |
 | 5 | Remove Firebase test numbers | ✅ |
-| 6 | CONFIG.vendor.id confirmed | ⏳ |
-| 7 | CONFIG.domains updated | ⏳ |
+| 6 | CONFIG.vendor.id confirmed | ✅ 'lamuletti' — confirmed Session 24 tidy-up |
+| 7 | CONFIG.domains updated | ✅ Both domains set — confirmed Session 24 tidy-up |
 | 8 | Kitchen PIN system replaced with multi-staff PIN management | ✅ Session 15 |
 | 8a | Anonymous Firebase auth for kitchen (enables security rules) | ✅ Session 16a |
 | 8b | PIN hash salting (per-staff random salt in Firestore) | ✅ Session 16b |
@@ -475,13 +475,15 @@ Before the "Forgot all PINs?" reset flow will work, Julian must manually set the
 | 9 | noindex on kitchen.html | ✅ Present |
 | 10 | Google Sheet — protect header row | ⏳ |
 | 11 | Google Sheet — vendor 2FA | ⏳ |
-| 12 | Allergen disclaimer in onboarding doc | ⏳ |
+| 12 | Allergen disclaimer in onboarding doc | ✅ Session 24 tidy-up — Stalliq_LaMuletti_AllergenDisclaimer.docx |
 | 13 | Events + offers sheet URLs in CONFIG | ✅ |
 | 14 | GDPR data retention — `deleteAt` field on orders | ✅ Session 18 (code done) |
-| 14a | Activate Firestore TTL policy | ⏳ Julian — Firebase Console → Firestore → TTL → collection: `orders`, field: `deleteAt` |
+| 14a | Activate Firestore TTL policy | ✅ Session 24 tidy-up — deployed via Firebase CLI (`firestore.indexes.json`) |
 | 15 | Customer order placement + auth flow end-to-end retest | ✅ Session 18 |
 | 16 | iOS screen lock recovery (auto-reload + session restore) | ✅ Session 18 |
 | 17 | Wipe test data from Firestore — delete all docs in `orders` and `users` collections. Keep `vendors/{vendorId}/staff/` (Daniele's PIN), `kitchenStatus`, `location`, `counters`. | ⏳ Julian — Firebase Console |
+| 18 | Fix Google Cloud Console access for stalliq project | ⏳ Julian — stalliq project is owned by julian@endoo.co.uk but the endoo.co.uk Google Workspace org has a Principal Access Boundary that blocks Cloud Console access to projects outside the org. Fix: admin.google.com → Account → Admin roles → or raise with Google Workspace support. Workaround until fixed: use Firebase CLI. Required for live support — without this, Firestore data cannot be viewed/edited via console during incidents. |
+| 19 | Enable MFA on julian@endoo.co.uk Google account | ⏳ Julian — **deadline: 6 May 2026** (Google is enforcing this). Go to myaccount.google.com → Security → 2-Step Verification. Required to retain access to Firebase Console and Google Cloud Console. |
 
 ---
 
