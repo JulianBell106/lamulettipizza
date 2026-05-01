@@ -1,8 +1,8 @@
 # Stalliq — Project Bible
-> Last updated: April 2026 — Session 24 tidy-up (config.js colours synced, stale event cleared, allergen disclaimer doc created, Section 29 offers schema documented)
-> **Next sprint:** Go live with Daniele (pushed back — Julian unwell).
+> Last updated: 2026-05-01 — Environment separation plan written; customer install strategy discussed; app store options assessed.
+> **Next sprint:** Environment separation (dev/ref/live split) — full plan at `stalliq_env_separation_plan.md` in workspace. Then demo with Daniele ~2026-05-15.
 > **⚠️ Manual data fix needed:** James's stamp count in Firestore is currently 1 (awarded incorrectly on the free pizza order). Set `users/{jamesUid}/stampCount` to 0 in Firebase Console.
-> **Pending (Julian):** Push these changes (GitHub Desktop → Netlify) · ICO registration (ico.org.uk, ~£40/year) · Activate Firestore TTL policy (Firebase Console → Firestore → TTL → collection: `orders`, field: `deleteAt`) · Google Sheet header row protection · Verify Firestore rules in Firebase Console (check phoneIndex section is present) · **Update offers sheet** to match Section 29 schema — especially set `stamps_required = 8` · Wipe test data before go-live (delete all docs in `orders` and `users` — keep staff PINs, kitchenStatus, location, counters) · After go-live: click composite index link in browser console on first customer sign-in.
+> **Pending (Julian):** Push Session 24 changes (GitHub Desktop → Netlify) · ICO registration (ico.org.uk, ~£40/year) · Google Sheet header row protection · **Update offers sheet** to match Section 29 schema — especially set `stamps_required = 8` · Wipe test data before go-live (delete all docs in `orders` and `users` — keep staff PINs, kitchenStatus, location, counters) · After go-live: click composite index link in browser console on first customer sign-in.
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -924,6 +924,53 @@ Called from:
 ### Pending (Julian)
 - Publish updated `firestore.rules` to Firebase Console
 - After go-live: create composite Firestore index for `linkWalkinOrders` query — browser console will show the auto-generated link on first customer sign-in
+
+## 35. Environment Separation Strategy (planned — next session)
+
+**Goal:** Separate La Muletti's live production system from active platform development. Full step-by-step plan saved at `stalliq_env_separation_plan.md` in workspace folder.
+
+### Target architecture
+
+| Environment | Branch | Netlify Site | Firebase Project |
+|---|---|---|---|
+| **Production** (La Muletti live) | `main` | `lamuletti-stalliq.netlify.app` (new) | `stalliq-production` (new) |
+| **Development** (platform dev) | `develop` | `stalliq-demo.netlify.app` (existing) | `stalliq-dev` (existing) |
+
+### Summary of phases
+1. **Git:** Create `develop` branch from current `main`. All new work on `develop`. `main` = stable production only.
+2. **Firebase:** Create new `stalliq-production` project for La Muletti live data. Existing project becomes `stalliq-dev` sandbox.
+3. **Netlify:** New site tracking `main` for La Muletti live. Existing `stalliq-demo` switches to track `develop`.
+4. **`firebase.js`:** Branch-specific. Production creds on `main`, dev creds on `develop`. Add `.gitattributes merge=ours` rule to prevent `firebase.js` being overwritten on merge.
+5. **App Check + Auth domains:** Register new production Netlify domain in Firebase Console.
+6. **Pre-go-live checklist:** All remaining items (ICO, TTL, test data wipe etc.) done against the production Firebase project.
+
+### Future customers
+Each new customer gets: their own Firebase project + their own Netlify site (from `main`) + their own `config.js`. No shared data between customers.
+
+---
+
+## 36. Customer Install Strategy (discussed 2026-05-01)
+
+**Primary channel:** QR code at the stall → simple install landing page → PWA install prompt. QR lives on van signage, handout cards, packaging.
+
+**Secondary channel:** Link from La Muletti's website — for people who find them online first.
+
+**Landing/install page (to build):**
+- Detects device OS
+- Android (Chrome): triggers native "Add to Home Screen" install prompt automatically
+- iOS (Safari): shows illustrated two-step guide (Share → Add to Home Screen) — Apple still doesn't allow PWAs to prompt this
+- Simple, one-screen. This is the first impression — worth care on the UX.
+
+**App stores (assessed, not yet actioned):**
+
+| Store | Feasibility | Notes |
+|---|---|---|
+| Google Play | ✅ Doable | TWA wrapper via PWABuilder. No Mac needed. One-time $25 dev fee. Probably 1-2 sessions. |
+| Apple App Store | ⚠️ Parked | Needs Mac or cloud build service (Codemagic). Julian has no Mac (iPad Pro only). Apple dev program $99/year. Revisit Month 2-3 post-launch. |
+
+**Decision:** QR + install page covers go-live. Google Play added for legitimacy once core is proven. Apple App Store deferred.
+
+---
 
 ## 34. Session 24 — Production Code Review + Bug Fixes (COMPLETE ✅)
 
