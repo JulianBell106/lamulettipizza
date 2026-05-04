@@ -27,10 +27,9 @@ const auth = firebase.auth();
 
 // ── App Check ─────────────────────────────────────────────────────────────────
 // Protects Firestore + Auth from abuse. Using reCAPTCHA v3.
-// Site key comes from Firebase Console → stalliq-production → App Check.
-// Register domain: lamuletti-stalliq.netlify.app
+// Registered for: lamuletti-stalliq.netlify.app
 // ─────────────────────────────────────────────────────────────────────────────
-const _appCheckSiteKey = 'PASTE_SITE_KEY_HERE';
+const _appCheckSiteKey = '6LelNtksAAAAAPEoa2QCW0RDzB7FHMsTNwyDaq4t';
 if (_appCheckSiteKey !== 'PASTE_SITE_KEY_HERE') {
   firebase.appCheck().activate(
     new firebase.appCheck.ReCaptchaV3Provider(_appCheckSiteKey),
