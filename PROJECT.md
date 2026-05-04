@@ -1,8 +1,10 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-04 — Session 25: Environment separation complete. Production site live at lamuletti-stalliq.netlify.app.
-> **Next:** Demo with Daniele ~2026-05-15. No code changes needed before demo — focus on manual pre-go-live tasks below.
+> Last updated: 2026-05-04 — Session 26: Stalliq product brand + domain setup. stalliq.co.uk coming soon page live on Netlify. Netlify DNS activated.
+> **Next session:** (1) Verify stalliq.co.uk is live · (2) Add demo.stalliq.co.uk in Netlify (on stalliq-demo site) · (3) Commit .gitattributes to develop + merge to main · (4) Fake vendor branding on develop branch for demo use.
+> **Demo with Daniele ~2026-05-15.**
+> **⚠️ URGENT — MFA on julian@endoo.co.uk: deadline 6 May 2026.** myaccount.google.com → Security → 2-Step Verification.
 > **⚠️ Manual data fix needed:** James's stamp count in Firestore is currently 1 (awarded incorrectly on the free pizza order). Set `users/{jamesUid}/stampCount` to 0 in **stalliq-production** Firebase Console.
-> **Pending (Julian):** ICO registration (ico.org.uk, ~£40/year) · Google Sheet header row protection · **Update offers sheet** to match Section 29 schema — especially set `stamps_required = 8` · Wipe test data before go-live (delete all docs in `orders` and `users` in **stalliq-production** — keep staff PINs, kitchenStatus, location, counters) · After go-live: click composite index link in browser console on first customer sign-in · Enable MFA on julian@endoo.co.uk **by 6 May 2026** (Google deadline).
+> **Pending (Julian):** ICO registration (ico.org.uk, ~£40/year) · Google Sheet header row protection · **Update offers sheet** to match Section 29 schema — especially set `stamps_required = 8` · Wipe test data before go-live (delete all docs in `orders` and `users` in **stalliq-production** — keep staff PINs, kitchenStatus, location, counters) · After go-live: click composite index link in browser console on first customer sign-in.
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -372,20 +374,46 @@ All changes in `kitchen.html` CSS only. Target: readable in a busy kitchen in po
 
 **GitHub:** https://github.com/JulianBell106/lamulettipizza
 
-| Branch | Netlify Site | Firebase Project | Purpose |
-|--------|-------------|-----------------|---------|
-| `develop` | https://stalliq-demo.netlify.app/ | `stalliq` (dev) | All active development + testing |
-| `main` | https://lamuletti-stalliq.netlify.app/ | `stalliq-production` | La Muletti live production system |
+| Branch | Netlify Site | Domain | Firebase Project | Purpose |
+|--------|-------------|--------|-----------------|---------|
+| `develop` | stalliq-demo.netlify.app | demo.stalliq.co.uk (pending) | `stalliq` (dev sandbox) | All active development + generic Stalliq demo |
+| `main` | lamuletti-stalliq.netlify.app | — | `stalliq-production` | La Muletti live production system |
 
-**⚠️ `js/firebase.js` is branch-specific** — protected by `.gitattributes merge=ours`. Never commit production credentials to `develop` or vice versa. Always verify `projectId` after a merge.
+**Stalliq product site:** `stalliq-site/` folder in workspace → deployed separately via Netlify drop → stalliq.co.uk
+
+**⚠️ `.gitattributes` protects both `js/firebase.js` AND `js/config.js` with `merge=ours`** — commit this change on `develop` and merge to `main` before next code change.
+Never commit production credentials or La Muletti config to `develop`, or vice versa. Always verify both files after a merge.
+
+**DNS:** stalliq.co.uk uses Netlify DNS. Nameservers: `dns1-4.p05.nsone.net` (set in HostPapa 2026-05-04). Add subdomains directly in Netlify DNS panel.
 
 **Development workflow:**
 1. All work starts on `develop`
 2. Claude produces files or diffs → Julian applies to `develop`
 3. GitHub Desktop → commit to `develop` → push → stalliq-demo auto-deploys
-4. When ready to ship to La Muletti: switch to `main` → merge from `develop` → verify firebase.js → push → lamuletti-stalliq auto-deploys
+4. When ready to ship to La Muletti: switch to `main` → merge from `develop` → verify firebase.js AND config.js still have La Muletti/production values → push → lamuletti-stalliq auto-deploys
 
 **See `BRANCHES.md` in repo root for the full branching guide.**
+
+---
+
+## 36a. Stalliq Product Brand — Session 26 (2026-05-04)
+
+**stalliq.co.uk** is the Stalliq product marketing site — entirely separate from the La Muletti app.
+
+**Coming soon page:** `stalliq-site/index.html` in workspace folder. Single-file HTML, no build step.
+
+**Stalliq brand palette (NOT La Muletti colours):**
+- Midnight: `#0B1221` · Teal accent: `#14B8A6` · Text: `#F0FDFA`
+- Font: Inter
+- La Muletti uses fire/dark/cream/gold — keep these completely separate
+
+**Domain architecture:**
+- `stalliq.co.uk` → Netlify "stalliq" project → coming soon page
+- `demo.stalliq.co.uk` → Netlify "stalliq-demo" project → `develop` branch (generic Stalliq demo with fake vendor)
+- `lamuletti.stalliq.co.uk` → future (when La Muletti migrates from lamuletti-stalliq.netlify.app)
+- `[vendor].stalliq.co.uk` → pattern for all future customers
+
+**Deploy coming soon updates:** drag `stalliq-site/` folder onto Netlify drop (no GitHub connection yet).
 
 ---
 
