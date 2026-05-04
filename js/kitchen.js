@@ -3,6 +3,17 @@
 // This gives the kitchen its own auth + Firestore client — no shared state.
 const _kitchenApp  = firebase.apps.find(a => a.name === 'kitchen') ||
                      firebase.initializeApp(firebase.app().options, 'kitchen');
+
+// Activate App Check on the kitchen named-app instance.
+// _appCheckSiteKey is defined in firebase.js (loaded before kitchen.js).
+// This ensures kitchen Firestore requests carry a valid App Check token.
+if (typeof _appCheckSiteKey !== 'undefined' && _appCheckSiteKey !== 'PASTE_SITE_KEY_HERE') {
+  firebase.appCheck(_kitchenApp).activate(
+    new firebase.appCheck.ReCaptchaV3Provider(_appCheckSiteKey),
+    true
+  );
+}
+
 const kitchenAuth  = firebase.auth(_kitchenApp);
 const kitchenDb    = firebase.firestore(_kitchenApp);
 
