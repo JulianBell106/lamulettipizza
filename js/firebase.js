@@ -2,6 +2,10 @@
  * ============================================================================
  * FIREBASE INITIALISATION — CDN compat mode
  * ============================================================================
+ * ⚠️  DEV CONFIG — stalliq Firebase project (sandbox)
+ * This file is branch-specific. See BRANCHES.md.
+ * Do NOT merge this file from develop into main (enforced by .gitattributes).
+ * ============================================================================
  * Loaded after Firebase SDK <script> tags in index.html.
  * Exposes globals: db, auth
  * ============================================================================
