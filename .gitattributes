@@ -2,3 +2,4 @@
 # Each branch holds its own Firebase credentials — dev on develop, production on main.
 # Git will always keep the current branch's version of this file during a merge.
 js/firebase.js merge=ours
+js/config.js merge=ours
