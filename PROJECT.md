@@ -1,8 +1,8 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-01 — Environment separation plan written; customer install strategy discussed; app store options assessed.
-> **Next sprint:** Environment separation (dev/ref/live split) — full plan at `stalliq_env_separation_plan.md` in workspace. Then demo with Daniele ~2026-05-15.
-> **⚠️ Manual data fix needed:** James's stamp count in Firestore is currently 1 (awarded incorrectly on the free pizza order). Set `users/{jamesUid}/stampCount` to 0 in Firebase Console.
-> **Pending (Julian):** Push Session 24 changes (GitHub Desktop → Netlify) · ICO registration (ico.org.uk, ~£40/year) · Google Sheet header row protection · **Update offers sheet** to match Section 29 schema — especially set `stamps_required = 8` · Wipe test data before go-live (delete all docs in `orders` and `users` — keep staff PINs, kitchenStatus, location, counters) · After go-live: click composite index link in browser console on first customer sign-in.
+> Last updated: 2026-05-04 — Session 25: Environment separation complete. Production site live at lamuletti-stalliq.netlify.app.
+> **Next:** Demo with Daniele ~2026-05-15. No code changes needed before demo — focus on manual pre-go-live tasks below.
+> **⚠️ Manual data fix needed:** James's stamp count in Firestore is currently 1 (awarded incorrectly on the free pizza order). Set `users/{jamesUid}/stampCount` to 0 in **stalliq-production** Firebase Console.
+> **Pending (Julian):** ICO registration (ico.org.uk, ~£40/year) · Google Sheet header row protection · **Update offers sheet** to match Section 29 schema — especially set `stamps_required = 8` · Wipe test data before go-live (delete all docs in `orders` and `users` in **stalliq-production** — keep staff PINs, kitchenStatus, location, counters) · After go-live: click composite index link in browser console on first customer sign-in · Enable MFA on julian@endoo.co.uk **by 6 May 2026** (Google deadline).
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -237,7 +237,9 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 
 ## 10. Firebase Backend — Spec
 
-**Firebase project:** `stalliq` (stalliq.firebaseapp.com)
+**Firebase projects:**
+- `stalliq-production` (stalliq-production.firebaseapp.com) — La Muletti **live** data
+- `stalliq` (stalliq.firebaseapp.com) — dev/sandbox (safe to wipe)
 **Firebase account:** julian@endoo.co.uk
 **Firebase SDK version:** 10.12.2 (CDN compat)
 **Firebase Phone Auth test numbers:**
@@ -368,15 +370,22 @@ All changes in `kitchen.html` CSS only. Target: readable in a busy kitchen in po
 
 ## 18. Deployment Pipeline ✅
 
-**Hosting:** Netlify — https://stalliq-demo.netlify.app/
 **GitHub:** https://github.com/JulianBell106/lamulettipizza
-**Auto-deploy:** Netlify linked to GitHub ✅
 
-**Workflow:**
-1. Claude produces files or diffs
-2. Julian applies changes to local repo
-3. GitHub Desktop → commit → Push origin
-4. Netlify auto-deploys in ~30 seconds
+| Branch | Netlify Site | Firebase Project | Purpose |
+|--------|-------------|-----------------|---------|
+| `develop` | https://stalliq-demo.netlify.app/ | `stalliq` (dev) | All active development + testing |
+| `main` | https://lamuletti-stalliq.netlify.app/ | `stalliq-production` | La Muletti live production system |
+
+**⚠️ `js/firebase.js` is branch-specific** — protected by `.gitattributes merge=ours`. Never commit production credentials to `develop` or vice versa. Always verify `projectId` after a merge.
+
+**Development workflow:**
+1. All work starts on `develop`
+2. Claude produces files or diffs → Julian applies to `develop`
+3. GitHub Desktop → commit to `develop` → push → stalliq-demo auto-deploys
+4. When ready to ship to La Muletti: switch to `main` → merge from `develop` → verify firebase.js → push → lamuletti-stalliq auto-deploys
+
+**See `BRANCHES.md` in repo root for the full branching guide.**
 
 ---
 
@@ -925,24 +934,27 @@ Called from:
 - Publish updated `firestore.rules` to Firebase Console
 - After go-live: create composite Firestore index for `linkWalkinOrders` query — browser console will show the auto-generated link on first customer sign-in
 
-## 35. Environment Separation Strategy (planned — next session)
+## 35. Session 25 — Environment Separation (COMPLETE ✅ 2026-05-04)
 
-**Goal:** Separate La Muletti's live production system from active platform development. Full step-by-step plan saved at `stalliq_env_separation_plan.md` in workspace folder.
+**Goal:** Separate La Muletti's live production system from active platform development.
 
-### Target architecture
+### What was built
 
 | Environment | Branch | Netlify Site | Firebase Project |
 |---|---|---|---|
-| **Production** (La Muletti live) | `main` | `lamuletti-stalliq.netlify.app` (new) | `stalliq-production` (new) |
-| **Development** (platform dev) | `develop` | `stalliq-demo.netlify.app` (existing) | `stalliq-dev` (existing) |
+| **Production** (La Muletti live) | `main` | `lamuletti-stalliq.netlify.app` | `stalliq-production` |
+| **Development** (platform dev) | `develop` | `stalliq-demo.netlify.app` | `stalliq` (dev sandbox) |
 
-### Summary of phases
-1. **Git:** Create `develop` branch from current `main`. All new work on `develop`. `main` = stable production only.
-2. **Firebase:** Create new `stalliq-production` project for La Muletti live data. Existing project becomes `stalliq-dev` sandbox.
-3. **Netlify:** New site tracking `main` for La Muletti live. Existing `stalliq-demo` switches to track `develop`.
-4. **`firebase.js`:** Branch-specific. Production creds on `main`, dev creds on `develop`. Add `.gitattributes merge=ours` rule to prevent `firebase.js` being overwritten on merge.
-5. **App Check + Auth domains:** Register new production Netlify domain in Firebase Console.
-6. **Pre-go-live checklist:** All remaining items (ICO, TTL, test data wipe etc.) done against the production Firebase project.
+### What was done
+1. **Git:** `develop` branch created from `main`. `.gitattributes` added with `js/firebase.js merge=ours` to prevent credentials leaking across branches. `BRANCHES.md` added to repo root as the branching guide.
+2. **Firebase:** New `stalliq-production` project created. Firestore (europe-west2), Auth (Anonymous + Phone), App Check (reCAPTCHA v3 — site key: `6LelNtksAAAAAPEoa2QCW0RDzB7FHMsTNwyDaq4t`), Firestore rules, and all vendor data migrated (vendors/lamuletti, counters, staff × 3, location/current).
+3. **Netlify:** `stalliq-demo` switched to track `develop`. New `lamuletti-stalliq` site created tracking `main`.
+4. **`js/firebase.js`:** Branch-specific — production creds on `main`, dev creds on `develop`.
+5. **`js/kitchen.js`:** Bug fixed — App Check was not activated on the kitchen's named Firebase app instance (`_kitchenApp`). Added activation using `_appCheckSiteKey` from `firebase.js` (globally available). Fix applied to both branches.
+
+### Smoke tests passed
+- `lamuletti-stalliq.netlify.app` — customer app loads, menu renders ✅
+- `lamuletti-stalliq.netlify.app/kitchen.html` — PIN login works ✅
 
 ### Future customers
 Each new customer gets: their own Firebase project + their own Netlify site (from `main`) + their own `config.js`. No shared data between customers.
