@@ -61,14 +61,14 @@ const CONFIG = {
      BRANDING & COLOURS
   -------------------------------------------------------------------------- */
   theme: {
-    primary:      '#D4420A',   // burnt orange
-    primaryHover: '#E8541A',
-    primaryDark:  '#952D07',
-    accent:       '#F5C842',   // mustard yellow
-    dark:         '#0F0C08',
-    darkMid:      '#1E1810',
-    light:        '#FFFDF8',
-    muted:        '#8A7A60',
+    primary:      '#14B8A6',   // Stalliq teal
+    primaryHover: '#0D9488',   // deeper teal
+    primaryDark:  '#0A7C72',
+    accent:       '#2DD4BF',   // lighter teal highlight
+    dark:         '#0B1221',   // Stalliq midnight
+    darkMid:      '#111E35',
+    light:        '#F0FDFA',   // Stalliq cool white
+    muted:        '#5B8E8A',
   },
 
   /* --------------------------------------------------------------------------

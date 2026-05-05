@@ -1,8 +1,7 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-04 — Session 26: Stalliq product brand + domain setup. stalliq.co.uk coming soon page live on Netlify. Netlify DNS activated.
-> **Next session:** (1) Verify stalliq.co.uk is live · (2) Add demo.stalliq.co.uk in Netlify (on stalliq-demo site) · (3) Commit .gitattributes to develop + merge to main · (4) Fake vendor branding on develop branch for demo use.
+> Last updated: 2026-05-05 — Session 27: stalliq.co.uk confirmed live. demo.stalliq.co.uk added in Netlify (Netlify DNS — instant). HTTPS enforced on stalliq-demo site. MFA enabled on julian@endoo.co.uk. Street Stack fake vendor branding committed to develop — demo.stalliq.co.uk now shows generic demo, not La Muletti. .gitattributes confirmed on both branches protecting firebase.js and config.js.
+> **Next session:** Demo prep for Daniele (~2026-05-15). Consider: PWA install landing page (QR → install flow), any final UX polish before the meeting.
 > **Demo with Daniele ~2026-05-15.**
-> **⚠️ URGENT — MFA on julian@endoo.co.uk: deadline 6 May 2026.** myaccount.google.com → Security → 2-Step Verification.
 > **⚠️ Manual data fix needed:** James's stamp count in Firestore is currently 1 (awarded incorrectly on the free pizza order). Set `users/{jamesUid}/stampCount` to 0 in **stalliq-production** Firebase Console.
 > **Pending (Julian):** ICO registration (ico.org.uk, ~£40/year) · Google Sheet header row protection · **Update offers sheet** to match Section 29 schema — especially set `stamps_required = 8` · Wipe test data before go-live (delete all docs in `orders` and `users` in **stalliq-production** — keep staff PINs, kitchenStatus, location, counters) · After go-live: click composite index link in browser console on first customer sign-in.
 > Read this file at the start of every session to get fully up to speed.
