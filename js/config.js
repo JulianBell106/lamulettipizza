@@ -22,6 +22,7 @@ const CONFIG = {
   /* --------------------------------------------------------------------------
      MENU SHEET
      Blanked for demo — app falls back to static menu array below.
+     (merge driver test 2026-05-05)
   -------------------------------------------------------------------------- */
    menuSheetUrl:   '',
    eventsSheetUrl: '',
