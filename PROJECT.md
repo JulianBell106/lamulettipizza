@@ -1,5 +1,5 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-05 — Session 27: stalliq.co.uk confirmed live. demo.stalliq.co.uk added in Netlify (Netlify DNS — instant). HTTPS enforced on stalliq-demo site. MFA enabled on julian@endoo.co.uk. Street Stack fake vendor branding committed to develop — demo.stalliq.co.uk now shows generic demo, not La Muletti. .gitattributes confirmed on both branches protecting firebase.js and config.js.
+> Last updated: 2026-05-05 — Session 27: stalliq.co.uk confirmed live. demo.stalliq.co.uk added in Netlify (Netlify DNS — instant). HTTPS enforced on stalliq-demo site. MFA enabled on julian@endoo.co.uk. Street Stack fake vendor branding with Stalliq teal colours committed to develop — demo.stalliq.co.uk now shows generic demo, not La Muletti. .gitattributes confirmed on both branches. merge=ours driver registered in .git/config (was missing — caused bad merge incident this session; now fixed).
 > **Next session:** Demo prep for Daniele (~2026-05-15). Consider: PWA install landing page (QR → install flow), any final UX polish before the meeting.
 > **Demo with Daniele ~2026-05-15.**
 > **⚠️ Manual data fix needed:** James's stamp count in Firestore is currently 1 (awarded incorrectly on the free pizza order). Set `users/{jamesUid}/stampCount` to 0 in **stalliq-production** Firebase Console.
