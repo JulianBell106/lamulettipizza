@@ -596,7 +596,7 @@ function refreshDesktopBasket() {
   if (!body || !footer) return;
 
   if (ids.length === 0) {
-    body.innerHTML = `<div class="d-basket-panel-empty"><div>🍕</div>Your basket is empty.<br>Add some ${CONFIG.business.type} from the menu above.</div>`;
+    body.innerHTML = `<div class="d-basket-panel-empty"><div>${CONFIG.business.stampIcon || '🍽️'}</div>Your basket is empty.<br>Add some ${CONFIG.business.type} from the menu above.</div>`;
     footer.style.display = 'none';
     return;
   }
@@ -2474,7 +2474,7 @@ function startOrderStatusListener(orderId) {
         if (mIcon)  mIcon.textContent  = '🟢';
         if (mTitle) mTitle.textContent = 'Ready to collect!';
         if (mTime)  mTime.textContent  = '';
-        if (mLabel) mLabel.textContent = 'Head to the van — your pizza is ready! 🍕';
+        if (mLabel) mLabel.textContent = `Head to the van — your ${CONFIG.business.type} is ready! ${CONFIG.business.stampIcon || '🎉'}`;
         if (mBtn)   mBtn.textContent   = '✓ Thanks — on my way!';
 
         const dIcon  = document.querySelector('#d-order-overlay .d-order-icon');
@@ -2485,7 +2485,7 @@ function startOrderStatusListener(orderId) {
         if (dIcon)  dIcon.textContent  = '🟢';
         if (dTitle) dTitle.textContent = 'Ready to collect!';
         if (dTime)  dTime.textContent  = '';
-        if (dLabel) dLabel.textContent = 'Head to the van — your pizza is ready! 🍕';
+        if (dLabel) dLabel.textContent = `Head to the van — your ${CONFIG.business.type} is ready! ${CONFIG.business.stampIcon || '🎉'}`;
         if (dBtn)   dBtn.textContent   = '✓ Thanks — on my way!';
 
         orderStatusUnsubscribe();
@@ -2751,13 +2751,13 @@ function renderStampCard(ids) {
   grid.innerHTML = Array.from({ length: total }, (_, i) => {
 
     const isFilled = i < filled;
-    return `<div class="m-stamp-dot${isFilled ? ' filled' : ''}">${isFilled ? '🍕' : ''}</div>`;
+    return `<div class="m-stamp-dot${isFilled ? ' filled' : ''}">${isFilled ? (CONFIG.business.stampIcon || '⭐') : ''}</div>`;
   }).join('');
 
   if (prog) prog.textContent = `${filled} of ${total} stamps collected`;
 
   if (sub && loyaltyConfig) {
-    sub.textContent = `Buy ${total} pizzas, get your next one free`;
+    sub.textContent = `Buy ${total} ${CONFIG.business.type}, get your next one free`;
   }
 }
 
