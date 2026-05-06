@@ -1769,7 +1769,7 @@ async function awardStamp(orderId) {
     // and updates userStampCount + renders the stamp card on both surfaces.
     console.log(`[Stalliq] Stamp awarded for order ${orderId}.`);
   } catch (err) {
-    console.error('[Stalliq] Error awarding stamp:', err.message);
+    console.error('[Stalliq] Error awarding stamp:', err.message, err);
   }
 }
 
@@ -3141,9 +3141,14 @@ function startAccountOrderListener(orderId) {
         // already received their benefit and stamps were reset on submission.
         if (status === 'collected') {
           const cachedOrder = orderCache[orderId];
+          console.log(`[Stalliq] Stamp check — cachedOrder:`, !!cachedOrder,
+            'stampsAwarded:', cachedOrder?.stampsAwarded,
+            'discountType:', cachedOrder?.discount?.type);
           if (cachedOrder && !cachedOrder.stampsAwarded &&
               cachedOrder.discount?.type !== 'loyalty') {
             awardStamp(orderId);
+          } else {
+            console.warn('[Stalliq] Stamp skipped — guard blocked awardStamp.');
           }
         }
 
