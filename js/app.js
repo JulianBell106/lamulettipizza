@@ -2896,6 +2896,18 @@ function loadUserOrders(uid) {
           }
 
           if (terminalStatuses.includes(status)) {
+            // Award loyalty stamp on collection via the query listener.
+            // startAccountOrderListener can get permission-denied on a fresh
+            // auth session before the token settles — the query listener is
+            // the reliable fallback since it's already established.
+            if (status === 'collected') {
+              const cachedOrder = orderCache[order.id];
+              const alreadyAwarded = cachedOrder?.stampsAwarded || order.stampsAwarded;
+              if (!alreadyAwarded && order.discount?.type !== 'loyalty') {
+                awardStamp(order.id);
+              }
+            }
+
             // Fade and remove card from both surfaces (mirrors startAccountOrderListener)
             ['m', 'd'].forEach(p => {
               const cardEl = document.getElementById(`${p}-coc-${order.id}`);
