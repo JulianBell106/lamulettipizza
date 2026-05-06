@@ -39,7 +39,7 @@ const CONFIG = {
      Update when the customer goes live on their own domain.
   -------------------------------------------------------------------------- */
   domains: [
-    'stalliq-demo.netlify.app',
+    'lamuletti-stalliq.netlify.app',
     'lamulettipizza.co.uk',
   ],
 
@@ -53,6 +53,7 @@ const CONFIG = {
     description: 'Traditional Neapolitan recipes, a wood-fired oven on wheels, and a husband & wife who live for great pizza.',
     location:    'Milton Keynes',
     type:        'pizza',
+    stampIcon:   '🍕',
     currency:    '£',
     year:        '2025',
   },
