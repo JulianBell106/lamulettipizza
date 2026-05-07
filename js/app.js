@@ -390,6 +390,16 @@ function renderDesktopMenu() {
   const grid = document.getElementById('d-menu-grid');
   if (!grid) return;
 
+  // Menu section heading — driven by CONFIG.business.type
+  const _type    = CONFIG.business.type || 'items';
+  const _typeCap = _type.charAt(0).toUpperCase() + _type.slice(1);
+  const _icon    = CONFIG.business.stampIcon || '🍽️';
+  const titleEl  = document.getElementById('d-menu-title');
+  if (titleEl) titleEl.innerHTML = `Our <em>${_typeCap}</em>`;
+  const noteEl   = document.getElementById('d-menu-note');
+  const _typeSingular = _type.replace(/s$/i, '');
+  if (noteEl) noteEl.textContent = `Every ${_typeSingular}'s made fresh to order. ${CONFIG.ordering?.paymentNote || 'Pay on collection'}.`;
+
   const items = menuData.filter(m => m.available !== false);
 
   grid.innerHTML = items.map((item, i) => {
@@ -499,9 +509,31 @@ function renderDesktopStory() {
    No-op — replaced by static "How It Works" section hardcoded in index.html.
    CONFIG.values retained for mobile about page via renderMobileAbout().
    ============================================================================ */
-function renderDesktopValues() {
-  // Intentionally empty — desktop values section replaced with
-  // "How It Works" in HTML (#d-howitworks). Mobile still uses CONFIG.values.
+function renderDesktopValues() {
+  // Intentionally empty — desktop values section replaced with
+  // "How It Works" in HTML (#d-howitworks). Mobile still uses CONFIG.values.
+}
+
+function renderDesktopHowitworks() {
+  const hiw = CONFIG.howItWorks;
+  if (!hiw) return;
+
+  const eyebrow = document.querySelector('#d-howitworks .d-eyebrow');
+  if (eyebrow) eyebrow.textContent = hiw.eyebrow || 'Simple as that';
+
+  const title = document.querySelector('#d-howitworks .d-title');
+  if (title) title.innerHTML = hiw.title || 'Order in <em>seconds</em>';
+
+  const steps = document.querySelectorAll('#d-howitworks .d-hiw-step');
+  if (steps.length && hiw.steps) {
+    hiw.steps.forEach((step, i) => {
+      if (!steps[i]) return;
+      const titleEl = steps[i].querySelector('.d-hiw-step-title');
+      const descEl  = steps[i].querySelector('.d-hiw-step-desc');
+      if (titleEl) titleEl.textContent = step.title;
+      if (descEl)  descEl.textContent  = step.desc;
+    });
+  }
 }
 
 
@@ -968,6 +1000,9 @@ function renderMobileAbout() {
         </div>
       </div>`).join('');
   }
+
+  const storyCta = document.getElementById('m-story-cta');
+  if (storyCta && CONFIG.hero && CONFIG.hero.ctaPrimary) storyCta.textContent = CONFIG.hero.ctaPrimary;
 
   const valGrid = document.querySelector('#page-about .m-values-grid');
   if (valGrid) {
@@ -1835,6 +1870,7 @@ document.addEventListener('DOMContentLoaded', async function () {
   renderDesktopMenu();
   renderDesktopStory();
   renderDesktopContact();
+  renderDesktopHowitworks();
 
   // ── Mobile renders (sheet-dependent) ─────────────────────────────────────
   renderMobileMenu();
@@ -1845,7 +1881,7 @@ document.addEventListener('DOMContentLoaded', async function () {
   if (footerLogo) {
     const parts = CONFIG.business.nameShort.split(' ');
     const last  = parts.pop();
-    footerLogo.innerHTML = `${parts.join(' ')} <span>${last}</span> Pizza`;
+    footerLogo.innerHTML = `${parts.join(' ')} <span>${last}</span>`;
   }
   const footerCopy = document.querySelector('.d-footer-copy');
   if (footerCopy) {
@@ -1853,6 +1889,36 @@ document.addEventListener('DOMContentLoaded', async function () {
   }
 
   initScrollReveal();
+
+  // ── CONFIG-driven text & icons (replaces hardcoded pizza references) ──────
+  const _bType    = CONFIG.business.type || 'items';
+  const _bTypeCap = _bType.charAt(0).toUpperCase() + _bType.slice(1);
+  const _bIcon    = CONFIG.business.stampIcon || '🍽️';
+
+  // CSS variable for stamp card background pseudo-element
+  document.documentElement.style.setProperty('--stamp-icon', `'${_bIcon}'`);
+
+  // Mobile hero CTA
+  const heroCta = document.getElementById('m-hero-cta');
+  if (heroCta) heroCta.textContent = `${_bIcon} Order Now`;
+
+  // Mobile menu sub-header
+  const menuSub = document.getElementById('m-menu-sub');
+  if (menuSub) menuSub.textContent = `All ${_bType} fresh to order · ${CONFIG.ordering?.paymentNote || 'Pay on collection'}`;
+
+  // Mobile basket empty
+  const mBasketIcon = document.getElementById('m-basket-empty-icon');
+  if (mBasketIcon) mBasketIcon.textContent = _bIcon;
+  const mBasketText = document.getElementById('m-basket-empty-text');
+  if (mBasketText) mBasketText.textContent = `Add some ${_bType} from the menu!`;
+
+  // Desktop basket empty
+  const dBasketIcon = document.getElementById('d-basket-empty-icon');
+  if (dBasketIcon) dBasketIcon.textContent = _bIcon;
+
+  // Mobile nav menu icon
+  const navIcon = document.getElementById('m-nav-menu-icon');
+  if (navIcon) navIcon.textContent = _bIcon;
 
   // Kitchen status — live Firestore listener (Section 31)
   initKitchenStatusListener();

@@ -1076,7 +1076,7 @@ html { scroll-behavior: smooth; }
 .m-acct-section-label { padding: 16px 16px 8px; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold); font-weight: 700; }
 .m-current-order-card { margin: 0 16px 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(212,160,67,0.25); border-radius: 16px; padding: 16px; }
 .m-stamp-card { margin: 0 16px 8px; background: rgba(255,255,255,0.04); border: 1px solid rgba(212,160,67,0.2); border-radius: 16px; padding: 18px 16px; position: relative; overflow: hidden; }
-.m-stamp-card::before { content: '🍕'; position: absolute; right: 14px; top: 10px; font-size: 52px; opacity: 0.07; pointer-events: none; }
+.m-stamp-card::before { content: var(--stamp-icon, '🍽️'); position: absolute; right: 14px; top: 10px; font-size: 52px; opacity: 0.07; pointer-events: none; }
 .m-stamp-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
 .m-stamp-card-title { font-size: 15px; font-weight: 700; color: var(--cream); }
 .m-coming-badge { font-size: 10px; padding: 3px 8px; border-radius: 20px; background: rgba(212,160,67,0.15); border: 1px solid rgba(212,160,67,0.3); color: var(--gold); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
@@ -1339,11 +1339,11 @@ html { scroll-behavior: smooth; }
     <div class="d-menu-inner">
       <div class="d-menu-header reveal">
         <div>
-          <div class="d-eyebrow">Fresh to order</div>
-          <h2 class="d-title">Our <em>Pizzas</em></h2>
+          <div id="d-menu-eyebrow" class="d-eyebrow">Fresh to order</div>
+          <h2 id="d-menu-title" class="d-title">Our <em>Pizzas</em></h2>
         </div>
         <p class="d-menu-header-note">
-          Every pizza made fresh to order.<br>Pay on collection — cash or card.
+          <span id="d-menu-note">Every pizza made fresh to order. Pay on collection — cash or card.</span>
         </p>
       </div>
       <div class="d-menu-grid" id="d-menu-grid"></div>
@@ -1460,7 +1460,7 @@ html { scroll-behavior: smooth; }
     <button class="d-basket-close" onclick="dToggleBasket()">×</button>
   </div>
   <div class="d-basket-panel-body" id="d-basket-body">
-    <div class="d-basket-panel-empty"><div>🍕</div>Your basket is empty.<br>Add pizzas from the menu above.</div>
+    <div class="d-basket-panel-empty"><div id="d-basket-empty-icon">🍕</div><span id="d-basket-empty-text">Your basket is empty.<br>Add items from the menu above.</span></div>
   </div>
   <div class="d-basket-panel-footer" id="d-basket-footer" style="display:none;">
     <div id="d-basket-discount-section"></div>
@@ -1544,13 +1544,13 @@ html { scroll-behavior: smooth; }
       </div>
     </div>
     <div class="m-pills"></div>
-    <button class="m-btn" onclick="mShowPage('menu')">🍕 Order Now</button>
+    <button id="m-hero-cta" class="m-btn" onclick="mShowPage('menu')">🍕 Order Now</button>
   </div>
 
   <div id="page-menu" class="page">
     <div class="m-eyebrow">Fresh to order</div>
     <div class="m-section-header">Our Menu</div>
-    <div class="m-section-sub">All pizzas fresh to order · Pay on collection</div>
+    <div id="m-menu-sub" class="m-section-sub">All pizzas fresh to order · Pay on collection</div>
     <div class="diet-legend">
       <span class="diet-badge diet-badge-ve">VE = Vegan</span>
       <span class="diet-badge diet-badge-v">V = Vegetarian</span>
@@ -1561,7 +1561,7 @@ html { scroll-behavior: smooth; }
 
   <div id="page-basket" class="page">
     <div class="m-section-header">Your Basket</div>
-    <div id="m-basket-empty" class="m-basket-empty"><div class="ei">🍕</div><p>Your basket is empty.<br>Add some pizzas from the menu!</p></div>
+    <div id="m-basket-empty" class="m-basket-empty"><div class="ei" id="m-basket-empty-icon">🍕</div><p>Your basket is empty.<br><span id="m-basket-empty-text">Add items from the menu!</span></p></div>
     <div id="m-basket-content" style="display:none;">
       <div class="m-basket-list" id="m-basket-list"></div>
       <div id="m-basket-discount-section"></div>
@@ -1594,7 +1594,7 @@ html { scroll-behavior: smooth; }
       <div class="m-story-title">Our Story</div>
       <div class="m-story-body"></div>
     </div>
-    <button class="m-btn" onclick="mShowPage('menu')">🍕 Try Our Pizzas</button>
+    <button id="m-story-cta" class="m-btn" onclick="mShowPage('menu')">🍕 View Our Menu</button>
   </div>
 
   <div id="page-findus" class="page">
@@ -1662,7 +1662,7 @@ html { scroll-behavior: smooth; }
 
   <nav class="m-bottom-nav">
     <div class="m-nav-item active" onclick="mShowPage('home')"    id="m-nav-home">   <div class="m-nav-icon">🏠</div><div class="m-nav-label">Home</div></div>
-    <div class="m-nav-item"        onclick="mShowPage('menu')"    id="m-nav-menu">   <div class="m-nav-icon">🍕</div><div class="m-nav-label">Menu</div></div>
+    <div class="m-nav-item"        onclick="mShowPage('menu')"    id="m-nav-menu">   <div class="m-nav-icon" id="m-nav-menu-icon">🍕</div><div class="m-nav-label">Menu</div></div>
     <div class="m-nav-item"        onclick="mShowPage('basket')"  id="m-nav-basket"> <div class="m-nav-icon">🛒</div><div class="m-nav-label">Basket</div><div class="m-basket-badge" id="m-basket-badge">0</div></div>
     <div class="m-nav-item"        onclick="mShowPage('about')"   id="m-nav-about">  <div class="m-nav-icon">👫</div><div class="m-nav-label">About</div></div>
     <div class="m-nav-item"        onclick="mShowPage('findus')"  id="m-nav-findus"> <div class="m-nav-icon">📍</div><div class="m-nav-label">Find Us</div></div>
