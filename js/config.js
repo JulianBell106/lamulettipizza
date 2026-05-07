@@ -24,9 +24,9 @@ const CONFIG = {
      Blanked for demo — app falls back to static menu array below.
      (merge driver test 2026-05-05)
   -------------------------------------------------------------------------- */
-   menuSheetUrl:   '',
-   eventsSheetUrl: '',
-   offersSheetUrl: '',
+   menuSheetUrl:   'https://docs.google.com/spreadsheets/d/e/2PACX-1vSP7_Si73YVPKnVerMYSbWAhC4Sz9iagORnZ88kLVpssTxTuS0asui3r_yTmaGXGA/pub?output=csv',
+   eventsSheetUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQH9InpxkAASnzySuI-8gma3P9p76LanPqGgvQW9Rqs9l385ngFWj6fqKhTtjLREg/pub?output=csv',
+   offersSheetUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSIRl-ACpUFdEiajbFuZfbD4dFyJmeI_WjOYEaHoPsUY6jumgP2g_95DwWmtwgLTQ/pub?output=csv',
 
   /* --------------------------------------------------------------------------
      VENDOR IDENTITY
