@@ -508,9 +508,31 @@ function renderDesktopStory() {
    No-op — replaced by static "How It Works" section hardcoded in index.html.
    CONFIG.values retained for mobile about page via renderMobileAbout().
    ============================================================================ */
-function renderDesktopValues() {
-  // Intentionally empty — desktop values section replaced with
-  // "How It Works" in HTML (#d-howitworks). Mobile still uses CONFIG.values.
+function renderDesktopValues() {
+  // Intentionally empty — desktop values section replaced with
+  // "How It Works" in HTML (#d-howitworks). Mobile still uses CONFIG.values.
+}
+
+function renderDesktopHowitworks() {
+  const hiw = CONFIG.howItWorks;
+  if (!hiw) return;
+
+  const eyebrow = document.querySelector('#d-howitworks .d-eyebrow');
+  if (eyebrow) eyebrow.textContent = hiw.eyebrow || 'Simple as that';
+
+  const title = document.querySelector('#d-howitworks .d-title');
+  if (title) title.innerHTML = hiw.title || 'Order in <em>seconds</em>';
+
+  const steps = document.querySelectorAll('#d-howitworks .d-hiw-step');
+  if (steps.length && hiw.steps) {
+    hiw.steps.forEach((step, i) => {
+      if (!steps[i]) return;
+      const titleEl = steps[i].querySelector('.d-hiw-step-title');
+      const descEl  = steps[i].querySelector('.d-hiw-step-desc');
+      if (titleEl) titleEl.textContent = step.title;
+      if (descEl)  descEl.textContent  = step.desc;
+    });
+  }
 }
 
 
@@ -1847,6 +1869,7 @@ document.addEventListener('DOMContentLoaded', async function () {
   renderDesktopMenu();
   renderDesktopStory();
   renderDesktopContact();
+  renderDesktopHowitworks();
 
   // ── Mobile renders (sheet-dependent) ─────────────────────────────────────
   renderMobileMenu();

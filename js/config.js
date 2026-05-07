@@ -198,6 +198,28 @@ const CONFIG = {
   events: [],
 
   /* --------------------------------------------------------------------------
+     HOW IT WORKS — three steps shown on desktop landing page
+  -------------------------------------------------------------------------- */
+  howItWorks: {
+    eyebrow: 'Simple as that',
+    title:   'Order in <em>seconds</em>',
+    steps: [
+      {
+        title: 'Choose your burger',
+        desc:  'Browse the menu and add to your basket. Works on any phone — no app download needed.',
+      },
+      {
+        title: 'We smash it fresh',
+        desc:  'Your order goes straight to the kitchen. Fresh smash patties, proper cheese pull, every time.',
+      },
+      {
+        title: 'Collect and pay',
+        desc:  'Your name is called when it's ready. Cash or card on collection. No waiting in line.',
+      },
+    ],
+  },
+
+  /* --------------------------------------------------------------------------
      ORDER SETTINGS
   -------------------------------------------------------------------------- */
   ordering: {
