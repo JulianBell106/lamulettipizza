@@ -241,4 +241,11 @@ const CONFIG = {
 
   /* --------------------------------------------------------------------------
      SEO / META
-  ---------------------------------------------
+  -------------------------------------------------------------------------- */
+  meta: {
+    title:       'La Muletti Pizza — Neapolitan Wood-Fired Pizza · Milton Keynes',
+    description: 'Authentic Neapolitan wood-fired pizza on wheels. Based in Milton Keynes. Order for collection or book us for your event.',
+    appTitle:    'La Muletti',
+  },
+
+};
