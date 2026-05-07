@@ -499,7 +499,8 @@ Before the "Forgot all PINs?" reset flow will work, Julian must manually set the
 
 | # | Task | Status |
 |---|------|--------|
-| 1 | Firestore composite index | ✅ Created for La Muletti |
+| 1 | Firestore composite index (stalliq-production) | ✅ Created 2026-05-06 — was missing after project recreation in Session 25 |
+| 1a | Firestore composite index (stalliq dev) | ⏳ Needed — create in Firebase Console for `stalliq` project |
 | 2 | Firestore security rules | ✅ Session 16b |
 | 3 | Remove `noindex, nofollow` from index.html | ✅ Session 16b |
 | 4 | Firebase Phone Auth — real domain | ✅ |
