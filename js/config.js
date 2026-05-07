@@ -19,9 +19,9 @@ const CONFIG = {
      Published Google Sheet CSV URL — vendor edits the sheet, app updates live.
      Set to '' to disable and use the menu array below instead.
   -------------------------------------------------------------------------- */
-   menuSheetUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTL19TeZ5Md3zJkz3qzGmc7e5dOnL29w3w8s6Rp9FBH6JC8Po2BRSaa-VXsMXqt3EbE76SiYUryme51/pub?output=csv',
-   eventsSheetUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTedQCoKEWfdPwuhUYqQoYeGrb5dGTB9pay0ecFv2BBTDrLxeHfjJ-DTssRTpnWagNUh07jCmWTjBei/pub?output=csv',
-   offersSheetUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vReFvkHBO0a-QRn9dCJQCjjgFd0N0s_0cqOWNYb3-4qiwbAOkfs1p47w8HOeclwzKQW93ovnruJafRp/pub?output=csv',
+   menuSheetUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSIMTQM31qb52q5002XCm-LLoYp3Ygf3Gh0jI7J42ENgio1GCVo6GeCKxivtELo7g/pub?output=csv',
+   eventsSheetUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT3pVp5VrbLfI3kwzTvqpaFqewMwHUDi2z9XO4r3vIdqmSCuktJJ9sCgrM40fZ8Vw/pub?output=csv',
+   offersSheetUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJiUTLfUnE7owgDG0TFMOv_PRXL8BYiD3Zw0qbwokQ5GsMN5Ck4OM2NjcKWpZt2g/pub?output=csv',
 
   /* --------------------------------------------------------------------------
      VENDOR IDENTITY
@@ -243,9 +243,4 @@ const CONFIG = {
      SEO / META
   -------------------------------------------------------------------------- */
   meta: {
-    title:       'La Muletti Pizza — Neapolitan Wood-Fired Pizza · Milton Keynes',
-    description: 'Authentic Neapolitan wood-fired pizza on wheels. Based in Milton Keynes. Order for collection or book us for your event.',
-    appTitle:    'La Muletti',
-  },
-
-};
+    title:       'La M
