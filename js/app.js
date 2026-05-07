@@ -151,6 +151,7 @@ let vanLocationData        = null; // last received location doc (Session 14)
 let locationAgeInterval    = null; // setInterval id for "Updated X mins ago" (Session 14)
 let userProfileUnsubscribe    = null; // real-time user document listener (Session 21)
 let userOfferUsageUnsubscribe = null; // real-time offer usage listener (Session 21)
+let userOrdersQueryUnsubscribe = null; // live orders query listener (Session 21)
 
 
 /* ============================================================================
@@ -515,6 +516,8 @@ const SVG_ICONS = {
   email: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>`,
   web:   `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>`,
   social:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>`
+,instagram:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>`
+,messenger:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/><path d="m6 14 3.5-4 2.5 2.5L15.5 8l2.5 4"/></svg>`
 };
 
 function renderDesktopContact() {
@@ -538,7 +541,9 @@ function renderDesktopContact() {
       <a href="${c.facebookUrl}" target="_blank" rel="noopener" class="d-contact-card">
         <div class="d-contact-icon">${SVG_ICONS.social}</div>
         <div><div class="d-contact-label">Facebook</div><div class="d-contact-value">${c.facebook}</div></div>
-      </a>`;
+      </a>
+      ${c.instagramUrl ? `<a href="${c.instagramUrl}" target="_blank" rel="noopener" class="d-contact-card"><div class="d-contact-icon">${SVG_ICONS.instagram}</div><div><div class="d-contact-label">Instagram</div><div class="d-contact-value">${c.instagram}</div></div></a>` : ''}
+      ${c.messengerUrl ? `<a href="${c.messengerUrl}" target="_blank" rel="noopener" class="d-contact-card"><div class="d-contact-icon">${SVG_ICONS.messenger}</div><div><div class="d-contact-label">Messenger</div><div class="d-contact-value">Message us on Facebook</div></div></a>` : ''}` ;
   }
 
   // id-based selector for new HTML; class-based for old
@@ -591,7 +596,7 @@ function refreshDesktopBasket() {
   if (!body || !footer) return;
 
   if (ids.length === 0) {
-    body.innerHTML = `<div class="d-basket-panel-empty"><div>🍕</div>Your basket is empty.<br>Add some ${CONFIG.business.type} from the menu above.</div>`;
+    body.innerHTML = `<div class="d-basket-panel-empty"><div>${CONFIG.business.stampIcon || '🍽️'}</div>Your basket is empty.<br>Add some ${CONFIG.business.type} from the menu above.</div>`;
     footer.style.display = 'none';
     return;
   }
@@ -641,9 +646,10 @@ function dToggleBasket() {
 function dToggleAccount() {
   const panel = document.getElementById('d-account-panel');
   if (!panel) return;
-  const opening = !panel.classList.contains('open');
   panel.classList.toggle('open');
-  if (opening) loadAccountPage('d');
+  // No loadAccountPage call needed — name/stamps/offers are kept live by
+  // listenUserProfile and listenUserOfferUsage; orders by loadUserOrders
+  // called from onAuthStateChanged (Session 21).
 }
 
 
@@ -987,7 +993,9 @@ function renderMobileFindUs() {
       <a href="tel:${c.phone.replace(/\s/g,'')}" class="m-contact-card"><div class="m-ci">📞</div><div><div class="m-cl">Phone</div><div class="m-cv">${c.phone}</div></div><div class="m-ca">›</div></a>
       <a href="mailto:${c.email}" class="m-contact-card"><div class="m-ci">✉️</div><div><div class="m-cl">Email</div><div class="m-cv">${c.email}</div></div><div class="m-ca">›</div></a>
       <a href="${c.websiteUrl}" target="_blank" rel="noopener" class="m-contact-card"><div class="m-ci">🌐</div><div><div class="m-cl">Website</div><div class="m-cv">${c.website}</div></div><div class="m-ca">›</div></a>
-      <a href="${c.facebookUrl}" target="_blank" rel="noopener" class="m-contact-card"><div class="m-ci">📘</div><div><div class="m-cl">Facebook / Socials</div><div class="m-cv">${c.facebook}</div></div><div class="m-ca">›</div></a>`;
+      <a href="${c.facebookUrl}" target="_blank" rel="noopener" class="m-contact-card"><div class="m-ci">📘</div><div><div class="m-cl">Facebook</div><div class="m-cv">${c.facebook}</div></div><div class="m-ca">›</div></a>
+      ${c.instagramUrl ? `<a href="${c.instagramUrl}" target="_blank" rel="noopener" class="m-contact-card"><div class="m-ci">📷</div><div><div class="m-cl">Instagram</div><div class="m-cv">${c.instagram}</div></div><div class="m-ca">›</div></a>` : ''}
+      ${c.messengerUrl ? `<a href="${c.messengerUrl}" target="_blank" rel="noopener" class="m-contact-card"><div class="m-ci">💬</div><div><div class="m-cl">Messenger</div><div class="m-cv">Message us on Facebook</div></div><div class="m-ca">›</div></a>` : ''}` ;
   }
 
   renderEventsList('.m-popup-list', 'm-popup-card', 'm-popup-date', 'm-popup-day', 'm-popup-month', 'm-popup-ename', 'm-popup-loc');
@@ -1682,28 +1690,6 @@ function buildBasketDiscountHTML(prefix) {
    22e. LOYALTY & OFFERS — FIRESTORE HELPERS
    ============================================================================ */
 
-/** Loads this customer's stamp count from Firestore into userStampCount. */
-async function loadUserStampCount(uid) {
-  try {
-    const doc = await db.collection('users').doc(uid).get();
-    userStampCount = (doc.exists && doc.data().stampCount) ? doc.data().stampCount : 0;
-  } catch (err) {
-    console.warn('[Stalliq] Could not load stamp count:', err.message);
-    userStampCount = 0;
-  }
-}
-
-/** Loads per-offer usage counts for this customer into userOfferUsage. */
-async function loadUserOfferUsage(uid) {
-  try {
-    const snapshot = await db.collection('users').doc(uid).collection('offerUsage').get();
-    userOfferUsage = {};
-    snapshot.forEach(doc => { userOfferUsage[doc.id] = doc.data().count || 0; });
-  } catch (err) {
-    console.warn('[Stalliq] Could not load offer usage:', err.message);
-  }
-}
-
 /**
  * Opens a real-time Firestore listener on the customer's user document.
  * Fires immediately with current data AND subscribes for cross-device changes
@@ -1714,8 +1700,16 @@ function listenUserProfile(uid) {
   if (userProfileUnsubscribe) { userProfileUnsubscribe(); userProfileUnsubscribe = null; }
   userProfileUnsubscribe = db.collection('users').doc(uid).onSnapshot(doc => {
     if (!doc.exists) return;
-    userStampCount = doc.data().stampCount ?? 0;
-    ['m', 'd'].forEach(p => renderStampCard(buildAccountIds(p)));
+    const profileData = doc.data();
+    userStampCount = profileData.stampCount ?? 0;
+    // Always sync customerName from Firestore so any auth refresh self-heals
+    // (Session 21). Don't gate on !customerName — stale null must be overwritten.
+    if (profileData.firstName) customerName = profileData.firstName;
+    ['m', 'd'].forEach(p => {
+      const nameEl = document.getElementById(`${p}-account-name`);
+      if (nameEl) nameEl.textContent = customerName ? `Hi, ${customerName}!` : 'Welcome back!';
+      renderStampCard(buildAccountIds(p));
+    });
     // Refresh basket — loyalty reward eligibility may have changed
     const discM = document.getElementById('m-basket-discount-section');
     if (discM) discM.innerHTML = buildBasketDiscountHTML('m');
@@ -1757,18 +1751,25 @@ async function awardStamp(orderId) {
   const user = auth.currentUser;
   if (!user || !loyaltyConfig) return;
 
+  // Use a Firestore transaction to atomically check-and-set stampsAwarded.
+  // This prevents a race where both mobile and desktop tabs call awardStamp
+  // simultaneously (both see stampsAwarded:false before either write lands),
+  // which would increment stampCount twice. The transaction serialises the
+  // check: the second client to run finds stampsAwarded:true and aborts.
   try {
-    await db.collection('orders').doc(orderId).update({ stampsAwarded: true });
-    await db.collection('users').doc(user.uid).set(
-      { stampCount: firebase.firestore.FieldValue.increment(1) },
-      { merge: true }
-    );
-    userStampCount++;
-    // Refresh stamp card if account page is visible
-    ['m', 'd'].forEach(p => renderStampCard(buildAccountIds(p)));
-    console.log(`[Stalliq] Stamp awarded for order ${orderId}. Total: ${userStampCount}`);
+    const orderRef = db.collection('orders').doc(orderId);
+    const userRef  = db.collection('users').doc(user.uid);
+    await db.runTransaction(async txn => {
+      const orderSnap = await txn.get(orderRef);
+      if (!orderSnap.exists || orderSnap.data().stampsAwarded) return; // already awarded
+      txn.update(orderRef, { stampsAwarded: true });
+      txn.set(userRef, { stampCount: firebase.firestore.FieldValue.increment(1) }, { merge: true });
+    });
+    // listenUserProfile fires automatically when stampCount changes in Firestore
+    // and updates userStampCount + renders the stamp card on both surfaces.
+    console.log(`[Stalliq] Stamp awarded for order ${orderId}.`);
   } catch (err) {
-    console.error('[Stalliq] Error awarding stamp:', err.message);
+    console.error('[Stalliq] Error awarding stamp:', err.message, err);
   }
 }
 
@@ -1864,7 +1865,9 @@ document.addEventListener('DOMContentLoaded', async function () {
   // was not visited first. Both now load as soon as Firebase Auth is ready,
   // regardless of which page the user lands on.
   auth.onAuthStateChanged(async user => {
-    if (user && user.uid) {
+    // Ignore anonymous users — the kitchen signs in anonymously on the same
+    // origin and would otherwise wipe the customer's account state (Session 21).
+    if (user && user.uid && !user.isAnonymous) {
       // ── Load customer name for persisted sessions (page reload when already
       //    signed in — auth flow never runs again so customerName stays null).
       if (!customerName) {
@@ -1878,23 +1881,23 @@ document.addEventListener('DOMContentLoaded', async function () {
 
       // ── Real-time listeners — fire immediately with current Firestore data
       //    AND stay subscribed for cross-device updates (stamps, offer usage).
+      // Claim any walk-in orders placed against this number since last login.
+      if (user.phoneNumber) linkWalkinOrders(user.uid, user.phoneNumber);
       listenUserProfile(user.uid);
       listenUserOfferUsage(user.uid);
 
-      // ── Eager-load the mobile account page. This populates the account tab
-      //    content and sets up live order listeners on page load, so the user
-      //    sees correct state without having to tap the Account nav item first.
-      //
-      //    Desktop account panel is NOT loaded here — it starts closed on any
-      //    page load, so dToggleAccount() will call loadAccountPage('d') when
-      //    the user opens it. By that point the real-time listeners above will
-      //    already have fired, so customerName, userStampCount, and
-      //    userOfferUsage will all be correct on first open.
+      // ── Render both account surfaces immediately (Session 21).
+      //    loadAccountPage renders name/stamps/offers for each prefix.
+      //    loadUserOrders is called once — it populates both m and d containers
+      //    with prefix-aware card IDs so there are no duplicate-ID races.
       loadAccountPage('m');
+      loadAccountPage('d');
+      loadUserOrders(user.uid);
     } else {
-      // User signed out — stop real-time listeners
-      if (userProfileUnsubscribe)    { userProfileUnsubscribe();    userProfileUnsubscribe    = null; }
-      if (userOfferUsageUnsubscribe) { userOfferUsageUnsubscribe(); userOfferUsageUnsubscribe = null; }
+      // User signed out — stop all real-time listeners
+      if (userProfileUnsubscribe)     { userProfileUnsubscribe();     userProfileUnsubscribe     = null; }
+      if (userOfferUsageUnsubscribe)  { userOfferUsageUnsubscribe();  userOfferUsageUnsubscribe  = null; }
+      if (userOrdersQueryUnsubscribe) { userOrdersQueryUnsubscribe(); userOrdersQueryUnsubscribe = null; }
     }
   });
 });
@@ -2037,6 +2040,9 @@ async function authVerifyCode() {
     const userDoc = await db.collection('users').doc(user.uid).get();
     if (userDoc.exists && userDoc.data().firstName) {
       customerName = userDoc.data().firstName;
+      // Keep phone index current and claim any walk-in orders for this number.
+      writePhoneIndex(user.uid, user.phoneNumber, customerName);
+      linkWalkinOrders(user.uid, user.phoneNumber);
       document.getElementById('auth-overlay').classList.remove('show');
       if (pendingOrderFn) pendingOrderFn();
     } else {
@@ -2077,6 +2083,9 @@ async function authSaveName() {
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     customerName = firstName;
+    // Register in phone index and claim any walk-in orders for this number.
+    writePhoneIndex(user.uid, user.phoneNumber, firstName);
+    linkWalkinOrders(user.uid, user.phoneNumber);
     document.getElementById('auth-overlay').classList.remove('show');
     if (pendingOrderFn) pendingOrderFn();
   } catch (err) {
@@ -2085,6 +2094,57 @@ async function authSaveName() {
   } finally {
     btn.textContent = 'Continue →';
     btn.disabled    = false;
+  }
+}
+
+
+/* ============================================================================
+   28a. AUTH — PHONE INDEX + WALK-IN ORDER LINKING
+   ============================================================================
+   These three helpers wire up the phoneIndex collection and enable walk-in
+   orders placed by the kitchen to be claimed by an existing or new account.
+   ============================================================================ */
+
+/** Normalise a raw UK phone string to E.164 format (+44XXXXXXXXXX).
+ *  Returns null if the input cannot be parsed as a UK number. */
+function normalizePhone(raw) {
+  if (!raw) return null;
+  const digits = raw.replace(/[\s\-\(\)]/g, '');
+  if (digits.startsWith('+44')) return '+44' + digits.slice(3).replace(/\D/g, '');
+  if (digits.startsWith('0'))   return '+44' + digits.slice(1).replace(/\D/g, '');
+  return null;
+}
+
+/** Write/update the customer's entry in the phoneIndex lookup collection.
+ *  Called on every successful sign-in so the index stays current.
+ *  The kitchen reads this collection to resolve a walk-in phone → UID. */
+async function writePhoneIndex(uid, phone, firstName) {
+  if (!phone) return;
+  try {
+    await db.collection('phoneIndex').doc(phone).set({ uid, firstName }, { merge: true });
+  } catch (err) {
+    console.warn('[Stalliq] phoneIndex write failed (non-critical):', err);
+  }
+}
+
+/** After sign-in, claim any walk-in orders placed against this customer's
+ *  phone number that were not yet linked to an account (customerId == null).
+ *  Uses a batch write so all orders are claimed atomically. */
+async function linkWalkinOrders(uid, phone) {
+  if (!phone) return;
+  try {
+    const snapshot = await db.collection('orders')
+      .where('customerPhone', '==', phone)
+      .where('customerId',    '==', null)
+      .where('source',        '==', 'walkin')
+      .get();
+    if (snapshot.empty) return;
+    const batch = db.batch();
+    snapshot.forEach(doc => batch.update(doc.ref, { customerId: uid }));
+    await batch.commit();
+    console.log('[Stalliq] Linked ' + snapshot.size + ' walk-in order(s) to account ' + uid);
+  } catch (err) {
+    console.warn('[Stalliq] linkWalkinOrders failed (non-critical):', err);
   }
 }
 
@@ -2189,8 +2249,8 @@ function applyKitchenStatus(status) {
       mBanner = document.createElement('div');
       mBanner.id = 'm-kitchen-closed-banner';
       mBanner.style.cssText = [
-        'background:#C8410B',
-        'color:#FDF6EC',
+        'background:var(--fire)',
+        'color:var(--cream)',
         'padding:12px 16px',
         'text-align:center',
         'font-size:14px',
@@ -2228,9 +2288,9 @@ function applyKitchenStatus(status) {
         'left:0',
         'right:0',
         'width:100%',
-        'background:#1A0A00',
-        'color:#FDF6EC',
-        'border-bottom:3px solid #C8410B',
+        'background:var(--dark)',
+        'color:var(--cream)',
+        'border-bottom:3px solid var(--fire)',
         'padding:16px 24px',
         'text-align:center',
         'font-size:17px',
@@ -2414,7 +2474,7 @@ function startOrderStatusListener(orderId) {
         if (mIcon)  mIcon.textContent  = '🟢';
         if (mTitle) mTitle.textContent = 'Ready to collect!';
         if (mTime)  mTime.textContent  = '';
-        if (mLabel) mLabel.textContent = 'Head to the van — your pizza is ready! 🍕';
+        if (mLabel) mLabel.textContent = `Head to the van — your ${CONFIG.business.type} is ready! ${CONFIG.business.stampIcon || '🎉'}`;
         if (mBtn)   mBtn.textContent   = '✓ Thanks — on my way!';
 
         const dIcon  = document.querySelector('#d-order-overlay .d-order-icon');
@@ -2425,7 +2485,7 @@ function startOrderStatusListener(orderId) {
         if (dIcon)  dIcon.textContent  = '🟢';
         if (dTitle) dTitle.textContent = 'Ready to collect!';
         if (dTime)  dTime.textContent  = '';
-        if (dLabel) dLabel.textContent = 'Head to the van — your pizza is ready! 🍕';
+        if (dLabel) dLabel.textContent = `Head to the van — your ${CONFIG.business.type} is ready! ${CONFIG.business.stampIcon || '🎉'}`;
         if (dBtn)   dBtn.textContent   = '✓ Thanks — on my way!';
 
         orderStatusUnsubscribe();
@@ -2619,6 +2679,7 @@ function buildAccountIds(prefix) {
     name:           `${prefix}-account-name`,
     currentSection: `${prefix}-current-orders-section`,
     currentList:    `${prefix}-current-orders-list`,
+    stampTitle:     `${prefix}-stamp-title`,
     stampsGrid:     `${prefix}-stamps-grid`,
     stampProgress:  `${prefix}-stamp-progress`,
     stampSub:       `${prefix}-stamp-sub`,
@@ -2660,26 +2721,29 @@ function loadAccountPage(prefix = 'm') {
     nameEl.textContent = customerName ? `Hi, ${customerName}!` : 'Welcome back!';
   }
 
-  // Render immediately with cached data (0 stamps on first load), then refresh
-  // with real Firestore data once loaded.
+  // Render with currently cached data. listenUserProfile and listenUserOfferUsage
+  // (set up in onAuthStateChanged) are the single source of truth for stamps and
+  // offers — they fire immediately on setup and on every cross-device change.
+  // We do NOT use one-shot Firestore reads here: they can fail during Firebase
+  // session refresh (cross-device re-auth) and overwrite correct live state
+  // with empty/stale data (Session 21 fix).
   renderStampCard(ids);
   renderAccountOffers(ids);
-  loadUserOrders(user.uid, ids);
-
-  Promise.all([
-    loadUserStampCount(user.uid),
-    loadUserOfferUsage(user.uid),
-  ]).then(() => {
-    renderStampCard(ids);
-    renderAccountOffers(ids);
-  });
 }
 
 function renderStampCard(ids) {
-  const grid = document.getElementById(ids.stampsGrid);
-  const prog = document.getElementById(ids.stampProgress);
-  const sub  = document.getElementById(ids.stampSub);
+  const title = document.getElementById(ids.stampTitle);
+  const grid  = document.getElementById(ids.stampsGrid);
+  const prog  = document.getElementById(ids.stampProgress);
+  const sub   = document.getElementById(ids.stampSub);
   if (!grid) return;
+
+  // Set the card heading dynamically so it follows CONFIG / sheet across tenants
+  if (title) {
+    title.textContent = (loyaltyConfig && loyaltyConfig.title)
+      ? loyaltyConfig.title
+      : (CONFIG.loyalty && CONFIG.loyalty.title) || `${CONFIG.business.name} Loyalty`;
+  }
 
   const total  = loyaltyConfig ? loyaltyConfig.stampsRequired : 10;
   const filled = Math.min(userStampCount, total);
@@ -2687,13 +2751,13 @@ function renderStampCard(ids) {
   grid.innerHTML = Array.from({ length: total }, (_, i) => {
 
     const isFilled = i < filled;
-    return `<div class="m-stamp-dot${isFilled ? ' filled' : ''}">${isFilled ? '🍕' : ''}</div>`;
+    return `<div class="m-stamp-dot${isFilled ? ' filled' : ''}">${isFilled ? (CONFIG.business.stampIcon || '⭐') : ''}</div>`;
   }).join('');
 
   if (prog) prog.textContent = `${filled} of ${total} stamps collected`;
 
   if (sub && loyaltyConfig) {
-    sub.textContent = `Buy ${total} pizzas, get your next one free`;
+    sub.textContent = `Buy ${total} ${CONFIG.business.type}, get your next one free`;
   }
 }
 
@@ -2746,84 +2810,160 @@ function renderAccountOffers(ids) {
   }).join('');
 }
 
-function loadUserOrders(uid, ids) {
+function loadUserOrders(uid) {
+  // Session 21 refactor: live onSnapshot query so new orders placed on mobile
+  // appear instantly on desktop. Uses docChanges() type === 'added' to inject
+  // cards without disturbing existing cards managed by startAccountOrderListener.
+  // Renders into BOTH 'm' and 'd' containers with prefix-aware IDs.
+  if (userOrdersQueryUnsubscribe) { userOrdersQueryUnsubscribe(); userOrdersQueryUnsubscribe = null; }
   stopAllAccountListeners();
   historyRemainder = [];
 
-  const currentSection = document.getElementById(ids.currentSection);
-  const currentList    = document.getElementById(ids.currentList);
-  const historyList    = document.getElementById(ids.historyList);
-  const historyEmpty   = document.getElementById(ids.historyEmpty);
-
-  if (historyList) {
-    historyList.innerHTML = `<div class="m-account-loading">Loading your orders…</div>`;
-  }
+  ['m', 'd'].forEach(p => {
+    const cs = document.getElementById(`${p}-current-orders-section`);
+    const cl = document.getElementById(`${p}-current-orders-list`);
+    const hl = document.getElementById(`${p}-order-history-list`);
+    if (cs) cs.style.display = 'none';
+    if (cl) cl.innerHTML = '';
+    if (hl) hl.innerHTML = '<div class="m-account-loading">Loading your orders…</div>';
+  });
 
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 90);
 
-  db.collection('orders')
+  userOrdersQueryUnsubscribe = db.collection('orders')
     .where('customerId', '==', uid)
     .where('createdAt', '>=', cutoff)
     .orderBy('createdAt', 'desc')
     .limit(50)
-    .get()
-    .then(snapshot => {
-      const orders = [];
-      snapshot.forEach(doc => {
-        const order = { id: doc.id, ...doc.data() };
-        // Session 13: pre-flag already-ready orders so beep only fires on transition
-        if (order.status === 'ready') order.firedReadyBeep = true;
-        orders.push(order);
-        orderCache[order.id] = order;
-      });
-
+    .onSnapshot(snapshot => {
       const activeStatuses   = ['pending', 'accepted', 'preparing', 'ready'];
       const terminalStatuses = ['collected', 'cancelled'];
-      const liveOrders       = orders.filter(o => activeStatuses.includes(o.status));
-      const historyOrders    = orders.filter(o => terminalStatuses.includes(o.status));
 
-      // ── Live orders ──────────────────────────────────────────────────────
-      if (liveOrders.length > 0) {
-        if (currentSection) currentSection.style.display = 'block';
-        if (currentList) {
-          currentList.innerHTML = '';
-          liveOrders.forEach(order => {
-            const wrapper = document.createElement('div');
-            wrapper.id        = `m-coc-${order.id}`;
-            wrapper.className = 'm-current-order-card';
-            wrapper.setAttribute('onclick', `openOrderDetail('${order.id}')`);
-            wrapper.innerHTML = buildCurrentOrderCardHTML(order);
-            currentList.appendChild(wrapper);
-            startAccountOrderListener(order.id);
+      snapshot.docChanges().forEach(change => {
+        const order = { id: change.doc.id, ...change.doc.data() };
+
+        if (change.type === 'added') {
+          // New document: render live card and start per-order listener.
+          // Pre-flag already-ready orders so beep only fires on transition (Session 13).
+          if (order.status === 'ready') order.firedReadyBeep = true;
+          orderCache[order.id] = order;
+
+          if (!activeStatuses.includes(order.status)) return;
+
+          // Inject card into both surfaces if not already present
+          ['m', 'd'].forEach(prefix => {
+            const currentSection = document.getElementById(`${prefix}-current-orders-section`);
+            const currentList    = document.getElementById(`${prefix}-current-orders-list`);
+            if (currentSection) currentSection.style.display = 'block';
+            if (currentList && !document.getElementById(`${prefix}-coc-${order.id}`)) {
+              const wrapper = document.createElement('div');
+              wrapper.id        = `${prefix}-coc-${order.id}`;
+              wrapper.className = 'm-current-order-card';
+              wrapper.setAttribute('onclick', `openOrderDetail('${order.id}')`);
+              wrapper.innerHTML = buildCurrentOrderCardHTML(order, prefix);
+              currentList.appendChild(wrapper);
+            }
           });
+          // One per-order status listener (not per prefix)
+          startAccountOrderListener(order.id);
         }
-      } else {
-        if (currentSection) currentSection.style.display = 'none';
-      }
 
-      // ── Order history — collected/cancelled only ─────────────────────────
+        if (change.type === 'modified') {
+          // Status update from kitchen. The per-order document listener
+          // (startAccountOrderListener) handles this too, but we also handle
+          // it here as a belt-and-suspenders guarantee — the query listener
+          // fires reliably for every field change on documents in its result set.
+          orderCache[order.id] = { ...(orderCache[order.id] || {}), ...change.doc.data() };
+          const { status, waitMins } = order;
+
+          if (activeStatuses.includes(status)) {
+            // Update status badge on both surfaces
+            const cfg      = ORDER_STATUS_CONFIG[status] || ORDER_STATUS_CONFIG.pending;
+            const waitLine = (status === 'accepted' && waitMins)
+              ? `<div class="m-coc-wait">~${waitMins} mins estimated</div>`
+              : '';
+            const statusHTML = `
+                <div class="m-coc-status-icon">${cfg.icon}</div>
+                <div class="m-coc-status-body">
+                  <div class="m-coc-status-text">${cfg.label}</div>
+                  ${waitLine}
+                </div>`;
+            ['m', 'd'].forEach(p => {
+              const statusEl = document.getElementById(`${p}-coc-status-${order.id}`);
+              if (statusEl) statusEl.innerHTML = statusHTML;
+            });
+          }
+
+          if (terminalStatuses.includes(status)) {
+            // Award loyalty stamp on collection via the query listener.
+            // startAccountOrderListener can get permission-denied on a fresh
+            // auth session before the token settles — the query listener is
+            // the reliable fallback since it's already established.
+            if (status === 'collected') {
+              const cachedOrder = orderCache[order.id];
+              const alreadyAwarded = cachedOrder?.stampsAwarded || order.stampsAwarded;
+              if (!alreadyAwarded && order.discount?.type !== 'loyalty') {
+                awardStamp(order.id);
+              }
+            }
+
+            // Fade and remove card from both surfaces (mirrors startAccountOrderListener)
+            ['m', 'd'].forEach(p => {
+              const cardEl = document.getElementById(`${p}-coc-${order.id}`);
+              if (cardEl) {
+                cardEl.style.transition = 'opacity 0.4s';
+                cardEl.style.opacity    = '0';
+                setTimeout(() => {
+                  cardEl.remove();
+                  const section = document.getElementById(`${p}-current-orders-section`);
+                  const list    = document.getElementById(`${p}-current-orders-list`);
+                  if (section && list && list.children.length === 0) {
+                    section.style.display = 'none';
+                  }
+                }, 400);
+              }
+            });
+          }
+        }
+      });
+
+      // Rebuild history from full snapshot on every fire so collected/cancelled
+      // orders appear immediately after the per-order listener removes the live card.
+      const historyOrders = [];
+      snapshot.forEach(doc => {
+        const order = { id: doc.id, ...doc.data() };
+        if (terminalStatuses.includes(order.status)) historyOrders.push(order);
+      });
       historyAllOrders = historyOrders;
+
       if (historyOrders.length === 0) {
-        if (historyList)  historyList.innerHTML = '';
-        if (historyEmpty) historyEmpty.style.display = 'block';
+        ['m', 'd'].forEach(p => {
+          const hl = document.getElementById(`${p}-order-history-list`);
+          const he = document.getElementById(`${p}-order-history-empty`);
+          if (hl) hl.innerHTML = '';
+          if (he) he.style.display = 'block';
+        });
       } else {
-        if (historyEmpty) historyEmpty.style.display = 'none';
+        ['m', 'd'].forEach(p => {
+          const he = document.getElementById(`${p}-order-history-empty`);
+          if (he) he.style.display = 'none';
+        });
         _renderHistoryList(false);
       }
-    })
-    .catch(err => {
+    }, err => {
       console.error('[Stalliq] Account orders load error:', err.code, err.message);
       if (err.code === 'failed-precondition') {
         console.warn('[Stalliq] Composite index required. Check Firestore console for a direct creation link.');
       }
-      if (historyList) {
-        historyList.innerHTML = `<div class="m-account-loading">Could not load orders — please try again.</div>`;
-      }
+      ['m', 'd'].forEach(p => {
+        const hl = document.getElementById(`${p}-order-history-list`);
+        if (hl) hl.innerHTML = '<div class="m-account-loading">Could not load orders — please try again.</div>';
+      });
     });
 }
 
-function buildCurrentOrderCardHTML(order) {
+function buildCurrentOrderCardHTML(order, prefix = 'm') {
   const cfg          = ORDER_STATUS_CONFIG[order.status] || ORDER_STATUS_CONFIG.pending;
   const itemsSummary = order.items
     ? order.items.map(i => `${esc(i.name)} × ${i.quantity}`).join(', ')
@@ -2841,7 +2981,7 @@ function buildCurrentOrderCardHTML(order) {
       <div class="m-coc-total">${total}</div>
     </div>
     <div class="m-coc-items">${itemsSummary}</div>
-    <div class="m-coc-status" id="m-coc-status-${order.id}">
+    <div class="m-coc-status" id="${prefix}-coc-status-${order.id}">
       <div class="m-coc-status-icon">${cfg.icon}</div>
       <div class="m-coc-status-body">
         <div class="m-coc-status-text">${cfg.label}</div>
@@ -2975,19 +3115,21 @@ function startAccountOrderListener(orderId) {
         orderCache[orderId] = { ...orderCache[orderId], ...data };
       }
 
-      const statusEl = document.getElementById(`m-coc-status-${orderId}`);
-      if (statusEl) {
-        const cfg      = ORDER_STATUS_CONFIG[status] || ORDER_STATUS_CONFIG.pending;
-        const waitLine = (status === 'accepted' && waitMins)
-          ? `<div class="m-coc-wait">~${waitMins} mins estimated</div>`
-          : '';
-        statusEl.innerHTML = `
+      // Update status element in BOTH m and d containers (Session 21 prefix-aware IDs)
+      const cfg      = ORDER_STATUS_CONFIG[status] || ORDER_STATUS_CONFIG.pending;
+      const waitLine = (status === 'accepted' && waitMins)
+        ? `<div class="m-coc-wait">~${waitMins} mins estimated</div>`
+        : '';
+      const statusHTML = `
           <div class="m-coc-status-icon">${cfg.icon}</div>
           <div class="m-coc-status-body">
             <div class="m-coc-status-text">${cfg.label}</div>
             ${waitLine}
           </div>`;
-      }
+      ['m', 'd'].forEach(p => {
+        const statusEl = document.getElementById(`${p}-coc-status-${orderId}`);
+        if (statusEl) statusEl.innerHTML = statusHTML;
+      });
 
       // Session 13: fire ready beep on transition to ready
       if (status === 'ready') {
@@ -3027,33 +3169,27 @@ function startAccountOrderListener(orderId) {
         if (finalOrder) _prependToHistory(finalOrder);
         _dismissCustomerReadyPrompt();
 
-        const cardEl = document.getElementById(`m-coc-${orderId}`);
-        if (cardEl) {
-          cardEl.style.transition = 'opacity 0.4s';
-          cardEl.style.opacity    = '0';
-          setTimeout(() => {
-            cardEl.remove();
-            ['m', 'd'].forEach(prefix => {
-              const section = document.getElementById(`${prefix}-current-orders-section`);
-              const list    = document.getElementById(`${prefix}-current-orders-list`);
+        // Fade and remove card from BOTH m and d containers
+        ['m', 'd'].forEach(p => {
+          const cardEl = document.getElementById(`${p}-coc-${orderId}`);
+          if (cardEl) {
+            cardEl.style.transition = 'opacity 0.4s';
+            cardEl.style.opacity    = '0';
+            setTimeout(() => {
+              cardEl.remove();
+              const section = document.getElementById(`${p}-current-orders-section`);
+              const list    = document.getElementById(`${p}-current-orders-list`);
               if (section && list && list.children.length === 0) {
                 section.style.display = 'none';
               }
-            });
-          }, 400);
-        }
+            }, 400);
+          }
+        });
         console.log(`[Stalliq] Account listener stopped for ${orderId} (${status}).`);
       }
     },
     err => {
       console.error(`[Stalliq] Account order listener error for ${orderId}:`, err.code);
-      // Retry once after a short delay — App Check token may not have settled yet
-      if (err.code === 'permission-denied' && !accountOrderListeners[`${orderId}_retried`]) {
-        accountOrderListeners[`${orderId}_retried`] = true;
-        delete accountOrderListeners[orderId];
-        console.log(`[Stalliq] Retrying account order listener for ${orderId} in 2s...`);
-        setTimeout(() => startAccountOrderListener(orderId), 2000);
-      }
     }
   );
 
@@ -3061,7 +3197,7 @@ function startAccountOrderListener(orderId) {
 }
 
 function accountSignIn() {
-  pendingOrderFn = () => loadAccountPage('m');
+  pendingOrderFn = () => { const u = auth.currentUser; loadAccountPage('m'); loadAccountPage('d'); if (u) loadUserOrders(u.uid); };
   document.getElementById('auth-title').textContent = 'Sign in to your account';
   document.getElementById('auth-sub-text').textContent = 'Enter your mobile number to sign in';
   authClearErrors();
@@ -3069,7 +3205,7 @@ function accountSignIn() {
 }
 
 function dAccountSignIn() {
-  pendingOrderFn = () => loadAccountPage('d');
+  pendingOrderFn = () => { const u = auth.currentUser; loadAccountPage('d'); loadAccountPage('m'); if (u) loadUserOrders(u.uid); };
   document.getElementById('auth-title').textContent = 'Sign in to your account';
   document.getElementById('auth-sub-text').textContent = 'Enter your mobile number to sign in';
   authClearErrors();
@@ -3078,14 +3214,27 @@ function dAccountSignIn() {
 
 function accountSignOut(prefix = 'm') {
   stopAllAccountListeners();
-  if (userProfileUnsubscribe)    { userProfileUnsubscribe();    userProfileUnsubscribe    = null; }
-  if (userOfferUsageUnsubscribe) { userOfferUsageUnsubscribe(); userOfferUsageUnsubscribe = null; }
+  if (userProfileUnsubscribe)     { userProfileUnsubscribe();     userProfileUnsubscribe     = null; }
+  if (userOfferUsageUnsubscribe)  { userOfferUsageUnsubscribe();  userOfferUsageUnsubscribe  = null; }
+  if (userOrdersQueryUnsubscribe) { userOrdersQueryUnsubscribe(); userOrdersQueryUnsubscribe = null; }
   userStampCount = 0;
   userOfferUsage = {};
+  // Clear order containers on both surfaces
+  ['m', 'd'].forEach(p => {
+    const cl = document.getElementById(`${p}-current-orders-list`);
+    const cs = document.getElementById(`${p}-current-orders-section`);
+    const hl = document.getElementById(`${p}-order-history-list`);
+    if (cl) cl.innerHTML = '';
+    if (cs) cs.style.display = 'none';
+    if (hl) hl.innerHTML = '';
+  });
+  historyAllOrders = [];
+
   auth.signOut()
     .then(() => {
       customerName = null;
-      loadAccountPage(prefix);
+      loadAccountPage('m');
+      loadAccountPage('d');
     })
     .catch(err => {
       console.error('[Stalliq] Sign out error:', err);
