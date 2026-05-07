@@ -214,7 +214,7 @@ const CONFIG = {
       },
       {
         title: 'Collect and pay',
-        desc:  'Your name is called when it's ready. Cash or card on collection. No waiting in line.',
+        desc:  'Your name is called when ready. Cash or card on collection. No waiting in line.',
       },
     ],
   },
