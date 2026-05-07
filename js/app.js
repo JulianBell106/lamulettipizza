@@ -969,6 +969,9 @@ function renderMobileAbout() {
       </div>`).join('');
   }
 
+  const storyCta = document.getElementById('m-story-cta');
+  if (storyCta && CONFIG.hero && CONFIG.hero.ctaPrimary) storyCta.textContent = CONFIG.hero.ctaPrimary;
+
   const valGrid = document.querySelector('#page-about .m-values-grid');
   if (valGrid) {
     valGrid.innerHTML = CONFIG.values.items.map(item => `

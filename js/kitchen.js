@@ -725,7 +725,7 @@ function renderOrders() {
     container.classList.add('is-empty');
     container.innerHTML = `
       <div class="k-empty">
-        <div class="k-empty-icon">🍕</div>
+        <div class="k-empty-icon">${CONFIG.business.stampIcon || '🍽️'}</div>
         <div class="k-empty-text">No active orders — standing by</div>
       </div>`;
     return;
