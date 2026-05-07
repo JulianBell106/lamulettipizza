@@ -1345,7 +1345,8 @@ async function fetchOffersFromSheet() {
   const url = CONFIG.offersSheetUrl;
 
   if (!url) {
-    console.log('[Stalliq] No offersSheetUrl in config — offers/loyalty disabled.');
+    console.log('[Stalliq] No offersSheetUrl in config — using demo loyalty defaults.');
+    loyaltyConfig = { title: 'Loyalty Card', description: 'Collect stamps, earn a reward.', stampsRequired: 10, rewardType: 'free_item' };
     return false;
   }
 
