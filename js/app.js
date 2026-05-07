@@ -397,7 +397,8 @@ function renderDesktopMenu() {
   const titleEl  = document.getElementById('d-menu-title');
   if (titleEl) titleEl.innerHTML = `Our <em>${_typeCap}</em>`;
   const noteEl   = document.getElementById('d-menu-note');
-  if (noteEl) noteEl.textContent = `Every ${_type} made fresh to order. ${CONFIG.ordering?.paymentNote || 'Pay on collection'}.`;
+  const _typeSingular = _type.replace(/s$/i, '');
+  if (noteEl) noteEl.textContent = `Every ${_typeSingular}'s made fresh to order. ${CONFIG.ordering?.paymentNote || 'Pay on collection'}.`;
 
   const items = menuData.filter(m => m.available !== false);
 
