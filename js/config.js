@@ -48,11 +48,11 @@ const CONFIG = {
   -------------------------------------------------------------------------- */
   business: {
     name:        'La Muletti Pizza',
-    nameShort:   'La Muletti',
+    nameShort:   'La Muletti Pizza',
     tagline:     'Neapolitan Wood-Fired Pizza',
     description: 'Traditional Neapolitan recipes, a wood-fired oven on wheels, and a husband & wife who live for great pizza.',
     location:    'Milton Keynes',
-    type:        'pizza',
+    type:        'pizzas',
     stampIcon:   '🍕',
     currency:    '£',
     year:        '2025',
@@ -205,6 +205,28 @@ const CONFIG = {
   ],
 
   /* --------------------------------------------------------------------------
+     HOW IT WORKS — three steps shown on desktop landing page
+  -------------------------------------------------------------------------- */
+  howItWorks: {
+    eyebrow: 'Simple as that',
+    title:   'Order in <em>seconds</em>',
+    steps: [
+      {
+        title: 'Choose your pizza',
+        desc:  'Browse the menu and add to your basket. Works on any phone — no app download needed.',
+      },
+      {
+        title: 'We fire it fresh',
+        desc:  'Your order reaches Daniele instantly. 90 seconds in the wood-fired oven — the way it is done in Naples.',
+      },
+      {
+        title: 'Collect and pay',
+        desc:  'Your name is called when ready. Cash or card on collection. No waiting in line.',
+      },
+    ],
+  },
+
+  /* --------------------------------------------------------------------------
      ORDER SETTINGS
   -------------------------------------------------------------------------- */
   ordering: {
@@ -219,11 +241,4 @@ const CONFIG = {
 
   /* --------------------------------------------------------------------------
      SEO / META
-  -------------------------------------------------------------------------- */
-  meta: {
-    title:       'La Muletti Pizza — Neapolitan Wood-Fired Pizza · Milton Keynes',
-    description: 'Authentic Neapolitan wood-fired pizza on wheels. Based in Milton Keynes. Order for collection or book us for your event.',
-    appTitle:    'La Muletti',
-  },
-
-};
+  ---------------------------------------------
