@@ -1889,9 +1889,16 @@ document.addEventListener('DOMContentLoaded', async function () {
   loyaltyConfig = null;
 
   // ── Static renders — no network dependency, fire immediately ────────────
-  // renderMobileHome uses only CONFIG.homePills — no sheet data needed.
+  // All CONFIG-only renders run before sheet fetch to prevent flash of
+  // default (La Muletti) text while sheets are loading.
   renderMobileHome();
   renderMobileAbout();
+  renderDesktopNav();
+  renderDesktopHero();
+  renderDesktopStrip();
+  renderDesktopStory();
+  renderDesktopContact();
+  renderDesktopHowitworks();
 
   // ── Fetch all sheets concurrently ─────────────────────────────────────────
   await Promise.all([
@@ -1900,14 +1907,8 @@ document.addEventListener('DOMContentLoaded', async function () {
     fetchOffersFromSheet()
   ]);
 
-  // Desktop renders
-  renderDesktopNav();
-  renderDesktopHero();
-  renderDesktopStrip();
+  // ── Sheet-dependent renders ───────────────────────────────────────────────
   renderDesktopMenu();
-  renderDesktopStory();
-  renderDesktopContact();
-  renderDesktopHowitworks();
 
   // ── Mobile renders (sheet-dependent) ─────────────────────────────────────
   renderMobileMenu();
