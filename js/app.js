@@ -509,31 +509,56 @@ function renderDesktopStory() {
    No-op — replaced by static "How It Works" section hardcoded in index.html.
    CONFIG.values retained for mobile about page via renderMobileAbout().
    ============================================================================ */
-function renderDesktopValues() {
-  // Intentionally empty — desktop values section replaced with
-  // "How It Works" in HTML (#d-howitworks). Mobile still uses CONFIG.values.
-}
-
-function renderDesktopHowitworks() {
-  const hiw = CONFIG.howItWorks;
-  if (!hiw) return;
-
-  const eyebrow = document.querySelector('#d-howitworks .d-eyebrow');
-  if (eyebrow) eyebrow.textContent = hiw.eyebrow || 'Simple as that';
-
-  const title = document.querySelector('#d-howitworks .d-title');
-  if (title) title.innerHTML = hiw.title || 'Order in <em>seconds</em>';
-
-  const steps = document.querySelectorAll('#d-howitworks .d-hiw-step');
-  if (steps.length && hiw.steps) {
-    hiw.steps.forEach((step, i) => {
-      if (!steps[i]) return;
-      const titleEl = steps[i].querySelector('.d-hiw-step-title');
-      const descEl  = steps[i].querySelector('.d-hiw-step-desc');
-      if (titleEl) titleEl.textContent = step.title;
-      if (descEl)  descEl.textContent  = step.desc;
-    });
-  }
+function renderDesktopValues() {
+
+  // Intentionally empty — desktop values section replaced with
+
+  // "How It Works" in HTML (#d-howitworks). Mobile still uses CONFIG.values.
+
+}
+
+
+
+function renderDesktopHowitworks() {
+
+  const hiw = CONFIG.howItWorks;
+
+  if (!hiw) return;
+
+
+
+  const eyebrow = document.querySelector('#d-howitworks .d-eyebrow');
+
+  if (eyebrow) eyebrow.textContent = hiw.eyebrow || 'Simple as that';
+
+
+
+  const title = document.querySelector('#d-howitworks .d-title');
+
+  if (title) title.innerHTML = hiw.title || 'Order in <em>seconds</em>';
+
+
+
+  const steps = document.querySelectorAll('#d-howitworks .d-hiw-step');
+
+  if (steps.length && hiw.steps) {
+
+    hiw.steps.forEach((step, i) => {
+
+      if (!steps[i]) return;
+
+      const titleEl = steps[i].querySelector('.d-hiw-step-title');
+
+      const descEl  = steps[i].querySelector('.d-hiw-step-desc');
+
+      if (titleEl) titleEl.textContent = step.title;
+
+      if (descEl)  descEl.textContent  = step.desc;
+
+    });
+
+  }
+
 }
 
 
@@ -780,6 +805,9 @@ function renderMobileHome() {
   const heroTitle = document.querySelector('#page-home .m-hero-title');
   if (heroTitle) heroTitle.textContent = CONFIG.business.name;
 
+  const heroSub = document.querySelector('#page-home .m-hero-sub');
+  if (heroSub) heroSub.textContent = CONFIG.business.tagline;
+
   const pillsEl = document.querySelector('#page-home .m-pills');
   if (pillsEl) {
     pillsEl.innerHTML = CONFIG.homePills.map(p => `
@@ -979,6 +1007,15 @@ function mDismissOrder() {
    ============================================================================ */
 function renderMobileAbout() {
   const a = CONFIG.about;
+
+  const aboutHeroImg = document.querySelector('#page-about .m-hero img');
+  if (aboutHeroImg) { aboutHeroImg.src = CONFIG.images.founders; aboutHeroImg.alt = a.imageCaption; }
+
+  const aboutHeroSub = document.querySelector('#page-about .m-hero-sub');
+  if (aboutHeroSub) aboutHeroSub.textContent = CONFIG.business.tagline;
+
+  const aboutBar = document.querySelector('#page-about .m-about-bar p');
+  if (aboutBar) aboutBar.textContent = CONFIG.business.description;
 
   const cartoon = document.querySelector('.m-cartoon img');
   if (cartoon) { cartoon.src = CONFIG.images.founders; cartoon.alt = a.imageCaption; }
@@ -1852,9 +1889,16 @@ document.addEventListener('DOMContentLoaded', async function () {
   loyaltyConfig = null;
 
   // ── Static renders — no network dependency, fire immediately ────────────
-  // renderMobileHome uses only CONFIG.homePills — no sheet data needed.
+  // All CONFIG-only renders run before sheet fetch to prevent flash of
+  // default (La Muletti) text while sheets are loading.
   renderMobileHome();
   renderMobileAbout();
+  renderDesktopNav();
+  renderDesktopHero();
+  renderDesktopStrip();
+  renderDesktopStory();
+  renderDesktopContact();
+  renderDesktopHowitworks();
 
   // ── Fetch all sheets concurrently ─────────────────────────────────────────
   await Promise.all([
@@ -1863,14 +1907,8 @@ document.addEventListener('DOMContentLoaded', async function () {
     fetchOffersFromSheet()
   ]);
 
-  // Desktop renders
-  renderDesktopNav();
-  renderDesktopHero();
-  renderDesktopStrip();
+  // ── Sheet-dependent renders ───────────────────────────────────────────────
   renderDesktopMenu();
-  renderDesktopStory();
-  renderDesktopContact();
-  renderDesktopHowitworks();
 
   // ── Mobile renders (sheet-dependent) ─────────────────────────────────────
   renderMobileMenu();
