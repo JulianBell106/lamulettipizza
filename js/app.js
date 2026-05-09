@@ -1009,7 +1009,7 @@ function renderMobileAbout() {
   const a = CONFIG.about;
 
   const aboutHeroImg = document.querySelector('#page-about .m-hero img');
-  if (aboutHeroImg) { aboutHeroImg.src = CONFIG.images.founders; aboutHeroImg.alt = a.imageCaption; }
+  if (aboutHeroImg) { aboutHeroImg.src = CONFIG.images.hero; aboutHeroImg.alt = CONFIG.business.name; }
 
   const aboutHeroSub = document.querySelector('#page-about .m-hero-sub');
   if (aboutHeroSub) aboutHeroSub.textContent = CONFIG.business.tagline;
