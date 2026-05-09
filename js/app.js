@@ -849,9 +849,11 @@ function renderMobileMenu() {
           <div class="m-card-info">
             <div class="m-card-name">${esc(item.name)}${dietTag}</div>
             <div class="m-card-desc">${esc(item.desc)}</div>
-            <div class="m-card-price">${CONFIG.business.currency}${item.price.toFixed(2)}</div>
           </div>
-          <div class="m-card-controls">${controls}</div>
+          <div class="m-card-footer">
+            <div class="m-card-price">${CONFIG.business.currency}${item.price.toFixed(2)}</div>
+            <div class="m-card-controls">${controls}</div>
+          </div>
         </div>`;
     }
 

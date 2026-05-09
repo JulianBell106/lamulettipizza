@@ -23,20 +23,20 @@
    --text-muted raised from 0.45 to 0.55 — was failing WCAG AA on dark bg.
 ═══════════════════════════════════════ */
 :root {
-  --fire:   #C4271A;
-  --gold:   #D4A043;
-  --cream:  #FDF6EC;
-  --dark:   #1A0A00;
-  --char:   #2C1A0A;
-  --smoke:  #5C3D1E;
-  --ember:  #D93B25;
-  --ash:    #8B6347;
-  --gold-pale: rgba(212,160,67,0.10);
-  --gold-mid:  rgba(212,160,67,0.22);
-  --gold-rule: rgba(212,160,67,0.12);
-  --text-primary:   rgba(253,246,236,0.95);
-  --text-secondary: rgba(253,246,236,0.75);
-  --text-muted:     rgba(253,246,236,0.55);
+  --fire:   #14B8A6;
+  --gold:   #2DD4BF;
+  --cream:  #F0FDFA;
+  --dark:   #0B1221;
+  --char:   #111E35;
+  --smoke:  #1A2F4A;
+  --ember:  #0D9488;
+  --ash:    #5B8E8A;
+  --gold-pale: rgba(45,212,191,0.10);
+  --gold-mid:  rgba(45,212,191,0.22);
+  --gold-rule: rgba(45,212,191,0.12);
+  --text-primary:   rgba(240,253,250,0.95);
+  --text-secondary: rgba(240,253,250,0.75);
+  --text-muted:     rgba(240,253,250,0.55);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -946,7 +946,8 @@ html { scroll-behavior: smooth; }
 .m-menu-card-img { width: 100%; height: 140px; object-fit: cover; object-position: center 60%; display: block; border-radius: 12px 12px 0 0; border-bottom: 1px solid rgba(212,160,67,0.12); }
 .m-menu-card.has-image { flex-direction: column; align-items: stretch; padding: 0; }
 .m-menu-card.has-image .m-card-info { padding: 10px 14px 4px; }
-.m-menu-card.has-image .m-card-controls { padding: 0 14px 8px; justify-content: flex-end; }
+.m-menu-card.has-image .m-card-controls { padding: 0; justify-content: flex-end; }
+.m-card-footer { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px 10px; border-top: 1px solid rgba(212,160,67,0.15); }
 
 /* Dietary legend */
 .diet-legend { display: flex; gap: 8px; padding: 0 16px 16px; flex-wrap: wrap; align-items: center; }
