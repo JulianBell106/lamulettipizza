@@ -92,9 +92,9 @@ const CONFIG = {
      IMAGES
   -------------------------------------------------------------------------- */
   images: {
-    hero:     'https://i.ibb.co/bMvvnQxp/pizza-image-7.jpg',
-    founders: 'https://i.ibb.co/ccpwqTzX/cartoon.jpg',
-    icon:     'https://i.ibb.co/bMvvnQxp/pizza-image-7.jpg',
+    hero:     'https://res.cloudinary.com/dqaotqmn8/image/upload/v1778351116/pizza-image-7_v4nwer.jpg',
+    founders: 'https://res.cloudinary.com/dqaotqmn8/image/upload/v1778351116/cartoon_rtn8tn.jpg',
+    icon:     'https://res.cloudinary.com/dqaotqmn8/image/upload/v1778351116/pizza-image-7_v4nwer.jpg',
   },
 
   /* --------------------------------------------------------------------------
