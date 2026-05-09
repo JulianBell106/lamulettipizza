@@ -23,20 +23,20 @@
    --text-muted raised from 0.45 to 0.55 — was failing WCAG AA on dark bg.
 ═══════════════════════════════════════ */
 :root {
-  --fire:   #14B8A6;
-  --gold:   #2DD4BF;
-  --cream:  #F0FDFA;
-  --dark:   #0B1221;
-  --char:   #111E35;
-  --smoke:  #1A2F4A;
-  --ember:  #0D9488;
-  --ash:    #5B8E8A;
-  --gold-pale: rgba(45,212,191,0.10);
-  --gold-mid:  rgba(45,212,191,0.22);
-  --gold-rule: rgba(45,212,191,0.12);
-  --text-primary:   rgba(240,253,250,0.95);
-  --text-secondary: rgba(240,253,250,0.75);
-  --text-muted:     rgba(240,253,250,0.55);
+  --fire:   #C4271A;
+  --gold:   #D4A043;
+  --cream:  #FDF6EC;
+  --dark:   #1A0A00;
+  --char:   #2C1A0A;
+  --smoke:  #5C3D1E;
+  --ember:  #D93B25;
+  --ash:    #8B6347;
+  --gold-pale: rgba(212,160,67,0.10);
+  --gold-mid:  rgba(212,160,67,0.22);
+  --gold-rule: rgba(212,160,67,0.12);
+  --text-primary:   rgba(253,246,236,0.95);
+  --text-secondary: rgba(253,246,236,0.75);
+  --text-muted:     rgba(253,246,236,0.55);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1743,48 +1743,4 @@ html { scroll-behavior: smooth; }
       <div class="auth-icon">👋</div>
       <div class="auth-title">What's your first name?</div>
       <p class="auth-sub">We'll call your name when your order is ready to collect</p>
-      <div class="auth-field">
-        <label class="auth-label">First name</label>
-        <input id="auth-name-input" type="text" inputmode="text"
-               placeholder="e.g. Julian" maxlength="30" class="auth-input"
-               onkeydown="if(event.key==='Enter')authSaveName()">
-      </div>
-      <button class="auth-primary-btn" onclick="authSaveName()">Continue →</button>
-      <div id="auth-name-err" class="auth-err"></div>
-    </div>
-  </div>
-</div>
-
-<!-- COOKIE / PRIVACY NOTICE (PECR compliance) -->
-<div id="cookie-notice" class="hidden">
-  <p class="cookie-text">
-    This site uses your phone number to send order confirmations and
-    remembers your session to show your order status.
-    No cookies are used for advertising.
-    <a href="privacy.html" target="_blank">Privacy policy</a>
-  </p>
-  <button class="cookie-btn" onclick="dismissCookieNotice()">Got it</button>
-</div>
-<script>
-  (function() {
-    if (!localStorage.getItem('stalliq_cookie_ok')) {
-      document.getElementById('cookie-notice').classList.remove('hidden');
-    }
-  })();
-  function dismissCookieNotice() {
-    localStorage.setItem('stalliq_cookie_ok', '1');
-    document.getElementById('cookie-notice').classList.add('hidden');
-  }
-</script>
-
-<!-- SCRIPTS -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="js/config.js"></script>
-<script src="js/firebase.js"></script>
-<script src="js/app.js"></script>
-
-</body>
-</html>
+      <div class=
