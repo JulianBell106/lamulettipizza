@@ -1,5 +1,5 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-10 — Session 31
+> Last updated: 2026-05-10 — Session 32
 
 ## What is Stalliq?
 Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering platform for independent mobile street food vendors. La Muletti Pizza (Daniele + Danielle, Bletchley MK) is the launch customer, on a free Year 1 Founding Customer deal.
@@ -8,7 +8,7 @@ Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering p
 
 ## Demo with Daniele — ~2026-05-15
 
-### Remaining pre-demo checklist
+### Remaining pre-demo checklist (Julian — manual actions)
 1. **Add composite index on `stalliq` dev Firebase project** — Firebase Console → stalliq project → Firestore → Indexes → Add: `orders` collection, `customerId` ASC + `createdAt` ASC. (Production index exists; dev index still missing.)
 2. ~~Add image links to Street Stack menu sheet~~ ✓ Done 2026-05-09
 3. **Wipe test data on stalliq-production** — Firebase Console: delete all docs in `orders` and `users` collections. Keep `vendors/{vendorId}/staff/` (staff PINs), `kitchenStatus`, `location`, `counters`.
@@ -16,6 +16,20 @@ Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering p
 5. **ICO registration** — ico.org.uk, ~£40/year (Endoo Limited — required before collecting personal data in production).
 6. **Google Sheet header rows** — protect header rows on all three La Muletti sheets.
 7. ~~stalliq.co.uk demo tile~~ ✓ Fixed 2026-05-10 — full site rebuilt (see Session 31 below), links correctly to `https://demo.stalliq.co.uk`.
+8. ⚠️ **Set `role: "owner"`** on the Owner staff doc in both Firebase projects — `vendors/demo/staff/{ownerId}` (stalliq dev) and `vendors/lamuletti/staff/{ownerId}` (stalliq-production). Without this the owner sees the restricted Staff view in the kitchen.
+9. **Deploy stalliq-site** — drag `stalliq-site/` folder onto Netlify Drop to publish the B1 demo section rebuild.
+
+---
+
+## Session 32 — 2026-05-10
+
+- **B1 done — stalliq-site demo section rebuilt** (`stalliq-site/index.html`). Section title: "See both sides of every order." Two-panel layout: customer panel (CSS phone + ghost CTA → `demo.stalliq.co.uk`) and kitchen panel (CSS phone with animated order cycling New → Confirmed → Ready on 11s loop, primary teal CTA → `demo.stalliq.co.uk/kitchen.html`, demo PIN `123456`). Mobile-responsive: panels stack vertically. ⚠️ Deploy pending — drag `stalliq-site/` onto Netlify Drop.
+- **Bug fix — desktop events not rendering** (`js/app.js`, both branches). Root cause: `renderEventsList` fired before sheet data loaded and was never called again post-load. Fix: added `renderEventsList(...)` call in the post-`Promise.all` block, after `renderMobileFindUs()`.
+- **Bug fix — kitchen.html `:root` flashing La Muletti colours on Street Stack** (`kitchen.html`, develop only). Fixed `:root` CSS vars to Street Stack teal values.
+- **Bug fix — Street Stack privacy.html showed La Muletti branding** (`privacy.html`, develop only). Completely rewritten for Street Stack palette and contact details.
+- **B2 done — Live Broadcast race condition fixed** (`js/kitchen.js`, both branches). Stale GPS resolves after `stopLocationBroadcast()` were overwriting `active: false`. Fix: `broadcastStopRequested` boolean flag set on stop, cleared on start, checked inside the GPS callback before any Firestore write.
+- **Feature — Staff role management** (`kitchen.html` + `js/kitchen.js`, both branches). `role: 'owner' | 'staff'` field in Firestore staff docs. Owners see all staff + add/edit/remove controls. Staff see own row only. Max 2 owners enforced in code + UI. Role set via Firebase Console at onboarding — no in-app promotion. `loggedInStaffRole` state variable + `sessionStorage` persistence. ⚠️ Julian must manually set `role: "owner"` on the Owner staff doc in both Firebase projects before demo.
+- **Firebase Auth fix** — `demo.stalliq.co.uk` added to authorised domains on `stalliq` dev project (manual, Julian). Phone auth was failing on Street Stack demo.
 
 ---
 
@@ -29,11 +43,9 @@ Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering p
 
 ## Pre-production backlog
 
-**B1 — stalliq.co.uk: Show kitchen dashboard more prominently**
-CSS phone mockups already show both customer and kitchen views in the demo section. Consider whether this needs to be more prominent or supplemented with a screen recording.
+~~**B1 — stalliq.co.uk: Show kitchen dashboard more prominently**~~ ✓ Done Session 32 — full two-panel demo section with animated kitchen card and both CTAs. See Session 32 below.
 
-**B2 — La Muletti: Live Broadcast re-enables itself (intermittent bug)**
-Kitchen "Live Broadcast" toggle was observed re-enabling itself after being turned off. Cannot reproduce. Suspected Firestore listener race condition in `kitchen.js` — check for any code path that writes `broadcasting: true` on snapshot receipt. Monitor.
+~~**B2 — La Muletti: Live Broadcast re-enables itself (intermittent bug)**~~ ✓ Fixed Session 32 — `broadcastStopRequested` flag prevents stale GPS resolves from overwriting the stop. Applied to both branches.
 
 **B3 — stalliq-site: Add to GitHub source control**
 `stalliq-site/index.html` is only deployed via Netlify Drop. Should be in a GitHub repo for version history and auto-deploy.
@@ -78,11 +90,13 @@ For naming consistency with `stalliq-production`. Firebase project rename does n
 
 ---
 
-## Branch divergence (intentional as of Session 30)
+## Branch divergence (intentional as of Session 30, updated Session 32)
 
 | | `develop` (Street Stack) | `main` (La Muletti) |
 |--|--|--|
-| `:root` CSS vars | Street Stack teal | La Muletti fire/gold/cream |
+| `:root` CSS vars | Street Stack teal (corrected Session 32) | La Muletti fire/gold/cream |
+| `kitchen.html` `:root` | Street Stack teal (fixed Session 32 — was flashing La Muletti colours) | La Muletti fire/gold/cream |
+| `privacy.html` | Street Stack branding (rewritten Session 32) | La Muletti branding |
 | Desktop card height | 180px | 220px |
 | Mobile card img height | 140px | 170px |
 | Mobile img position | `center center` | `center 60%` |
@@ -110,6 +124,16 @@ For naming consistency with `stalliq-production`. Firebase project rename does n
 **Firestore:** always use compat SDK pattern (`db.collection().doc().onSnapshot()`) — never modular destructuring.
 
 **Kitchen Firebase isolation:** `kitchen.js` uses a named app instance (`firebase.initializeApp(config, 'kitchen')`) → `kitchenAuth` + `kitchenDb`. App Check activated on both.
+
+**Firestore staff doc schema** (`vendors/{vendorId}/staff/{staffId}`):
+```
+name:      string
+pinHash:   string   (SHA-256 hex of PIN+salt)
+pinSalt:   string   (random hex — missing = '' for backward compat)
+active:    boolean
+createdAt: timestamp
+role:      string   ('owner' | 'staff') — added Session 32. Missing = treated as 'staff'. Max 2 owners. Set via Firebase Console at onboarding.
+```
 
 ---
 
@@ -167,7 +191,7 @@ All vendor images hosted on **Cloudinary** (account: `dqaotqmn8`).
 ## Production Firebase (stalliq-production)
 
 - **Firestore:** europe-west2, production mode rules deployed
-- **Auth:** Anonymous + Phone enabled. Authorised domain: `lamuletti-stalliq.netlify.app`
+- **Auth:** Anonymous + Phone enabled. Authorised domains: `lamuletti-stalliq.netlify.app`, `demo.stalliq.co.uk` (added Session 32)
 - **App Check:** reCAPTCHA v3 site key: `6LelNtksAAAAAPEoa2QCW0RDzB7FHMsTNwyDaq4t`, enforced on Firestore
 - **Vendor data:** `vendors/lamuletti` — kitchenStatus, ownerPhone, counters/daily, staff (Harry, Som, Owner), location/current
 - **Composite index:** `orders` → `customerId` ASC + `createdAt` ASC — created 2026-05-06 ✓
