@@ -1,5 +1,5 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-10 — Session 32
+> Last updated: 2026-05-10 — Session 33
 
 ## What is Stalliq?
 Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering platform for independent mobile street food vendors. La Muletti Pizza (Daniele + Danielle, Bletchley MK) is the launch customer, on a free Year 1 Founding Customer deal.
@@ -12,12 +12,15 @@ Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering p
 1. **Add composite index on `stalliq` dev Firebase project** — Firebase Console → stalliq project → Firestore → Indexes → Add: `orders` collection, `customerId` ASC + `createdAt` ASC. (Production index exists; dev index still missing.)
 2. ~~Add image links to Street Stack menu sheet~~ ✓ Done 2026-05-09
 3. **Wipe test data on stalliq-production** — Firebase Console: delete all docs in `orders` and `users` collections. Keep `vendors/{vendorId}/staff/` (staff PINs), `kitchenStatus`, `location`, `counters`.
-4. **James's stamp count** — manually set `users/{jamesUid}/stampCount` to 0 in stalliq-production Firebase Console (awarded incorrectly on a free pizza order).
+4. ~~James's stamp count~~ ✓ Done 2026-05-10 — `stampCount` set to 0 in stalliq-production.
 5. **ICO registration** — ico.org.uk, ~£40/year (Endoo Limited — required before collecting personal data in production).
 6. **Google Sheet header rows** — protect header rows on all three La Muletti sheets.
 7. ~~stalliq.co.uk demo tile~~ ✓ Fixed 2026-05-10 — full site rebuilt (see Session 31 below), links correctly to `https://demo.stalliq.co.uk`.
-8. ⚠️ **Set `role: "owner"`** on the Owner staff doc in both Firebase projects — `vendors/demo/staff/{ownerId}` (stalliq dev) and `vendors/lamuletti/staff/{ownerId}` (stalliq-production). Without this the owner sees the restricted Staff view in the kitchen.
-9. **Deploy stalliq-site** — drag `stalliq-site/` folder onto Netlify Drop to publish the B1 demo section rebuild.
+8. ~~Set `role: "owner"` on the Owner staff doc in both Firebase projects~~ ✓ Done 2026-05-10 — set on `vendors/demo/staff/{ownerId}` (stalliq dev) and `vendors/lamuletti/staff/{ownerId}` (stalliq-production).
+9. ~~Deploy stalliq-site~~ ✓ Done 2026-05-10 — `stalliq-site/` deployed to Netlify Drop.
+10. **Add `stalliq-site` to GitHub source control** — currently only deployed via Netlify Drop, no version history.
+11. **Generic code audit** ⚠️ High priority before scaling — audit `app.js`, `kitchen.js`, `index.html` (develop branch), and `css/styles.css` to remove hardcoded pizza/La Muletti references from the shared layer. All customer-specific text must flow through `CONFIG`. Do on a dedicated feature branch, test on both Street Stack (develop) and La Muletti (main) before merging. Do not rush — risky change.
+12. **Rename Firebase `stalliq` project → `stalliq-development`** — for naming consistency with `stalliq-production`. Firebase project rename does not change the Project ID so `js/firebase.js` on `develop` should be unaffected — verify before and after.
 
 ---
 
@@ -47,14 +50,6 @@ Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering p
 
 ~~**B2 — La Muletti: Live Broadcast re-enables itself (intermittent bug)**~~ ✓ Fixed Session 32 — `broadcastStopRequested` flag prevents stale GPS resolves from overwriting the stop. Applied to both branches.
 
-**B3 — stalliq-site: Add to GitHub source control**
-`stalliq-site/index.html` is only deployed via Netlify Drop. Should be in a GitHub repo for version history and auto-deploy.
-
-**B4 — Generic code audit ⚠️ High priority before scaling**
-Audit `app.js`, `kitchen.js`, `index.html` (develop branch), and `css/styles.css` to remove any hardcoded pizza/La Muletti references from the shared layer. All customer-specific text must flow through `CONFIG`. Do on a dedicated feature branch, test on both Street Stack (develop) and La Muletti (main) before merging. Do not rush — this is a risky change.
-
-**B5 — Rename Firebase `stalliq` project → `stalliq-development`**
-For naming consistency with `stalliq-production`. Firebase project rename does not change the Project ID so `js/firebase.js` on `develop` should be unaffected — verify before and after.
 
 ---
 
