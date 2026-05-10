@@ -622,6 +622,13 @@ function pushLocation() {
   return new Promise((resolve, reject) => {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
+        // Guard: if broadcast was stopped while GPS was resolving, discard the
+        // result rather than writing active:true and re-enabling the toggle.
+        if (!broadcastActive) {
+          console.log('[Stalliq] Broadcast stopped before GPS resolved — discarding stale position.');
+          resolve();
+          return;
+        }
         try {
           await kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
                   .collection('location').doc('current')
