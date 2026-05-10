@@ -1916,6 +1916,9 @@ document.addEventListener('DOMContentLoaded', async function () {
   renderMobileMenu();
   renderMobileFindUs();
 
+  // ── Desktop events re-render (sheet data now loaded) ────────────────────
+  renderEventsList('#d-popup-list, .d-popup-list', 'd-popup-card', 'd-popup-date', 'd-popup-day', 'd-popup-month', 'd-popup-event', 'd-popup-loc');
+
   // ── Footer ────────────────────────────────────────────────────────────────
   const footerLogo = document.querySelector('.d-footer-logo');
   if (footerLogo) {
