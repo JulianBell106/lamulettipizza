@@ -1,5 +1,8 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-10 — Session 33 (continued)
+> Last updated: 2026-05-10 — Session 34: Endoo branding added to stalliq-site. Netlify auto-deploy confirmed working.
+> **Next session — start here:**
+> - **Future session:** Add Stalliq product page to endoo.co.uk (under Products) — agreed with Julian 2026-05-10.
+> - Pre-demo manual actions still outstanding — see checklist below.
 
 ## What is Stalliq?
 Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering platform for independent mobile street food vendors. La Muletti Pizza (Daniele + Danielle, Bletchley MK) is the launch customer, on a free Year 1 Founding Customer deal.
@@ -21,6 +24,17 @@ Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering p
 10. ~~Add `stalliq-site` to GitHub source control~~ ✓ Done 2026-05-10 — repo at `JulianBell106/stalliq-site` (`Documents\Engineering\stalliq-site`), public, linked to Netlify for auto-deploy on push to `main`.
 11. **Generic code audit** ⚠️ High priority before scaling — audit `app.js`, `kitchen.js`, `index.html` (develop branch), and `css/styles.css` to remove hardcoded pizza/La Muletti references from the shared layer. All customer-specific text must flow through `CONFIG`. Do on a dedicated feature branch, test on both Street Stack (develop) and La Muletti (main) before merging. Do not rush — risky change.
 12. ~~Rename Firebase `stalliq` project → `stalliq-development`~~ ✓ Done 2026-05-10 — display name updated in Firebase Console. Project ID unchanged; `js/firebase.js` on `develop` unaffected.
+
+---
+
+## Session 34 — 2026-05-10
+
+- **Endoo branding added to `stalliq-site/index.html`** — two placements:
+  1. **Footer** — full-width ruled row below the copyright line: "A product of [Endoo logo] — Endoo Limited, registered in England & Wales". Logo links to `https://www.endoo.co.uk`.
+  2. **CTA section** — trust sentence below the demo buttons: "Stalliq is built and operated by [Endoo Limited](https://www.endoo.co.uk) — a UK technology company based in Milton Keynes."
+- **`endoo-logo.png` added to `stalliq-site/`** — resized from `Endoo_Logo_BestOf_110mm.png` (1299×434px) to 239×80px (13 KB), RGBA PNG. Displayed at 20px height via CSS. Cream/gold coloured logo on transparent background — renders correctly on the midnight dark background.
+- **Netlify auto-deploy confirmed working** — `stalliq-site` Netlify project now properly linked to `JulianBell106/stalliq-site` GitHub repo. Push to `main` → auto-deploys to `stalliq.co.uk`.
+- **Future session planned** — write a Stalliq product page for `endoo.co.uk` under Products to cross-reference from the Stalliq site.
 
 ---
 
