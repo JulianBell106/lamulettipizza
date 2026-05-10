@@ -1,18 +1,13 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-10 — Session 32: stalliq.co.uk demo section rebuilt (two-panel layout, animated kitchen card, both CTAs). Desktop events rendering bug fixed on both branches. kitchen.html `:root` flash on Street Stack fixed. Street Stack privacy.html rebranded. Live Broadcast race condition (B2) fixed with `broadcastStopRequested` flag on both branches. Staff role management (Owner/Staff) implemented on both branches — `role` field in Firestore, owner-only controls enforced in UI + code. demo.stalliq.co.uk added to Firebase Auth authorised domains (manual).
+> Last updated: 2026-05-10 — Session 33: FSA hygiene rating badge added to footer (both branches, CONFIG-driven, `CONFIG.fsa.rating`). stalliq-site moved to GitHub (`JulianBell106/stalliq-site`), linked to Netlify auto-deploy. Firebase `stalliq` display name → `stalliq-development`. James stamp count reset. Owner role set on both Firebase projects. stalliq-site deployed.
 > **Next session — start here:**
-> ⚠️ **Julian — manual actions before demo (~2026-05-15):**
-> 1. **Firebase: set `role: "owner"`** on the Owner staff doc in both Firebase projects — `vendors/demo/staff/{ownerId}` on stalliq dev, `vendors/lamuletti/staff/{ownerId}` on stalliq-production. Without this the owner sees the restricted Staff view in the kitchen.
-> 2. **Add composite index on `stalliq` dev project** — Firebase Console → stalliq → Firestore → Indexes → Add: `orders` collection, `customerId` ASC + `createdAt` ASC. (Production index exists; dev index still missing.)
-> 3. **Wipe test data on stalliq-production** — delete all docs in `orders` and `users` collections. Keep `vendors/{vendorId}/staff/`, `kitchenStatus`, `location`, `counters`.
-> 4. **James's stamp count** — set `users/{jamesUid}/stampCount` to 0 in stalliq-production Firebase Console.
-> 5. **ICO registration** — ico.org.uk, ~£40/year (required before collecting personal data in production).
-> 6. **Google Sheet header rows** — protect header rows on all three La Muletti sheets.
-> 7. **Deploy stalliq-site** — drag `stalliq-site/` folder onto Netlify Drop to publish the B1 demo section rebuild.
+> ⚠️ **Julian — manual actions still outstanding before demo (~2026-05-15):**
+> 1. **Add composite index on `stalliq-development` project** — Firebase Console → Firestore → Indexes → Add: `orders` collection, `customerId` ASC + `createdAt` ASC.
+> 2. **Wipe test data on stalliq-production** — delete all docs in `orders` and `users` collections. Keep `vendors/{vendorId}/staff/`, `kitchenStatus`, `location`, `counters`.
+> 3. **ICO registration** — ico.org.uk, ~£40/year (required before collecting personal data in production).
+> 4. **Google Sheet header rows** — protect header rows on all three La Muletti sheets.
 > **⚠️ Backlog:**
-> - B3: Add stalliq-site to GitHub source control (currently Netlify Drop only)
 > - B4: Generic code audit — remove hardcoded pizza/La Muletti refs from shared layer ⚠️ risky — do on feature branch
-> - B5: Rename Firebase `stalliq` project → `stalliq-development`
 > **Demo with Daniele ~2026-05-15.**
 > Read this file at the start of every session to get fully up to speed.
 
