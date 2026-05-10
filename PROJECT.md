@@ -1,5 +1,5 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-09 — Session 30
+> Last updated: 2026-05-10 — Session 31
 
 ## What is Stalliq?
 Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering platform for independent mobile street food vendors. La Muletti Pizza (Daniele + Danielle, Bletchley MK) is the launch customer, on a free Year 1 Founding Customer deal.
@@ -15,7 +15,34 @@ Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering p
 4. **James's stamp count** — manually set `users/{jamesUid}/stampCount` to 0 in stalliq-production Firebase Console (awarded incorrectly on a free pizza order).
 5. **ICO registration** — ico.org.uk, ~£40/year (Endoo Limited — required before collecting personal data in production).
 6. **Google Sheet header rows** — protect header rows on all three La Muletti sheets.
-7. **stalliq.co.uk demo tile** — update `stalliq-site/index.html` href from `stalliq-demo.netlify.app` to `https://demo.stalliq.co.uk`, drag `stalliq-site/` folder onto Netlify drop to redeploy.
+7. ~~stalliq.co.uk demo tile~~ ✓ Fixed 2026-05-10 — full site rebuilt (see Session 31 below), links correctly to `https://demo.stalliq.co.uk`.
+
+---
+
+## Session 31 — 2026-05-10
+
+- **stalliq-site rebuilt** — replaced "coming soon" splash with full marketing site: sticky nav, hero, proof bar, spotlight carousel (Flash Sales / WhatsApp Messaging / Geofence Loyalty with animated visuals), feature bento grid (hairline-separated cells, inline SVG icons — no emojis), CSS phone mockups (customer + kitchen views side by side), CTA, footer. Gradient section dividers throughout.
+- **ImprovMX email** — `hello@stalliq.co.uk` → `info@endoo.co.uk`, catch-all → `julian@endoo.co.uk`. MX + SPF records added to Netlify DNS. ✓ Working.
+- **stalliq-site not yet deployed or on GitHub** — drag `stalliq-site/` folder onto Netlify Drop to publish; see backlog B3 for source control.
+
+---
+
+## Pre-production backlog
+
+**B1 — stalliq.co.uk: Show kitchen dashboard more prominently**
+CSS phone mockups already show both customer and kitchen views in the demo section. Consider whether this needs to be more prominent or supplemented with a screen recording.
+
+**B2 — La Muletti: Live Broadcast re-enables itself (intermittent bug)**
+Kitchen "Live Broadcast" toggle was observed re-enabling itself after being turned off. Cannot reproduce. Suspected Firestore listener race condition in `kitchen.js` — check for any code path that writes `broadcasting: true` on snapshot receipt. Monitor.
+
+**B3 — stalliq-site: Add to GitHub source control**
+`stalliq-site/index.html` is only deployed via Netlify Drop. Should be in a GitHub repo for version history and auto-deploy.
+
+**B4 — Generic code audit ⚠️ High priority before scaling**
+Audit `app.js`, `kitchen.js`, `index.html` (develop branch), and `css/styles.css` to remove any hardcoded pizza/La Muletti references from the shared layer. All customer-specific text must flow through `CONFIG`. Do on a dedicated feature branch, test on both Street Stack (develop) and La Muletti (main) before merging. Do not rush — this is a risky change.
+
+**B5 — Rename Firebase `stalliq` project → `stalliq-development`**
+For naming consistency with `stalliq-production`. Firebase project rename does not change the Project ID so `js/firebase.js` on `develop` should be unaffected — verify before and after.
 
 ---
 
@@ -28,6 +55,7 @@ Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering p
 | `lamuletti-stalliq.netlify.app` | lamuletti | `main` | `stalliq-production` | La Muletti live system |
 
 **DNS:** stalliq.co.uk uses Netlify DNS. Nameservers: `dns1-4.p05.nsone.net` (set in HostPapa 2026-05-04).
+**Email:** ImprovMX handles `@stalliq.co.uk`. MX records in Netlify DNS. `hello@` → `info@endoo.co.uk`, `*@` → `julian@endoo.co.uk`. ✓ Working 2026-05-10.
 **Future vendors** will get `[vendor].stalliq.co.uk` subdomains — Netlify DNS makes this trivial.
 
 ---
