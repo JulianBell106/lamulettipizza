@@ -819,6 +819,19 @@ html { scroll-behavior: smooth; }
 .d-footer-logo { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 700; color: var(--cream); }
 .d-footer-logo span { color: var(--gold); font-style: italic; }
 .d-footer-copy { font-size: 12px; color: var(--text-muted); }
+/* ─── FSA BADGE ─── */
+.d-footer-fsa { display:flex; align-items:center; gap:10px; }
+.d-footer-fsa-score {
+  display:flex; align-items:center; justify-content:center;
+  width:36px; height:36px; border-radius:50%;
+  background:var(--gold); color:var(--dark);
+  font-size:18px; font-weight:800; font-family:'Playfair Display',serif;
+  flex-shrink:0;
+}
+.d-footer-fsa-text { display:flex; flex-direction:column; gap:1px; }
+.d-footer-fsa-label { font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; }
+.d-footer-fsa-verdict { font-size:12px; color:var(--cream); font-weight:600; }
+
 
 /* ─── ANIMATIONS ─── */
 @keyframes fadeUp {
@@ -1445,8 +1458,24 @@ html { scroll-behavior: smooth; }
   <!-- FOOTER -->
   <footer class="d-footer">
     <div class="d-footer-logo">La <span>Muletti</span> Pizza</div>
+    <div id="d-footer-fsa"></div>
     <div class="d-footer-copy">© 2025 La Muletti Pizza · Milton Keynes · hello@lamulettipizza.co.uk · <a href="privacy.html" style="color:var(--gold);text-decoration:underline;text-underline-offset:2px;">Privacy policy</a></div>
   </footer>
+  <script>
+  (function() {
+    var fsaLabels = ['Urgent Improvement Required','Major Improvement Required','Improvement Necessary','Generally Satisfactory','Good','Very Good'];
+    var r = (typeof CONFIG !== 'undefined' && CONFIG.fsa && CONFIG.fsa.rating != null) ? CONFIG.fsa.rating : null;
+    if (r === null) return;
+    var el = document.getElementById('d-footer-fsa');
+    if (!el) return;
+    el.className = 'd-footer-fsa';
+    el.innerHTML = '<div class="d-footer-fsa-score">' + r + '</div>'
+      + '<div class="d-footer-fsa-text">'
+      + '<span class="d-footer-fsa-label">Food Hygiene Rating</span>'
+      + '<span class="d-footer-fsa-verdict">' + (fsaLabels[r] || '') + '</span>'
+      + '</div>';
+  })();
+  </script>
 
 </div><!-- /desktop-site -->
 
