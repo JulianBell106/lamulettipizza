@@ -91,6 +91,7 @@ let walkinNotes = {};  // { menuItemId: noteText } — Session 13
 // Multi-staff PIN state (Session 15)
 let loggedInStaffId   = null;  // Firestore doc ID of the logged-in staff member
 let loggedInStaffName = null;  // Display name of the logged-in staff member
+let loggedInStaffRole = null;  // 'owner' or 'staff' — controls settings permissions
 let failedPinAttempts = 0;     // Failed attempts this session (persisted in sessionStorage)
 let pinLockedUntil    = null;  // Timestamp (ms) — null if not locked
 let pinLockTimer      = null;  // setInterval handle for lockout countdown display
@@ -294,11 +295,13 @@ async function checkPinMultiStaff() {
       sessionStorage.removeItem('pinLockUntil');
       loggedInStaffId   = match.id;
       loggedInStaffName = match.name;
+      loggedInStaffRole = match.role || 'staff';
 
       // Persist session so a reload (triggered by screen-lock recovery) can
       // restore the dashboard without requiring the PIN again.
       sessionStorage.setItem('kitchenStaffId',   loggedInStaffId);
       sessionStorage.setItem('kitchenStaffName', loggedInStaffName);
+      sessionStorage.setItem('kitchenStaffRole', loggedInStaffRole);
 
       document.getElementById('pin-overlay').classList.add('hidden');
       const dashboard = document.getElementById('k-dashboard');
@@ -1255,6 +1258,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (user) {
         loggedInStaffId   = savedStaffId;
         loggedInStaffName = savedStaffName;
+        loggedInStaffRole = sessionStorage.getItem('kitchenStaffRole') || 'staff';
         document.getElementById('pin-overlay').classList.add('hidden');
         const dashboard = document.getElementById('k-dashboard');
         if (dashboard) dashboard.style.display = 'flex';
@@ -1547,6 +1551,8 @@ async function logoutStaff() {
   // Clear staff state
   loggedInStaffId   = null;
   loggedInStaffName = null;
+  loggedInStaffRole = null;
+  sessionStorage.removeItem('kitchenStaffRole');
   currentOrders     = {};
 
   // Hide dashboard, show PIN screen
@@ -1662,7 +1668,6 @@ async function loadStaffList() {
                             .where('active', '==', true)
                             .get();
 
-  // Sort by createdAt client-side (avoids needing a composite Firestore index)
   const staffDocs = [];
   snapshot.forEach(doc => staffDocs.push({ id: doc.id, ...doc.data() }));
   staffDocs.sort((a, b) => {
@@ -1671,27 +1676,45 @@ async function loadStaffList() {
     return aT - bT;
   });
 
-  const listEl = document.getElementById('staff-list');
+  const listEl    = document.getElementById('staff-list');
+  const titleEl   = document.getElementById('staff-list-title');
+  const subEl     = document.getElementById('staff-list-sub');
+  const addWrapEl = document.getElementById('staff-add-wrap');
   if (!listEl) return;
 
-  if (staffDocs.length === 0) {
-    listEl.innerHTML = `<div class="staff-empty">No staff members yet — add one below.</div>`;
+  const isOwner    = loggedInStaffRole === 'owner';
+  const ownerCount = staffDocs.filter(d => (d.role || 'staff') === 'owner').length;
+
+  if (titleEl) titleEl.textContent = isOwner ? 'Staff Members' : 'Your Account';
+  if (subEl)   subEl.textContent   = isOwner
+    ? 'Everyone who can access the kitchen dashboard.'
+    : 'You can change your name and PIN below.';
+  if (addWrapEl) addWrapEl.style.display = isOwner ? '' : 'none';
+
+  const visibleDocs = isOwner ? staffDocs : staffDocs.filter(d => d.id === loggedInStaffId);
+
+  if (visibleDocs.length === 0) {
+    listEl.innerHTML = `<div class="staff-empty">No staff members yet.</div>`;
     return;
   }
 
-  listEl.innerHTML = staffDocs.map(d => {
-    const isSelf = d.id === loggedInStaffId;
-    const safeName = d.name.replace(/'/g, "\\'");
+  listEl.innerHTML = visibleDocs.map(d => {
+    const isSelf     = d.id === loggedInStaffId;
+    const isOwnerRow = (d.role || 'staff') === 'owner';
+    const safeName   = d.name.replace(/'/g, "\\'");
+    const safeRole   = isOwnerRow ? 'owner' : 'staff';
+    const canRemove  = isOwner && !isSelf && !(isOwnerRow && ownerCount <= 1);
     return `
       <div class="staff-row${isSelf ? ' staff-row-self' : ''}">
         <div class="staff-row-name">
           ${d.name}
+          ${isOwnerRow ? '<span class="staff-owner-badge">Owner</span>' : ''}
           ${isSelf ? '<span class="staff-you-badge">You</span>' : ''}
         </div>
         <div class="staff-row-actions">
           <button class="staff-action-btn" onclick="openEditStaff('${d.id}', '${safeName}')">Edit</button>
-          ${!isSelf
-            ? `<button class="staff-action-btn danger" onclick="deactivateStaff('${d.id}', '${safeName}')">Remove</button>`
+          ${canRemove
+            ? `<button class="staff-action-btn danger" onclick="deactivateStaff('${d.id}', '${safeName}', '${safeRole}')">Remove</button>`
             : ''}
         </div>
       </div>`;
@@ -1700,7 +1723,15 @@ async function loadStaffList() {
 
 // ── Deactivate staff ─────────────────────────────────────────────────────────
 
-async function deactivateStaff(staffId, name) {
+async function deactivateStaff(staffId, name, role) {
+  if (loggedInStaffRole !== 'owner') { showToast('Only owners can remove staff.'); return; }
+  if ((role || 'staff') === 'owner') {
+    const ownerSnap = await kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
+                              .collection('staff')
+                              .where('active', '==', true)
+                              .where('role', '==', 'owner').get();
+    if (ownerSnap.size <= 1) { showToast('Cannot remove the only owner.'); return; }
+  }
   if (!confirm(`Remove ${name} from the kitchen? They will no longer be able to log in.`)) return;
   try {
     await kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
@@ -1723,6 +1754,23 @@ function openAddStaff() {
   });
   const errEl = document.getElementById('add-staff-error');
   if (errEl) errEl.textContent = '';
+
+  const roleWrap = document.getElementById('add-staff-role-wrap');
+  const roleEl   = document.getElementById('add-staff-role');
+  const noteEl   = document.getElementById('add-owner-limit-note');
+  if (roleWrap) roleWrap.style.display = loggedInStaffRole === 'owner' ? '' : 'none';
+  if (roleEl)   roleEl.value = 'staff';
+  if (loggedInStaffRole === 'owner' && roleEl) {
+    kitchenDb.collection('vendors').doc(CONFIG.vendor.id).collection('staff')
+      .where('active', '==', true).where('role', '==', 'owner').get()
+      .then(snap => {
+        const atLimit = snap.size >= 2;
+        const ownerOpt = roleEl.querySelector('option[value="owner"]');
+        if (ownerOpt) ownerOpt.disabled = atLimit;
+        if (noteEl)   noteEl.textContent = atLimit ? 'Maximum 2 owners already set.' : '';
+      }).catch(() => {});
+  }
+
   showStaffScreen('staff-add-screen');
   setTimeout(() => { const el = document.getElementById('add-staff-name'); if (el) el.focus(); }, 200);
 }
@@ -1732,7 +1780,7 @@ async function submitAddStaff() {
   const pinEl  = document.getElementById('add-staff-pin');
   const pin2El = document.getElementById('add-staff-pin2');
   const errEl  = document.getElementById('add-staff-error');
-  const btn    = document.getElementById('add-staff-btn');
+  const btn    = document.getElementById('add-staff-save-btn');
 
   const name = (nameEl?.value || '').trim();
   const pin  = (pinEl?.value  || '').trim();
@@ -1747,11 +1795,25 @@ async function submitAddStaff() {
   try {
     const pinSalt = generateSalt();
     const pinHash = await hashPin(pin, pinSalt);
+    const roleEl2  = document.getElementById('add-staff-role');
+    const newRole  = (loggedInStaffRole === 'owner' && roleEl2) ? (roleEl2.value || 'staff') : 'staff';
+    if (newRole === 'owner') {
+      const ownerSnap = await kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
+                                .collection('staff')
+                                .where('active', '==', true)
+                                .where('role', '==', 'owner').get();
+      if (ownerSnap.size >= 2) {
+        if (errEl) errEl.textContent = 'Maximum 2 owners allowed.';
+        if (btn) { btn.textContent = 'Save'; btn.disabled = false; }
+        return;
+      }
+    }
     await kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
             .collection('staff').add({
               name,
               pinHash,
               pinSalt,
+              role:      newRole,
               active:    true,
               createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             });
@@ -1769,6 +1831,10 @@ async function submitAddStaff() {
 // ── Edit staff (rename / change PIN) ─────────────────────────────────────────
 
 function openEditStaff(staffId, name) {
+  if (loggedInStaffRole !== 'owner' && staffId !== loggedInStaffId) {
+    showToast('You can only edit your own account.');
+    return;
+  }
   editingStaffId = staffId;
   const nameEl = document.getElementById('edit-staff-name');
   if (nameEl) nameEl.value = name;
