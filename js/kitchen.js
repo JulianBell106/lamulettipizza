@@ -75,6 +75,7 @@ let ordersUnsubscribe = null;
 // Location broadcast state (Session 14)
 let broadcastActive     = false;
 let broadcastIntervalId = null;
+let broadcastStopRequested = false; // guards against stale GPS writes after stop
 
 // Audio state — shared AudioContext unlocked on PIN entry (iOS requires gesture)
 let kitchenAudioCtx      = null;
@@ -585,6 +586,7 @@ async function toggleBroadcast() {
  * and broadcast does NOT start — Firestore state remains inactive.
  */
 async function startLocationBroadcast() {
+  broadcastStopRequested = false; // clear any previous stop before new GPS call
   if (!navigator.geolocation) {
     showToast('Location is not available on this device.', 4000);
     return;
@@ -622,6 +624,13 @@ function pushLocation() {
   return new Promise((resolve, reject) => {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
+        // Guard: if stop was requested while GPS was resolving, discard the
+        // result rather than writing active:true and re-enabling the toggle.
+        if (broadcastStopRequested) {
+          console.log('[Stalliq] Broadcast stopped before GPS resolved — discarding stale position.');
+          resolve();
+          return;
+        }
         try {
           await kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
                   .collection('location').doc('current')
@@ -657,6 +666,7 @@ function pushLocation() {
  *   2. Writes active:false to Firestore so the customer app removes the map
  */
 async function stopLocationBroadcast() {
+  broadcastStopRequested = true; // signal any in-flight GPS call to discard its result
   if (broadcastIntervalId) {
     clearInterval(broadcastIntervalId);
     broadcastIntervalId = null;
