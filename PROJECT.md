@@ -1,5 +1,5 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-10 — Session 33
+> Last updated: 2026-05-10 — Session 33 (continued)
 
 ## What is Stalliq?
 Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering platform for independent mobile street food vendors. La Muletti Pizza (Daniele + Danielle, Bletchley MK) is the launch customer, on a free Year 1 Founding Customer deal.
@@ -21,6 +21,14 @@ Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering p
 10. ~~Add `stalliq-site` to GitHub source control~~ ✓ Done 2026-05-10 — repo at `JulianBell106/stalliq-site` (`Documents\Engineering\stalliq-site`), public, linked to Netlify for auto-deploy on push to `main`.
 11. **Generic code audit** ⚠️ High priority before scaling — audit `app.js`, `kitchen.js`, `index.html` (develop branch), and `css/styles.css` to remove hardcoded pizza/La Muletti references from the shared layer. All customer-specific text must flow through `CONFIG`. Do on a dedicated feature branch, test on both Street Stack (develop) and La Muletti (main) before merging. Do not rush — risky change.
 12. ~~Rename Firebase `stalliq` project → `stalliq-development`~~ ✓ Done 2026-05-10 — display name updated in Firebase Console. Project ID unchanged; `js/firebase.js` on `develop` unaffected.
+
+---
+
+## Session 33 — 2026-05-10 (continued)
+
+- **Feature — FSA Food Hygiene Rating badge** (`index.html` + `js/config.js`, both branches). Gold circle showing rating score + "Very Good" label renders in the desktop footer. CONFIG-driven: `CONFIG.fsa.rating` (0–5 or `null` to hide). Script placed after `config.js` loads to avoid timing issue. Font: DM Sans on the score numeral. La Muletti: `rating: 5`. Street Stack demo: `rating: 5` (for demo purposes). ⚠️ develop `config.js` had null bytes — stripped on write.
+- **Backlog done — stalliq-site to GitHub** (`JulianBell106/stalliq-site`, public). Moved to `Documents\Engineering\stalliq-site`. Linked to Netlify for auto-deploy on push to `main`. Old `stalliq-site/` folder inside La Muletti to be deleted manually.
+- **Firebase rename** — `stalliq` project display name → `stalliq-development`. Project ID unchanged.
 
 ---
 
