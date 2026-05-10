@@ -1459,21 +1459,6 @@ html { scroll-behavior: smooth; }
     <div id="d-footer-fsa"></div>
     <div class="d-footer-copy">© 2025 La Muletti Pizza · Milton Keynes · hello@lamulettipizza.co.uk · <a href="privacy.html" style="color:var(--gold);text-decoration:underline;text-underline-offset:2px;">Privacy policy</a></div>
   </footer>
-  <script>
-  (function() {
-    var fsaLabels = ['Urgent Improvement Required','Major Improvement Required','Improvement Necessary','Generally Satisfactory','Good','Very Good'];
-    var r = (typeof CONFIG !== 'undefined' && CONFIG.fsa && CONFIG.fsa.rating != null) ? CONFIG.fsa.rating : null;
-    if (r === null) return;
-    var el = document.getElementById('d-footer-fsa');
-    if (!el) return;
-    el.className = 'd-footer-fsa';
-    el.innerHTML = '<div class="d-footer-fsa-score">' + r + '</div>'
-      + '<div class="d-footer-fsa-text">'
-      + '<span class="d-footer-fsa-label">Food Hygiene Rating</span>'
-      + '<span class="d-footer-fsa-verdict">' + (fsaLabels[r] || '') + '</span>'
-      + '</div>';
-  })();
-  </script>
 
 </div><!-- /desktop-site -->
 
@@ -1814,6 +1799,21 @@ html { scroll-behavior: smooth; }
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="js/config.js"></script>
+  <script>
+  (function() {
+    var fsaLabels = ['Urgent Improvement Required','Major Improvement Required','Improvement Necessary','Generally Satisfactory','Good','Very Good'];
+    var r = (typeof CONFIG !== 'undefined' && CONFIG.fsa && CONFIG.fsa.rating != null) ? CONFIG.fsa.rating : null;
+    if (r === null) return;
+    var el = document.getElementById('d-footer-fsa');
+    if (!el) return;
+    el.className = 'd-footer-fsa';
+    el.innerHTML = '<div class="d-footer-fsa-score">' + r + '</div>'
+      + '<div class="d-footer-fsa-text">'
+      + '<span class="d-footer-fsa-label">Food Hygiene Rating</span>'
+      + '<span class="d-footer-fsa-verdict">' + (fsaLabels[r] || '') + '</span>'
+      + '</div>';
+  })();
+  </script>
 <script src="js/firebase.js"></script>
 <script src="js/app.js"></script>
 
