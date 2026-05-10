@@ -239,6 +239,19 @@ const CONFIG = {
     allowCustomWait: true,
   },
 
+
+  /* --------------------------------------------------------------------------
+     FSA FOOD HYGIENE RATING
+     Set rating to 0-5 to show the badge in the footer.
+     Set to null to hide entirely (e.g. for vendors awaiting inspection).
+     5 = Very Good, 4 = Good, 3 = Generally Satisfactory,
+     2 = Improvement Necessary, 1 = Major Improvement Required,
+     0 = Urgent Improvement Required
+  -------------------------------------------------------------------------- */
+  fsa: {
+    rating: 5,
+  },
+
   /* --------------------------------------------------------------------------
      SEO / META
   -------------------------------------------------------------------------- */
