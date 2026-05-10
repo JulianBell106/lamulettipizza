@@ -18,7 +18,7 @@ Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering p
 7. ~~stalliq.co.uk demo tile~~ ✓ Fixed 2026-05-10 — full site rebuilt (see Session 31 below), links correctly to `https://demo.stalliq.co.uk`.
 8. ~~Set `role: "owner"` on the Owner staff doc in both Firebase projects~~ ✓ Done 2026-05-10 — set on `vendors/demo/staff/{ownerId}` (stalliq dev) and `vendors/lamuletti/staff/{ownerId}` (stalliq-production).
 9. ~~Deploy stalliq-site~~ ✓ Done 2026-05-10 — `stalliq-site/` deployed to Netlify Drop.
-10. **Add `stalliq-site` to GitHub source control** — currently only deployed via Netlify Drop, no version history.
+10. ~~Add `stalliq-site` to GitHub source control~~ ✓ Done 2026-05-10 — repo at `JulianBell106/stalliq-site` (`Documents\Engineering\stalliq-site`), public, linked to Netlify for auto-deploy on push to `main`.
 11. **Generic code audit** ⚠️ High priority before scaling — audit `app.js`, `kitchen.js`, `index.html` (develop branch), and `css/styles.css` to remove hardcoded pizza/La Muletti references from the shared layer. All customer-specific text must flow through `CONFIG`. Do on a dedicated feature branch, test on both Street Stack (develop) and La Muletti (main) before merging. Do not rush — risky change.
 12. **Rename Firebase `stalliq` project → `stalliq-development`** — for naming consistency with `stalliq-production`. Firebase project rename does not change the Project ID so `js/firebase.js` on `develop` should be unaffected — verify before and after.
 
