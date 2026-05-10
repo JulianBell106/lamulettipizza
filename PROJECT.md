@@ -1,15 +1,19 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-05 — Session 27: stalliq.co.uk confirmed live. demo.stalliq.co.uk added in Netlify (Netlify DNS — instant). HTTPS enforced on stalliq-demo site. MFA enabled on julian@endoo.co.uk. Street Stack fake vendor branding with Stalliq teal colours committed to develop — demo.stalliq.co.uk now shows generic demo, not La Muletti. .gitattributes confirmed on both branches. merge=ours driver registered in .git/config (was missing — caused bad merge incident this session; now fixed). Hardcoded pizza refs in app.js replaced with CONFIG.business.stampIcon / type. stampIcon field added to Street Stack config.
+> Last updated: 2026-05-10 — Session 32: stalliq.co.uk demo section rebuilt (two-panel layout, animated kitchen card, both CTAs). Desktop events rendering bug fixed on both branches. kitchen.html `:root` flash on Street Stack fixed. Street Stack privacy.html rebranded. Live Broadcast race condition (B2) fixed with `broadcastStopRequested` flag on both branches. Staff role management (Owner/Staff) implemented on both branches — `role` field in Firestore, owner-only controls enforced in UI + code. demo.stalliq.co.uk added to Firebase Auth authorised domains (manual).
 > **Next session — start here:**
-> ⚠️ 1. **Fix auth/billing-not-enabled on lamuletti-stalliq.netlify.app** — Phone Auth broken after today's merges. Site loads and sheets work; only SMS sign-in fails. Check firebase.js API key on main matches stalliq-production in Firebase Console (key ends `zuHI` per console error). May need Netlify clear-cache redeploy.
-> ⚠️ 2. **Add stampIcon: '🍕' to La Muletti config on main** — app.js now reads CONFIG.business.stampIcon for stamp card; main's config.js doesn't have it yet so falls back to ⭐. Switch to main, add field, commit.
-> 3. **Clear Street Stack order history** — Firebase Console → stalliq (dev) project → Firestore → delete all docs in `orders` and `users` collections.
-> 4. **Fix Street Stack kitchen login** — kitchen.html PIN login not working on stalliq-demo. Investigate.
-> 5. **Add demo.stalliq.co.uk link to stalliq.co.uk** — coming soon page needs a live "Try the demo" link to demo.stalliq.co.uk.
-> 6. Demo prep for Daniele (~2026-05-15). PWA install landing page (QR → install flow), any final UX polish.
+> ⚠️ **Julian — manual actions before demo (~2026-05-15):**
+> 1. **Firebase: set `role: "owner"`** on the Owner staff doc in both Firebase projects — `vendors/demo/staff/{ownerId}` on stalliq dev, `vendors/lamuletti/staff/{ownerId}` on stalliq-production. Without this the owner sees the restricted Staff view in the kitchen.
+> 2. **Add composite index on `stalliq` dev project** — Firebase Console → stalliq → Firestore → Indexes → Add: `orders` collection, `customerId` ASC + `createdAt` ASC. (Production index exists; dev index still missing.)
+> 3. **Wipe test data on stalliq-production** — delete all docs in `orders` and `users` collections. Keep `vendors/{vendorId}/staff/`, `kitchenStatus`, `location`, `counters`.
+> 4. **James's stamp count** — set `users/{jamesUid}/stampCount` to 0 in stalliq-production Firebase Console.
+> 5. **ICO registration** — ico.org.uk, ~£40/year (required before collecting personal data in production).
+> 6. **Google Sheet header rows** — protect header rows on all three La Muletti sheets.
+> 7. **Deploy stalliq-site** — drag `stalliq-site/` folder onto Netlify Drop to publish the B1 demo section rebuild.
+> **⚠️ Backlog:**
+> - B3: Add stalliq-site to GitHub source control (currently Netlify Drop only)
+> - B4: Generic code audit — remove hardcoded pizza/La Muletti refs from shared layer ⚠️ risky — do on feature branch
+> - B5: Rename Firebase `stalliq` project → `stalliq-development`
 > **Demo with Daniele ~2026-05-15.**
-> **⚠️ Manual data fix needed:** James's stamp count in Firestore is currently 1 (awarded incorrectly on the free pizza order). Set `users/{jamesUid}/stampCount` to 0 in **stalliq-production** Firebase Console.
-> **Pending (Julian):** ICO registration (ico.org.uk, ~£40/year) · Google Sheet header row protection · **Update offers sheet** to match Section 29 schema — especially set `stamps_required = 8` · Wipe test data before go-live (delete all docs in `orders` and `users` in **stalliq-production** — keep staff PINs, kitchenStatus, location, counters) · After go-live: click composite index link in browser console on first customer sign-in.
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -273,12 +277,13 @@ vendors/{vendorId}/
     accuracy:  number
     updatedAt: timestamp
 
-  staff/{staffId} → (Session 15 — multi-staff PIN)
+  staff/{staffId} → (Session 15 — multi-staff PIN; role added Session 32)
     name:      string
     pinHash:   string  (SHA-256 hex of PIN+salt — never store plaintext)
     pinSalt:   string  (random hex salt — added Session 16a, backward compat: missing = empty string)
     active:    boolean
     createdAt: timestamp
+    role:      string  ('owner' | 'staff') — set via Firebase Console at onboarding. Missing = treated as 'staff'. Max 2 owners enforced in code.
 
 orders/{orderId}/
   vendorId, orderRef, source, customerId, customerName, customerPhone,
@@ -530,11 +535,12 @@ Before the "Forgot all PINs?" reset flow will work, Julian must manually set the
 
 ---
 
-## 25. Multi-Staff Kitchen PIN — Spec (Session 15)
+## 25. Multi-Staff Kitchen PIN — Spec (Session 15, updated Session 32)
 
-**Decision:** Different identities, same access level. All staff PINs unlock the full kitchen dashboard. No role tiers at this stage.
+**Decision (original):** Different identities, same access level. All staff PINs unlock the full kitchen dashboard. No role tiers at this stage.
+**⚠️ Superseded by Session 32:** Role tiers are now implemented — see Section 37 below.
 
-**Firestore location:** `vendors/{vendorId}/staff/{staffId}` → `{ name, pinHash, active, createdAt }`
+**Firestore location:** `vendors/{vendorId}/staff/{staffId}` → `{ name, pinHash, pinSalt, active, createdAt, role }`
 
 **PIN storage:** SHA-256 hex hash of the raw PIN — never store plaintext. Hash is computed client-side before writing and before comparison.
 
@@ -1064,3 +1070,154 @@ Items `<div>` was never closed before the totals section. Two duplicate `k-detai
 ### Key rule established
 
 **CSS vars must be used in all JS inline styles** — never hardcode hex values that exist as theme tokens. CSS custom properties resolve correctly inside `style.cssText` strings.
+
+---
+
+## 37. Session 32 — Demo Polish + Role Management (COMPLETE ✅ 2026-05-10)
+
+**Files changed:** `stalliq-site/index.html`, `js/app.js` (both branches), `kitchen.html` (both branches), `js/kitchen.js` (both branches), `privacy.html` (develop branch)
+
+---
+
+### B1 — stalliq.co.uk Demo Section Rebuild ✅
+
+**`stalliq-site/index.html`** — Section title changed to "See both sides of every order." Old layout (two small phone mockups, one CTA) replaced with a two-panel layout:
+
+| Panel | Content |
+|-------|---------|
+| Left — Customer | `phone-lg` (188×370px) CSS mockup showing the customer ordering UI |
+| Right — Kitchen | `phone-lg` CSS mockup with animated live order card cycling through New → Confirmed → Ready on an 11-second loop, plus two action buttons |
+
+Each panel has its own eyebrow, title, description, and CTA:
+- Customer panel: "Try customer view →" (ghost button, links to `demo.stalliq.co.uk`)
+- Kitchen panel: "Try kitchen view →" (primary teal button, links to `demo.stalliq.co.uk/kitchen.html`) + "Demo PIN: **123456**" label
+
+**Key CSS added:** `.demo-panels`, `.demo-panel`, `.dp-eyebrow`, `.dp-title`, `.dp-desc`, `.dp-cta`, `.dp-pin`, `.kd-card-live`, `.kd-btn-group`, `.kd-btns-a`
+
+**Keyframes:** `kd-enter`, `kd-st-new`, `kd-st-conf`, `kd-st-ready`, `kd-confirm-pulse`, `kd-badge-bump`
+
+**Mobile:** `demo-panels` stacks vertically, `demo-panel` max-width 200px.
+
+**⚠️ Deploy pending:** drag `stalliq-site/` folder onto Netlify Drop to publish.
+
+---
+
+### Bug fix — Desktop events not rendering (both branches) ✅
+
+**Root cause:** `renderDesktopContact()` (which contains `renderEventsList`) fires before Google Sheets data loads. The post-`Promise.all` block only called `renderMobileMenu()` and `renderMobileFindUs()` — not the desktop events equivalent. So events loaded into memory but the desktop list never re-rendered.
+
+**Fix in `js/app.js`** — added after `renderMobileFindUs()` in the post-sheet block:
+```javascript
+// ── Desktop events re-render (sheet data now loaded) ─────────────────────
+renderEventsList('#d-popup-list, .d-popup-list', 'd-popup-card', 'd-popup-date', 'd-popup-day', 'd-popup-month', 'd-popup-event', 'd-popup-loc');
+```
+Applied to both `develop` and `main` branches.
+
+---
+
+### Bug fix — kitchen.html `:root` flash of La Muletti colours on Street Stack (develop) ✅
+
+**Root cause:** `kitchen.html` on `develop` had La Muletti hardcoded CSS vars in `:root`. Browser briefly applied them before the Street Stack teal palette loaded from the JS bootstrap.
+
+**Fix in `kitchen.html` (develop only):** `:root` CSS vars replaced with Street Stack teal values:
+```css
+:root {
+  --fire:  #14B8A6;  --ember: #0D9488;  --gold:  #2DD4BF;
+  --dark:  #0B1221;  --char:  #111E35;  --cream: #F0FDFA;  --ash:   #5B8E8A;
+}
+```
+
+---
+
+### Bug fix — Street Stack privacy.html showing La Muletti branding (develop) ✅
+
+`privacy.html` on `develop` was an unmodified copy of the La Muletti branded privacy page. Completely rewritten for Street Stack: teal palette, Inter font, `hello@streetstack.co.uk`, `07700 900123`, "© 2026 Street Stack · Milton Keynes".
+
+---
+
+### B2 — Live Broadcast Race Condition Fix (both branches) ✅
+
+**Root cause:** `getCurrentPosition()` is async and can resolve after `stopLocationBroadcast()` has already written `active: false` to Firestore. The GPS resolve callback was unconditionally writing `active: true` — overwriting the stop, triggering the Firestore listener to re-enable the Broadcast button.
+
+Initial fix used `if (!broadcastActive)` guard inside `pushLocation()`, but this also prevented re-enabling the broadcast (because `broadcastActive` is only set `true` by the Firestore listener, which fires *after* the first write — so GPS resolves while `broadcastActive` is still `false`).
+
+**Final fix in `js/kitchen.js`** — new dedicated flag:
+
+```javascript
+let broadcastStopRequested = false;
+
+// startLocationBroadcast():
+broadcastStopRequested = false;
+
+// stopLocationBroadcast():
+broadcastStopRequested = true;
+
+// pushLocation(), inside GPS callback, before Firestore write:
+if (broadcastStopRequested) {
+  console.log('[Stalliq] Broadcast stopped before GPS resolved — discarding stale position.');
+  resolve();
+  return;
+}
+```
+Applied to both `develop` and `main` branches.
+
+---
+
+### Feature — Staff Role Management (both branches) ✅
+
+**Problem:** All kitchen staff had identical access. Any staff member could add/remove/edit other staff — a security flaw especially with the Street Stack demo being publicly accessible.
+
+**Solution:** Minimal role system — `role: 'owner'` or `role: 'staff'` stored in Firestore staff docs. Max 2 owners. Role is set via Firebase Console at onboarding — no in-app promotion flow.
+
+**Permission model:**
+
+| Action | Owner | Staff |
+|--------|-------|-------|
+| View staff list | All staff | Own row only |
+| Add new staff | ✅ | ❌ |
+| Edit any staff PIN/name | ✅ | ❌ |
+| Edit own PIN/name | ✅ | ✅ |
+| Remove staff | ✅ | ❌ |
+| Remove last owner | ❌ | ❌ |
+
+**`kitchen.html` changes (both branches):**
+- `.staff-owner-badge` CSS (red/fire pill, same style as `.staff-you-badge`)
+- `.staff-role-select` CSS (styled select element for role picker in add-staff screen)
+- IDs: `staff-list-title`, `staff-list-sub`, `staff-add-wrap`, `staff-add-btn`
+- `add-staff-btn` renamed to `add-staff-save-btn`
+- Role selector added to add-staff screen:
+  - Staff option: "Staff — can log in and change own PIN"
+  - Owner option: "Owner — can manage all staff"
+  - Helper note (owner limit warning shown dynamically)
+
+**`js/kitchen.js` changes (both branches):**
+
+1. `let loggedInStaffRole = null;` — new state variable
+2. On PIN login success: `loggedInStaffRole = match.role || 'staff';` + stored in `sessionStorage`
+3. Session restore: read `kitchenStaffRole` from `sessionStorage`
+4. Logout: clears `loggedInStaffRole` + removes from `sessionStorage`
+5. `loadStaffList()` fully rewritten — owners see all staff + add/edit/remove controls; staff see own row only; title/sub/add-button toggled by role; `canRemove` check prevents last-owner deletion
+6. `deactivateStaff()` — owner-only guard + last-owner Firestore query check
+7. `openEditStaff()` — guard: owner OR own row
+8. `openAddStaff()` — shows/hides role selector, checks 2-owner limit dynamically
+9. `submitAddStaff()` — reads role from selector, server-side 2-owner count before write, stores `role` field in Firestore
+10. Button ID `add-staff-btn` → `add-staff-save-btn` reference corrected
+
+**⚠️ Julian must set `role: "owner"` manually in Firebase Console** on the Owner staff doc in both Firebase projects before the demo. Without this, the owner sees the restricted Staff view.
+
+---
+
+### Firebase Auth fix — demo.stalliq.co.uk not in authorised domains ✅
+
+Phone auth was failing on Street Stack demo with "Could not send code." Root cause: `demo.stalliq.co.uk` was not in the `stalliq` Firebase project's authorised domains list.
+
+**Fix (manual — Julian):** Firebase Console → `stalliq` project → Authentication → Settings → Authorised domains → added `demo.stalliq.co.uk`. No code change required.
+
+---
+
+### Key rules reinforced this session
+
+- **CRLF on all repo files (Windows):** Python patch scripts must use actual `"\r\n"` — NOT raw strings where `\r\n` becomes literal backslash characters. Use `NL = "\r\n"` + string concatenation.
+- **Null bytes in large files:** Strip before any Python read/write: `raw.replace(b'\x00', b'')`. Verify with `node --check` after every JS change.
+- **Large file patching:** Find function bounds with `content.find()` and slice directly — do not rely on raw string matching for multi-line function replacements.
+- **Always write large files in binary mode:** `open(dest, 'wb').write(data)` + verify with `os.path.getsize`. Direct `cp` to Windows mount truncates.
