@@ -1,6 +1,9 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-10 — Session 33: FSA hygiene rating badge added to footer (both branches, CONFIG-driven, `CONFIG.fsa.rating`). stalliq-site moved to GitHub (`JulianBell106/stalliq-site`), linked to Netlify auto-deploy. Firebase `stalliq` display name → `stalliq-development`. James stamp count reset. Owner role set on both Firebase projects. stalliq-site deployed.
+> Last updated: 2026-05-10 — Session 34: Endoo branding added to stalliq-site. Netlify auto-deploy confirmed working.
 > **Next session — start here:**
+> - **Future session:** Add Stalliq product page to endoo.co.uk (under Products) — agreed with Julian 2026-05-10.
+> - Pre-demo manual actions still outstanding — see checklist below.
+>
 > ⚠️ **Julian — manual actions still outstanding before demo (~2026-05-15):**
 > 1. **Add composite index on `stalliq-development` project** — Firebase Console → Firestore → Indexes → Add: `orders` collection, `customerId` ASC + `createdAt` ASC.
 > 2. **Wipe test data on stalliq-production** — delete all docs in `orders` and `users` collections. Keep `vendors/{vendorId}/staff/`, `kitchenStatus`, `location`, `counters`.
@@ -1216,3 +1219,28 @@ Phone auth was failing on Street Stack demo with "Could not send code." Root cau
 - **Null bytes in large files:** Strip before any Python read/write: `raw.replace(b'\x00', b'')`. Verify with `node --check` after every JS change.
 - **Large file patching:** Find function bounds with `content.find()` and slice directly — do not rely on raw string matching for multi-line function replacements.
 - **Always write large files in binary mode:** `open(dest, 'wb').write(data)` + verify with `os.path.getsize`. Direct `cp` to Windows mount truncates.
+
+---
+
+## 38. Session 33 — FSA Badge + stalliq-site to GitHub (COMPLETE ✅ 2026-05-10)
+
+**Files changed:** `index.html` (both branches), `js/config.js` (both branches), `kitchen.html` (both branches)
+
+- **FSA Food Hygiene Rating badge** — gold circle showing rating score + "Very Good" label renders in the desktop footer. CONFIG-driven: `CONFIG.fsa.rating` (0–5 or `null` to hide). Script placed after `config.js` loads to avoid timing issue. La Muletti: `rating: 5`. Street Stack demo: `rating: 5`.
+- **stalliq-site moved to GitHub** — repo at `JulianBell106/stalliq-site` (`Documents\Engineering\stalliq-site`), public, linked to Netlify for auto-deploy on push to `main`.
+- **Firebase rename** — `stalliq` project display name → `stalliq-development`. Project ID unchanged; `js/firebase.js` on `develop` unaffected.
+- **James's stamp count reset** — `users/{jamesUid}/stampCount` set to 0 in stalliq-production Firebase Console.
+- **Owner role set** — `role: "owner"` set manually on Owner staff doc in both Firebase projects (`vendors/demo/staff/{ownerId}` and `vendors/lamuletti/staff/{ownerId}`).
+
+---
+
+## 39. Session 34 — Endoo Branding on stalliq-site (COMPLETE ✅ 2026-05-10)
+
+**Files changed:** `stalliq-site/index.html`, `stalliq-site/endoo-logo.png` (new)
+
+- **Endoo branding added** — two placements on stalliq.co.uk:
+  1. **Footer** — full-width ruled row below copyright: "A product of [Endoo logo] — Endoo Limited, registered in England & Wales". Logo links to `https://www.endoo.co.uk`.
+  2. **CTA section** — trust sentence below demo buttons: "Stalliq is built and operated by [Endoo Limited](https://www.endoo.co.uk) — a UK technology company based in Milton Keynes."
+- **`endoo-logo.png` added to `stalliq-site/`** — resized from `Endoo_Logo_BestOf_110mm.png` (1299×434px) to 239×80px (13 KB), RGBA PNG. Displayed at 20px height via CSS. Cream/gold on transparent — renders correctly on midnight dark background.
+- **Netlify auto-deploy confirmed** — `stalliq-site` Netlify project properly linked to `JulianBell106/stalliq-site`. Push to `main` → auto-deploys to `stalliq.co.uk`.
+- **Future session planned** — write a Stalliq product page for `endoo.co.uk` under Products.
