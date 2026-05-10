@@ -809,6 +809,21 @@
       color: var(--gold); border: 1px solid rgba(212,160,67,0.4); border-radius: 4px;
       padding: 1px 5px; margin-left: 6px; vertical-align: middle;
     }
+    .staff-owner-badge {
+      display: inline-block; font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;
+      color: var(--fire); border: 1px solid rgba(200,65,11,0.45); border-radius: 4px;
+      padding: 1px 5px; margin-left: 6px; vertical-align: middle;
+    }
+    .staff-role-select {
+      width: 100%; padding: 12px 14px;
+      border-radius: 9px; border: 1px solid rgba(253,246,236,0.13);
+      background: rgba(253,246,236,0.04); color: var(--cream);
+      font-size: 15px; font-family: inherit;
+      transition: border-color 0.15s; appearance: none; cursor: pointer;
+    }
+    .staff-role-select:focus { outline: none; border-color: var(--gold); }
+    .staff-role-select option { background: #1a0a00; color: var(--cream); }
+    .staff-role-select:disabled { opacity: 0.45; cursor: not-allowed; }
     .staff-row-actions { display: flex; gap: 8px; flex-shrink: 0; }
     .staff-action-btn {
       padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;
@@ -1102,11 +1117,11 @@
 
       <!-- Screen 1: Staff list -->
       <div id="staff-list-screen" class="hidden">
-        <div class="k-modal-title">Staff Members</div>
-        <div class="k-modal-sub">Everyone who can access the kitchen dashboard.</div>
+        <div class="k-modal-title" id="staff-list-title">Staff Members</div>
+        <div class="k-modal-sub" id="staff-list-sub">Everyone who can access the kitchen dashboard.</div>
         <div class="staff-list" id="staff-list"></div>
-        <div class="k-modal-actions" style="margin-top:4px;">
-          <button class="k-modal-btn primary" onclick="openAddStaff()">+ Add Staff Member</button>
+        <div class="k-modal-actions" style="margin-top:4px;" id="staff-add-wrap">
+          <button class="k-modal-btn primary" id="staff-add-btn" onclick="openAddStaff()">+ Add Staff Member</button>
         </div>
       </div>
 
@@ -1130,10 +1145,18 @@
           <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6"
                  class="staff-form-input" id="add-staff-pin2" placeholder="Repeat PIN">
         </div>
+        <div class="staff-form-field" id="add-staff-role-wrap">
+          <label class="staff-form-label" for="add-staff-role">Role</label>
+          <select class="staff-role-select" id="add-staff-role">
+            <option value="staff">Staff — can log in and change own PIN</option>
+            <option value="owner">Owner — can manage all staff</option>
+          </select>
+          <div style="font-size:11px;color:var(--ash);margin-top:5px;" id="add-owner-limit-note"></div>
+        </div>
         <div class="staff-form-error" id="add-staff-error"></div>
         <div class="k-modal-actions">
           <button class="k-modal-btn secondary" onclick="showStaffScreen('staff-list-screen')">← Back</button>
-          <button class="k-modal-btn primary" id="add-staff-btn" onclick="submitAddStaff()">Save</button>
+          <button class="k-modal-btn primary" id="add-staff-save-btn" onclick="submitAddStaff()">Save</button>
         </div>
       </div>
 
