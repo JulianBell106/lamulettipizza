@@ -726,13 +726,15 @@ function dPlaceOrder() {
       const { orderRef, orderId, discount } = await submitOrderToFirestore();
       console.log(`[Stalliq] Order placed. orderId: ${orderId} | orderRef: ${orderRef}`);
 
+      // Build summary before resetting stamps — same reason as mobile flow above.
+      const { rows } = buildOrderSummaryHTML('d-order-row');
+
       // ── Post-order: record loyalty reset or offer usage ──────────────────
       if (discount?.type === 'loyalty') {
         await resetUserStamps();
       } else if (discount?.type === 'offer') {
         await recordOfferUsage(discount.offerId);
       }
-      const { rows } = buildOrderSummaryHTML('d-order-row');
 
       selectedOffer = null;
       document.getElementById('d-order-ref').textContent   = 'Order ref ' + orderRef;
@@ -961,13 +963,17 @@ function mPlaceOrder() {
       const { orderRef, orderId, discount } = await submitOrderToFirestore();
       console.log(`[Stalliq] Order placed. orderId: ${orderId} | orderRef: ${orderRef}`);
 
+      // Build summary before resetting stamps — resetUserStamps() triggers
+      // listenUserProfile which zeroes userStampCount, causing getLoyaltyDiscount()
+      // to return null and the discount row to disappear from the confirmation.
+      const { rows } = buildOrderSummaryHTML('m-confirm-row');
+
       // ── Post-order: record loyalty reset or offer usage ──────────────────
       if (discount?.type === 'loyalty') {
         await resetUserStamps();
       } else if (discount?.type === 'offer') {
         await recordOfferUsage(discount.offerId);
       }
-      const { rows } = buildOrderSummaryHTML('m-confirm-row');
 
       selectedOffer = null;
       document.getElementById('m-confirm-ref').textContent   = 'Order ref ' + orderRef;
