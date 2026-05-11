@@ -395,8 +395,9 @@ document.addEventListener('visibilitychange', () => {
 
   // Short absence (<60s) — incremental reconnect, no reload
   _acquireWakeLock();
-  firebase.firestore().enableNetwork().catch(() => {});
-  listenOrders();
+  firebase.firestore().enableNetwork()
+    .catch(() => {})
+    .finally(() => { listenOrders(); startIOSHeartbeat(); });
 
   // Force-clear both interval handles — iOS may have suspended them silently
   // during screen lock, leaving handles non-null but timers not ticking.
@@ -716,6 +717,48 @@ function listenOrders() {
     const hasPending = Object.values(incoming).some(o => o.status === 'pending');
     _managePendingAlert(hasPending);
   }, err => console.error('[Stalliq] Orders listener:', err));
+}
+
+/* iOS Firestore heartbeat — polls server state every 20s to compensate for
+ * iOS Safari silently dropping 'document modified' WebSocket events.
+ * Uses get({source:'server'}) rather than recreating the onSnapshot listener
+ * to avoid cache-first stale reads and avoid disrupting the beep interval.
+ * Only active on iOS; no-op on all other platforms. */
+let _iosHeartbeatInterval = null;
+const _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+function startIOSHeartbeat() {
+  if (!_isIOS) return;
+  stopIOSHeartbeat();
+  _iosHeartbeatInterval = setInterval(() => {
+    if (document.visibilityState !== 'visible' || !loggedInStaffId) return;
+    kitchenDb.collection('orders')
+      .where('vendorId', '==', CONFIG.vendor.id)
+      .where('status', 'in', ['pending', 'accepted', 'preparing', 'ready'])
+      .get({ source: 'server' })
+      .then(snapshot => {
+        const incoming = {};
+        snapshot.forEach(doc => {
+          incoming[doc.id] = { id: doc.id, ...doc.data() };
+        });
+        Object.keys(incoming).forEach(id => {
+          if (!currentOrders[id] && incoming[id].status === 'pending') playOrderAlert();
+        });
+        currentOrders = incoming;
+        renderOrders();
+        const hasPending = Object.values(incoming).some(o => o.status === 'pending');
+        _managePendingAlert(hasPending);
+      })
+      .catch(() => {});
+  }, 20000);
+}
+
+function stopIOSHeartbeat() {
+  if (_iosHeartbeatInterval) {
+    clearInterval(_iosHeartbeatInterval);
+    _iosHeartbeatInterval = null;
+  }
 }
 
 
@@ -1228,6 +1271,7 @@ function startDashboard() {
   listenOrders();
   initKanbanDrag();
   _acquireWakeLock();    // Session 18 — keep screen on during kitchen session
+  startIOSHeartbeat();   // iOS fix — server-fetch heartbeat for silent WebSocket drops
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1539,6 +1583,7 @@ async function logoutStaff() {
   // Stop the orders listener, pending alert interval, and screen wake lock
   if (ordersUnsubscribe) { ordersUnsubscribe(); ordersUnsubscribe = null; }
   if (pendingAlertInterval) { clearInterval(pendingAlertInterval); pendingAlertInterval = null; }
+  stopIOSHeartbeat();
   _releaseWakeLock();
 
   // Clear persisted session so reload does not auto-restore after a logout
