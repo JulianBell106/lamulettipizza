@@ -167,12 +167,27 @@ function pinPress(digit) {
  */
 function _unlockKitchenAudio() {
   try {
+    // If the context exists but isn't running, iOS has broken it post-lock.
+    // resume() on a broken context silently does nothing — discard and create
+    // a fresh one instead. This mirrors what a page refresh does naturally.
+    if (kitchenAudioCtx && kitchenAudioCtx.state !== 'running') {
+      try { kitchenAudioCtx.close(); } catch (_) {}
+      kitchenAudioCtx = null;
+    }
     if (!kitchenAudioCtx) {
       kitchenAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
-    if (kitchenAudioCtx.state === 'suspended') {
+    if (kitchenAudioCtx.state !== 'running') {
       kitchenAudioCtx.resume().catch(() => {});
     }
+    // Play a silent 1-sample buffer to fully prime the iOS audio pipeline.
+    // iOS requires audio to actually be played during the gesture — just
+    // creating/resuming the context is not enough.
+    const buf = kitchenAudioCtx.createBuffer(1, 1, 22050);
+    const src = kitchenAudioCtx.createBufferSource();
+    src.buffer = buf;
+    src.connect(kitchenAudioCtx.destination);
+    src.start(0);
   } catch (_) {}
 }
 
@@ -1170,10 +1185,14 @@ function playOrderAlert() {
     const ctx = kitchenAudioCtx || new (window.AudioContext || window.webkitAudioContext)();
     if (!kitchenAudioCtx) kitchenAudioCtx = ctx;
 
-    if (ctx.state === 'suspended') {
-      ctx.resume().then(() => _playOrderBeeps(ctx)).catch(() => {});
-    } else {
+    if (ctx.state === 'running') {
       _playOrderBeeps(ctx);
+    } else {
+      // 'suspended' or 'interrupted' (iOS interrupts on lock/call/Siri).
+      // Always try resume — show restore banner if it fails (no gesture available).
+      ctx.resume()
+        .then(() => _playOrderBeeps(ctx))
+        .catch(() => _showAudioRestorePrompt());
     }
   } catch (_) {}
 }
