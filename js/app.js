@@ -2678,8 +2678,9 @@ function unlockAudio() {
     if (audioCtx && audioCtx.state === 'closed') audioCtx = null;
     if (!audioCtx) {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    } else if (audioCtx.state === 'suspended') {
-      audioCtx.resume();
+    } else if (audioCtx.state !== 'running') {
+      // handles 'suspended' and iOS 'interrupted' state
+      audioCtx.resume().catch(() => {});
     }
   } catch (_) {
     // AudioContext not available — beep will attempt a new context at fire time
@@ -2700,7 +2701,7 @@ async function playReadyBeep() {
     // Mobile (especially iOS) suspends AudioContext after inactivity.
     // Resume it now — this works because the context was already unlocked
     // by the user's "Place Order" tap gesture earlier in the session.
-    if (ctx.state === 'suspended') await ctx.resume();
+    if (ctx.state !== 'running') await ctx.resume().catch(() => {});
     const gain = ctx.createGain();
     gain.connect(ctx.destination);
     [0, 0.3].forEach(offset => {

@@ -1174,10 +1174,14 @@ function playOrderAlert() {
     const ctx = kitchenAudioCtx || new (window.AudioContext || window.webkitAudioContext)();
     if (!kitchenAudioCtx) kitchenAudioCtx = ctx;
 
-    if (ctx.state === 'suspended') {
-      ctx.resume().then(() => _playOrderBeeps(ctx)).catch(() => {});
-    } else {
+    if (ctx.state === 'running') {
       _playOrderBeeps(ctx);
+    } else {
+      // 'suspended' or 'interrupted' (iOS interrupts on lock/call/Siri).
+      // Always try resume — show restore banner if it fails (no gesture available).
+      ctx.resume()
+        .then(() => _playOrderBeeps(ctx))
+        .catch(() => _showAudioRestorePrompt());
     }
   } catch (_) {}
 }
