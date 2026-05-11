@@ -1,11 +1,11 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-10 — Session 34: Endoo branding added to stalliq-site. Netlify auto-deploy confirmed working.
+> Last updated: 2026-05-11 — Session 35: Composite index on stalliq-development confirmed done.
 > **Next session — start here:**
 > - **Future session:** Add Stalliq product page to endoo.co.uk (under Products) — agreed with Julian 2026-05-10.
 > - Pre-demo manual actions still outstanding — see checklist below.
 >
 > ⚠️ **Julian — manual actions still outstanding before demo (~2026-05-15):**
-> 1. **Add composite index on `stalliq-development` project** — Firebase Console → Firestore → Indexes → Add: `orders` collection, `customerId` ASC + `createdAt` ASC.
+> 1. ~~**Add composite index on `stalliq-development` project**~~ ✅ Done — stamps confirmed working on demo.stalliq.co.uk.
 > 2. **Wipe test data on stalliq-production** — delete all docs in `orders` and `users` collections. Keep `vendors/{vendorId}/staff/`, `kitchenStatus`, `location`, `counters`.
 > 3. **ICO registration** — ico.org.uk, ~£40/year (required before collecting personal data in production).
 > 4. **Google Sheet header rows** — protect header rows on all three La Muletti sheets.
@@ -503,7 +503,7 @@ Before the "Forgot all PINs?" reset flow will work, Julian must manually set the
 | # | Task | Status |
 |---|------|--------|
 | 1 | Firestore composite index (stalliq-production) | ✅ Created 2026-05-06 — was missing after project recreation in Session 25 |
-| 1a | Firestore composite index (stalliq dev) | ⏳ Needed — create in Firebase Console for `stalliq` project |
+| 1a | Firestore composite index (stalliq-development) | ✅ Done — stamps working on demo.stalliq.co.uk confirmed |
 | 2 | Firestore security rules | ✅ Session 16b |
 | 3 | Remove `noindex, nofollow` from index.html | ✅ Session 16b |
 | 4 | Firebase Phone Auth — real domain | ✅ |
