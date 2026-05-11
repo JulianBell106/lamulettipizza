@@ -1,8 +1,9 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-10 — Session 34: Endoo branding added to stalliq-site. Netlify auto-deploy confirmed working.
+> Last updated: 2026-05-11 — Session 35: iPad/iOS bug fix session — PIN inputs, real-time kitchen updates, loyalty discount modal, audio after screen lock.
 > **Next session — start here:**
 > - **Future session:** Add Stalliq product page to endoo.co.uk (under Products) — agreed with Julian 2026-05-10.
 > - Pre-demo manual actions still outstanding — see checklist below.
+> - ⚠️ `app.js` audio fix (`unlockAudio` + `playReadyBeep` handle `'interrupted'` state) applied to main only — needs applying to develop next session.
 
 ## What is Stalliq?
 Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering platform for independent mobile street food vendors. La Muletti Pizza (Daniele + Danielle, Bletchley MK) is the launch customer, on a free Year 1 Founding Customer deal.
@@ -24,6 +25,23 @@ Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering p
 10. ~~Add `stalliq-site` to GitHub source control~~ ✓ Done 2026-05-10 — repo at `JulianBell106/stalliq-site` (`Documents\Engineering\stalliq-site`), public, linked to Netlify for auto-deploy on push to `main`.
 11. **Generic code audit** ⚠️ High priority before scaling — audit `app.js`, `kitchen.js`, `index.html` (develop branch), and `css/styles.css` to remove hardcoded pizza/La Muletti references from the shared layer. All customer-specific text must flow through `CONFIG`. Do on a dedicated feature branch, test on both Street Stack (develop) and La Muletti (main) before merging. Do not rush — risky change.
 12. ~~Rename Firebase `stalliq` project → `stalliq-development`~~ ✓ Done 2026-05-10 — display name updated in Firebase Console. Project ID unchanged; `js/firebase.js` on `develop` unaffected.
+
+---
+
+## Session 35 — 2026-05-11
+
+- **Bug fix — iOS PIN inputs unresponsive in kitchen settings** (`kitchen.html`, both branches). `type="password"` + `inputmode="numeric"` is broken on iOS Safari — Safari ignores `inputmode` on password fields and the password autofill UI intercepts the first tap. Fix: changed all 6 PIN inputs (`add-staff-pin`, `add-staff-pin2`, `edit-staff-pin`, `edit-staff-pin2`, `forgot-newpin-input`, `forgot-newpin2-input`) to `type="text"` + `autocomplete="off"` + CSS `-webkit-text-security: disc` (masks digits visually). New class `staff-pin-input` added.
+
+- **Bug fix — iOS kitchen not updating order status in real-time** (`js/kitchen.js`, both branches). iOS Safari silently drops Firestore "document modified" WebSocket events while still delivering "document added" events — so new orders appeared but status changes from other devices didn't. Fix: iOS heartbeat (`startIOSHeartbeat` / `stopIOSHeartbeat`) runs `get({source:'server'})` every 20s on iOS only. Uses direct server fetch rather than recreating the `onSnapshot` listener (listener recreation caused cache-first stale reads = one state behind, and disrupted the beep interval). Also fixed `visibilitychange` handler to chain `enableNetwork().finally(() => listenOrders())` instead of calling them independently. Detection: `_isIOS` flag covers iPad Pro (`platform === 'MacIntel'` + `maxTouchPoints > 1`).
+
+- **Bug fix — loyalty discount missing from Order Placed modal** (`js/app.js`, both branches). `buildOrderSummaryHTML()` was called after `await resetUserStamps()`. `resetUserStamps()` triggers `listenUserProfile` which immediately zeroes `userStampCount`, so `getLoyaltyDiscount()` returned null and the discount row was absent. Fix: moved `buildOrderSummaryHTML()` call to before `resetUserStamps()` in both mobile (`mPlaceOrder`) and desktop (`dPlaceOrder`) flows.
+
+- **Bug fix — iOS kitchen audio silent after screen lock** (`js/kitchen.js`, both branches). Three layered fixes:
+  1. `_unlockKitchenAudio()` — if existing AudioContext is not `'running'` (iOS breaks it post-lock), close and discard it rather than trying to `resume()` (which silently fails). Create a fresh context. Also play a silent 1-sample buffer during the gesture — iOS requires audio to actually be played during the gesture to fully prime the pipeline for subsequent non-gesture beeps.
+  2. `playOrderAlert()` — handle `'interrupted'` state (iOS on lock/call/Siri) same as `'suspended'`; always try `resume()` if not `'running'`, show restore banner if `resume()` fails.
+  3. Result: after screen lock/unlock, the red "🔔 New order — tap to restore sound alerts" banner appears; one tap now reliably restores audio without needing a page refresh.
+
+- **⚠️ app.js audio fix — main only** (`js/app.js`). `unlockAudio()` and `playReadyBeep()` updated to handle `'interrupted'` AudioContext state (not just `'suspended'`). Applied to main. Needs applying to develop next session.
 
 ---
 
@@ -132,9 +150,9 @@ Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering p
 | `css/styles.css` | Legacy mobile-only styles — do NOT edit for desktop |
 | `js/config.js` | All customer-specific data — only file that changes per customer |
 | `js/firebase.js` | Firebase init — branch-specific credentials |
-| `js/app.js` | All customer-side logic (~3410+ lines) |
+| `js/app.js` | All customer-side logic (~3520+ lines) |
 | `kitchen.html` | Kitchen dashboard — PIN protected |
-| `js/kitchen.js` | All kitchen logic (~1959 lines) |
+| `js/kitchen.js` | All kitchen logic (~2120+ lines) |
 
 **⚠️ Desktop CSS lives in `index.html` `<style>` block — NOT in css/styles.css**
 
