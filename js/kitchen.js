@@ -732,9 +732,29 @@ function startIOSHeartbeat() {
   if (!_isIOS) return;
   stopIOSHeartbeat();
   _iosHeartbeatInterval = setInterval(() => {
-    if (document.visibilityState === 'visible' && loggedInStaffId) {
-      listenOrders();
-    }
+    if (document.visibilityState !== 'visible' || !loggedInStaffId) return;
+    // Use a direct server fetch instead of recreating the onSnapshot listener.
+    // Recreating the listener would fire from cache first (stale data = one state behind)
+    // and would call _managePendingAlert(false) mid-cycle, killing the beep interval.
+    kitchenDb.collection('orders')
+      .where('vendorId', '==', CONFIG.vendor.id)
+      .where('status', 'in', ['pending', 'accepted', 'preparing', 'ready'])
+      .get({ source: 'server' })
+      .then(snapshot => {
+        const incoming = {};
+        snapshot.forEach(doc => {
+          incoming[doc.id] = { id: doc.id, ...doc.data() };
+        });
+        // Beep for any pending orders that weren't in our stale local state
+        Object.keys(incoming).forEach(id => {
+          if (!currentOrders[id] && incoming[id].status === 'pending') playOrderAlert();
+        });
+        currentOrders = incoming;
+        renderOrders();
+        const hasPending = Object.values(incoming).some(o => o.status === 'pending');
+        _managePendingAlert(hasPending);
+      })
+      .catch(() => {});
   }, 20000);
 }
 
