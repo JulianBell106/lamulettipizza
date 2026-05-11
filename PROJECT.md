@@ -1,5 +1,5 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-11 — Session 35: Composite index on stalliq-development confirmed done.
+> Last updated: 2026-05-12 — Session 36: All iOS fixes confirmed on both branches.
 > **Next session — start here:**
 > - **Future session:** Add Stalliq product page to endoo.co.uk (under Products) — agreed with Julian 2026-05-10.
 > - Pre-demo manual actions still outstanding — see checklist below.
@@ -1244,3 +1244,23 @@ Phone auth was failing on Street Stack demo with "Could not send code." Root cau
 - **`endoo-logo.png` added to `stalliq-site/`** — resized from `Endoo_Logo_BestOf_110mm.png` (1299×434px) to 239×80px (13 KB), RGBA PNG. Displayed at 20px height via CSS. Cream/gold on transparent — renders correctly on midnight dark background.
 - **Netlify auto-deploy confirmed** — `stalliq-site` Netlify project properly linked to `JulianBell106/stalliq-site`. Push to `main` → auto-deploys to `stalliq.co.uk`.
 - **Future session planned** — write a Stalliq product page for `endoo.co.uk` under Products.
+
+---
+
+## 40. Session 35 — iPad/iOS Bug Fix Session (COMPLETE ✅ 2026-05-11)
+
+**Files changed:** `kitchen.html`, `js/kitchen.js`, `js/app.js` (both branches)
+
+- **iOS PIN inputs** (`kitchen.html`, both branches). Changed 6 PIN inputs from `type="password"` to `type="text"` + `autocomplete="off"` + `-webkit-text-security: disc` CSS. iOS ignores `inputmode="numeric"` on password fields and autofill UI intercepts taps — switching to `type="text"` with CSS masking fixes both.
+- **iOS Firestore real-time heartbeat** (`js/kitchen.js`, both branches). iOS Safari silently drops Firestore "document modified" WebSocket events. Added 20s server-fetch polling fallback (`get({ source: 'server' })`) that runs alongside the `onSnapshot` listener when on iOS. New functions: `startIOSHeartbeat()`, `stopIOSHeartbeat()`. Called from `startDashboard()`, logout, and `visibilitychange` handler.
+- **Loyalty discount Order Placed modal** (`js/app.js`, both branches). `buildOrderSummaryHTML()` was called after `resetUserStamps()` in `mPlaceOrder`/`dPlaceOrder`. `resetUserStamps()` triggers `listenUserProfile` which zeroes `userStampCount`, causing `getLoyaltyDiscount()` to return null. Fixed by computing summary before performing side effects.
+- **iOS audio discard-and-recreate** (`js/kitchen.js`, both branches). After screen lock/unlock, the banner appeared but tapping it didn't restore beeps because the old broken `AudioContext` was reused. `_unlockKitchenAudio()` now discards any non-running context before creating a fresh one, then plays a silent buffer to fully prime the pipeline. `playOrderAlert()` handles `'interrupted'` state with banner fallback.
+- **iOS audio interrupted state** (`js/app.js`, main). `unlockAudio()` and `playReadyBeep()` updated to handle `'interrupted'` AudioContext state — `state === 'suspended'` → `state !== 'running'`. Applied to main this session, develop in Session 36.
+
+---
+
+## 41. Session 36 — iOS app.js Audio Fix to Develop (COMPLETE ✅ 2026-05-12)
+
+**Files changed:** `js/app.js` (develop), `PROJECT.md` (both branches)
+
+- **app.js audio fix — develop** (`js/app.js`). `unlockAudio()`: `audioCtx.state === 'suspended'` → `!== 'running'` + `.catch(() => {})`. `playReadyBeep()`: `if (ctx.state === 'suspended') await ctx.resume()` → `if (ctx.state !== 'running') await ctx.resume().catch(() => {})`. All iOS audio fixes now on both branches.
