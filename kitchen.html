@@ -852,6 +852,7 @@
     }
     .staff-form-input::placeholder { color: var(--ash); }
     .staff-form-input:focus { outline: none; border-color: var(--gold); }
+    .staff-pin-input { -webkit-text-security: disc; }
     .staff-form-error { font-size: 12px; color: var(--s-urgent); min-height: 16px; margin-top: -8px; margin-bottom: 10px; }
 
     /* Global close footer — always at the bottom of the staff modal */
@@ -1137,13 +1138,13 @@
         </div>
         <div class="staff-form-field">
           <label class="staff-form-label" for="add-staff-pin">PIN *</label>
-          <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6"
-                 class="staff-form-input" id="add-staff-pin" placeholder="6 digits">
+          <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off"
+                 class="staff-form-input staff-pin-input" id="add-staff-pin" placeholder="6 digits">
         </div>
         <div class="staff-form-field">
           <label class="staff-form-label" for="add-staff-pin2">Confirm PIN *</label>
-          <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6"
-                 class="staff-form-input" id="add-staff-pin2" placeholder="Repeat PIN">
+          <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off"
+                 class="staff-form-input staff-pin-input" id="add-staff-pin2" placeholder="Repeat PIN">
         </div>
         <div class="staff-form-field" id="add-staff-role-wrap">
           <label class="staff-form-label" for="add-staff-role">Role</label>
@@ -1174,15 +1175,15 @@
           <label class="staff-form-label" for="edit-staff-pin">
             New PIN <span class="staff-form-hint">— optional</span>
           </label>
-          <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6"
-                 class="staff-form-input" id="edit-staff-pin" placeholder="Leave blank to keep existing PIN">
+          <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off"
+                 class="staff-form-input staff-pin-input" id="edit-staff-pin" placeholder="Leave blank to keep existing PIN">
         </div>
         <div class="staff-form-field">
           <label class="staff-form-label" for="edit-staff-pin2">
             Confirm New PIN <span class="staff-form-hint">— optional</span>
           </label>
-          <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6"
-                 class="staff-form-input" id="edit-staff-pin2" placeholder="Repeat new PIN">
+          <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off"
+                 class="staff-form-input staff-pin-input" id="edit-staff-pin2" placeholder="Repeat new PIN">
         </div>
         <div class="staff-form-error" id="edit-staff-error"></div>
         <div class="k-modal-actions">
@@ -1245,13 +1246,13 @@
         <p class="forgot-intro">Choose a new 6-digit PIN for the owner account.</p>
         <div class="staff-form-field">
           <label class="staff-form-label" for="forgot-newpin-input">New PIN</label>
-          <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6"
-                 class="staff-form-input" id="forgot-newpin-input" placeholder="6 digits">
+          <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off"
+                 class="staff-form-input staff-pin-input" id="forgot-newpin-input" placeholder="6 digits">
         </div>
         <div class="staff-form-field">
           <label class="staff-form-label" for="forgot-newpin2-input">Confirm new PIN</label>
-          <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6"
-                 class="staff-form-input" id="forgot-newpin2-input" placeholder="Repeat PIN">
+          <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off"
+                 class="staff-form-input staff-pin-input" id="forgot-newpin2-input" placeholder="Repeat PIN">
         </div>
         <div class="staff-form-error" id="forgot-newpin-error"></div>
         <div class="k-modal-actions">
