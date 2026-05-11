@@ -1,9 +1,8 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-11 — Session 35: iPad/iOS bug fix session — PIN inputs, real-time kitchen updates, loyalty discount modal, audio after screen lock.
+> Last updated: 2026-05-12 — Session 36: Applied pending app.js audio fix (interrupted state) to develop. All iOS fixes now on both branches.
 > **Next session — start here:**
 > - **Future session:** Add Stalliq product page to endoo.co.uk (under Products) — agreed with Julian 2026-05-10.
 > - Pre-demo manual actions still outstanding — see checklist below.
-> - ⚠️ `app.js` audio fix (`unlockAudio` + `playReadyBeep` handle `'interrupted'` state) applied to main only — needs applying to develop next session.
 
 ## What is Stalliq?
 Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering platform for independent mobile street food vendors. La Muletti Pizza (Daniele + Danielle, Bletchley MK) is the launch customer, on a free Year 1 Founding Customer deal.
@@ -28,6 +27,15 @@ Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering p
 
 ---
 
+
+## Session 36 — 2026-05-12
+
+**Scope:** Apply pending app.js audio fix to develop branch.
+
+### Changes
+- **app.js audio fix — develop** (`js/app.js`). `unlockAudio()`: `audioCtx.state === 'suspended'` → `!== 'running'` + `.catch(() => {})`. `playReadyBeep()`: `if (ctx.state === 'suspended') await ctx.resume()` → `if (ctx.state !== 'running') await ctx.resume().catch(() => {})`. Matches main. All iOS audio fixes now on both branches.
+
+---
 ## Session 35 — 2026-05-11
 
 - **Bug fix — iOS PIN inputs unresponsive in kitchen settings** (`kitchen.html`, both branches). `type="password"` + `inputmode="numeric"` is broken on iOS Safari — Safari ignores `inputmode` on password fields and the password autofill UI intercepts the first tap. Fix: changed all 6 PIN inputs (`add-staff-pin`, `add-staff-pin2`, `edit-staff-pin`, `edit-staff-pin2`, `forgot-newpin-input`, `forgot-newpin2-input`) to `type="text"` + `autocomplete="off"` + CSS `-webkit-text-security: disc` (masks digits visually). New class `staff-pin-input` added.
@@ -41,7 +49,7 @@ Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering p
   2. `playOrderAlert()` — handle `'interrupted'` state (iOS on lock/call/Siri) same as `'suspended'`; always try `resume()` if not `'running'`, show restore banner if `resume()` fails.
   3. Result: after screen lock/unlock, the red "🔔 New order — tap to restore sound alerts" banner appears; one tap now reliably restores audio without needing a page refresh.
 
-- **⚠️ app.js audio fix — main only** (`js/app.js`). `unlockAudio()` and `playReadyBeep()` updated to handle `'interrupted'` AudioContext state (not just `'suspended'`). Applied to main. Needs applying to develop next session.
+- **app.js audio fix — both branches** (`js/app.js`). `unlockAudio()` and `playReadyBeep()` updated to handle `'interrupted'` AudioContext state (not just `'suspended'`). Applied to main (Session 35) and develop (Session 36).
 
 ---
 
