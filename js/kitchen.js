@@ -170,9 +170,17 @@ function _unlockKitchenAudio() {
     if (!kitchenAudioCtx) {
       kitchenAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
-    if (kitchenAudioCtx.state === 'suspended') {
+    if (kitchenAudioCtx.state !== 'running') {
       kitchenAudioCtx.resume().catch(() => {});
     }
+    // iOS requires audio to actually be played during the gesture — just
+    // creating/resuming the context is not enough. Play a silent 1-sample
+    // buffer to fully prime the audio pipeline for non-gesture beeps later.
+    const buf = kitchenAudioCtx.createBuffer(1, 1, 22050);
+    const src = kitchenAudioCtx.createBufferSource();
+    src.buffer = buf;
+    src.connect(kitchenAudioCtx.destination);
+    src.start(0);
   } catch (_) {}
 }
 
