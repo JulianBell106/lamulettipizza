@@ -1,32 +1,90 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-12 — Session 36: Applied pending app.js audio fix (interrupted state) to develop. All iOS fixes now on both branches.
+> Last updated: 2026-05-17 — Design session: Feature 16/17/18 design + Twilio/WhatsApp setup started.
 > **Next session — start here:**
+> - **Next build:** Feature 16 — SMS/WhatsApp order-ready notifications (Cloud Function + Twilio). See session entry below.
 > - **Future session:** Add Stalliq product page to endoo.co.uk (under Products) — agreed with Julian 2026-05-10.
-> - Pre-demo manual actions still outstanding — see checklist below.
 
 ## What is Stalliq?
 Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering platform for independent mobile street food vendors. La Muletti Pizza (Daniele + Danielle, Bletchley MK) is the launch customer, on a free Year 1 Founding Customer deal.
 
 ---
 
-## Demo with Daniele — ~2026-05-15
+## Demo with Daniele — postponed ~2 weeks from 2026-05-17 (he is busy)
 
-### Remaining pre-demo checklist (Julian — manual actions)
-1. **Add composite index on `stalliq` dev Firebase project** — Firebase Console → stalliq project → Firestore → Indexes → Add: `orders` collection, `customerId` ASC + `createdAt` ASC. (Production index exists; dev index still missing.)
+### Outstanding actions (Julian)
+1. ~~**Add composite index on `stalliq` dev Firebase project**~~ ✓ Done — stamps confirmed working on demo.stalliq.co.uk.
 2. ~~Add image links to Street Stack menu sheet~~ ✓ Done 2026-05-09
 3. **Wipe test data on stalliq-production** — Firebase Console: delete all docs in `orders` and `users` collections. Keep `vendors/{vendorId}/staff/` (staff PINs), `kitchenStatus`, `location`, `counters`.
 4. ~~James's stamp count~~ ✓ Done 2026-05-10 — `stampCount` set to 0 in stalliq-production.
 5. **ICO registration** — ico.org.uk, ~£40/year (Endoo Limited — required before collecting personal data in production).
 6. **Google Sheet header rows** — protect header rows on all three La Muletti sheets.
-7. ~~stalliq.co.uk demo tile~~ ✓ Fixed 2026-05-10 — full site rebuilt (see Session 31 below), links correctly to `https://demo.stalliq.co.uk`.
-8. ~~Set `role: "owner"` on the Owner staff doc in both Firebase projects~~ ✓ Done 2026-05-10 — set on `vendors/demo/staff/{ownerId}` (stalliq dev) and `vendors/lamuletti/staff/{ownerId}` (stalliq-production).
-9. ~~Deploy stalliq-site~~ ✓ Done 2026-05-10 — `stalliq-site/` deployed to Netlify Drop.
-10. ~~Add `stalliq-site` to GitHub source control~~ ✓ Done 2026-05-10 — repo at `JulianBell106/stalliq-site` (`Documents\Engineering\stalliq-site`), public, linked to Netlify for auto-deploy on push to `main`.
-11. **Generic code audit** ⚠️ High priority before scaling — audit `app.js`, `kitchen.js`, `index.html` (develop branch), and `css/styles.css` to remove hardcoded pizza/La Muletti references from the shared layer. All customer-specific text must flow through `CONFIG`. Do on a dedicated feature branch, test on both Street Stack (develop) and La Muletti (main) before merging. Do not rush — risky change.
-12. ~~Rename Firebase `stalliq` project → `stalliq-development`~~ ✓ Done 2026-05-10 — display name updated in Firebase Console. Project ID unchanged; `js/firebase.js` on `develop` unaffected.
+7. ~~stalliq.co.uk demo tile~~ ✓ Fixed 2026-05-10 — full site rebuilt, links correctly to `https://demo.stalliq.co.uk`.
+8. ~~Set `role: "owner"` on the Owner staff doc in both Firebase projects~~ ✓ Done 2026-05-10.
+9. ~~Deploy stalliq-site~~ ✓ Done 2026-05-10.
+10. ~~Add `stalliq-site` to GitHub source control~~ ✓ Done 2026-05-10 — repo at `JulianBell106/stalliq-site`, linked to Netlify.
+11. **Generic code audit** ⚠️ High priority before scaling — remove hardcoded pizza/La Muletti refs from shared layer. Do on feature branch. Do not rush — risky change.
+12. ~~Rename Firebase `stalliq` project → `stalliq-development`~~ ✓ Done 2026-05-10.
+13. **Twilio billing** — add card to Twilio account (julian@endoo.co.uk) to activate WhatsApp sender. Google Pay kept failing — try card directly.
 
 ---
 
+
+## Design Session — 2026-05-17: Feature 16/17/18 Notifications
+
+### Build order agreed
+1. **Feature 16 — Order Ready Notifications (SMS + WhatsApp)** — build first
+2. **Web Push infrastructure** — powers features 17 and 18
+3. **Feature 18 — Flash Sales** — opt-in + kitchen broadcast UI + Cloud Function
+4. **Feature 17 — Geolocation** — Cloud Function on location write + geofence + push
+
+### Feature 16 — Order Ready Notifications spec
+
+**Trigger:** Kitchen marks order → `ready` → Firebase Cloud Function fires.
+**Channels:** WhatsApp first, SMS fallback on delivery failure. Same Twilio account.
+**GDPR:** Transactional — no separate opt-in needed.
+
+**WhatsApp template:** `order_ready_notification`
+- Body: `Hi {{1}}, your order from {{2}} is ready for collection! Thanks for your order – see you soon.`
+- `{{1}}` = customer first name · `{{2}}` = vendor name (CONFIG.business.name)
+- Generic — no food emoji, works across all Stalliq vendors
+- WhatsApp approval status: **Not yet submitted** (blocked on Twilio billing)
+
+**SMS fallback:** `Hi {{1}}, your order from {{2}} is ready for collection! See you soon.`
+
+**Cloud Function flow:**
+1. Firestore `orders/{orderId}` write triggers on status → `ready`
+2. Read `customerPhone` + `firstName` from order/user docs
+3. Attempt WhatsApp send via Twilio content template SID
+4. On failure → send SMS to same number
+5. Log outcome
+
+**Twilio setup state (2026-05-17):**
+- Account created: julian@endoo.co.uk ✅
+- Content template `order_ready_notification` created ✅
+- Meta Business account created (Endoo Limited) ✅
+- WhatsApp sender: ⏳ blocked on Twilio billing — Julian to add card (Google Pay failed, try card directly)
+- Once billing active: complete WhatsApp sender setup → submit template for Meta approval (~24-48hr)
+
+### Feature 17 — Geolocation spec (outline)
+- Van GPS (existing 10-min Firestore write) triggers Cloud Function
+- Function checks all subscriber geofences
+- Notification via Web Push (not SMS — too expensive at scale)
+- **Dependency:** Web Push infrastructure required first
+
+### Feature 18 — Flash Sales spec (outline)
+- Opt-in toggle on Account page → `users/{uid}/marketingOptIn: true` (GDPR clean)
+- Kitchen broadcast UI: text field + send button
+- Cloud Function: queries opted-in users with push subscription → sends Web Push
+- **Dependency:** Web Push infrastructure required first
+
+### Web Push infrastructure (shared dependency for 17 + 18)
+- Service worker (`sw.js`) registered in PWA
+- Push subscription stored at `users/{uid}/pushSubscription`
+- Cloud Function sends push via Web Push Protocol or FCM
+- Permission prompt on Account page after opt-in
+- **Not yet designed — tackle after Feature 16 shipped**
+
+---
 
 ## Session 36 — 2026-05-12
 
