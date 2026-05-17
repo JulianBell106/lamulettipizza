@@ -1,17 +1,17 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-12 — Session 36: All iOS fixes confirmed on both branches.
+> Last updated: 2026-05-17 — Design session: Feature 16/17/18 design + Twilio/WhatsApp setup started.
 > **Next session — start here:**
+> - **Next build:** Feature 16 — SMS/WhatsApp order-ready notifications (Cloud Function + Twilio). See Section 42.
 > - **Future session:** Add Stalliq product page to endoo.co.uk (under Products) — agreed with Julian 2026-05-10.
-> - Pre-demo manual actions still outstanding — see checklist below.
 >
-> ⚠️ **Julian — manual actions still outstanding before demo (~2026-05-15):**
-> 1. ~~**Add composite index on `stalliq-development` project**~~ ✅ Done — stamps confirmed working on demo.stalliq.co.uk.
+> ⚠️ **Julian — actions outstanding:**
+> 1. **Twilio billing** — add card to Twilio account (julian@endoo.co.uk) to activate WhatsApp sender. Google Pay kept failing — try card directly.
 > 2. **Wipe test data on stalliq-production** — delete all docs in `orders` and `users` collections. Keep `vendors/{vendorId}/staff/`, `kitchenStatus`, `location`, `counters`.
 > 3. **ICO registration** — ico.org.uk, ~£40/year (required before collecting personal data in production).
 > 4. **Google Sheet header rows** — protect header rows on all three La Muletti sheets.
 > **⚠️ Backlog:**
 > - B4: Generic code audit — remove hardcoded pizza/La Muletti refs from shared layer ⚠️ risky — do on feature branch
-> **Demo with Daniele ~2026-05-15.**
+> **Demo with Daniele postponed ~2 weeks from 2026-05-17 (he is busy).**
 > Read this file at the start of every session to get fully up to speed.
 
 ---
@@ -1256,6 +1256,89 @@ Phone auth was failing on Street Stack demo with "Could not send code." Root cau
 - **Loyalty discount Order Placed modal** (`js/app.js`, both branches). `buildOrderSummaryHTML()` was called after `resetUserStamps()` in `mPlaceOrder`/`dPlaceOrder`. `resetUserStamps()` triggers `listenUserProfile` which zeroes `userStampCount`, causing `getLoyaltyDiscount()` to return null. Fixed by computing summary before performing side effects.
 - **iOS audio discard-and-recreate** (`js/kitchen.js`, both branches). After screen lock/unlock, the banner appeared but tapping it didn't restore beeps because the old broken `AudioContext` was reused. `_unlockKitchenAudio()` now discards any non-running context before creating a fresh one, then plays a silent buffer to fully prime the pipeline. `playOrderAlert()` handles `'interrupted'` state with banner fallback.
 - **iOS audio interrupted state** (`js/app.js`, main). `unlockAudio()` and `playReadyBeep()` updated to handle `'interrupted'` AudioContext state — `state === 'suspended'` → `state !== 'running'`. Applied to main this session, develop in Session 36.
+
+---
+
+## 42. Feature 16/17/18 — Notifications Design (2026-05-17)
+
+### Overview — build order
+
+1. **Feature 16 — Order Ready Notifications (SMS + WhatsApp)** — build first. Highest immediate value, contained, no complex infrastructure.
+2. **Web Push infrastructure** — service worker, subscription storage, push sending via Cloud Function. Platform that powers features 17 and 18.
+3. **Feature 18 — Flash Sales** — opt-in toggle + kitchen broadcast UI + Cloud Function. Sits on top of push.
+4. **Feature 17 — Geolocation** — Cloud Function on location write + geofence check + push. Sits on top of push + existing location broadcast.
+
+---
+
+### Feature 16 — Order Ready Notifications
+
+**Trigger:** Kitchen marks order status → `ready` in Firestore → Firebase Cloud Function fires.
+
+**Channels:** WhatsApp first, SMS fallback if WhatsApp delivery fails. Same Twilio account, same credentials.
+
+**GDPR:** Order-ready notifications are transactional — no separate opt-in required. Customer gave phone number for auth and reasonably expects contact about their order.
+
+**WhatsApp template approved:** `order_ready_notification`
+- Body: `Hi {{1}}, your order from {{2}} is ready for collection! Thanks for your order – see you soon.`
+- `{{1}}` = customer first name · `{{2}}` = vendor name (from CONFIG)
+- Template is generic — no food-type emoji, works across all Stalliq vendors
+- WhatsApp approval status: **Not yet submitted** (blocked on Twilio billing)
+
+**SMS fallback message:** `Hi {{1}}, your order from {{2}} is ready for collection! See you soon.`
+
+**Cloud Function flow:**
+1. Firestore `orders/{orderId}` write triggers function on status → `ready`
+2. Read `customerPhone` and `firstName` from order/user docs
+3. Attempt WhatsApp send via Twilio content template SID
+4. On failure → send SMS to same number
+5. Log outcome
+
+**Twilio account setup (2026-05-17):**
+- Account: julian@endoo.co.uk ✅
+- Content template `order_ready_notification` created ✅ (WhatsApp approval not yet submitted)
+- Meta Business account created (Endoo Limited) ✅
+- WhatsApp sender: ⏳ blocked on billing — Julian to add card directly (Google Pay failed)
+- Once billing active: complete WhatsApp sender setup → submit template for Meta approval (24-48hr turnaround)
+
+---
+
+### Feature 17 — Geolocation Notifications
+
+**Concept:** Van enters a subscriber's set radius → subscribed customer's phone buzzes.
+
+**Architecture:**
+- Van GPS already writes to Firestore every 10 mins via existing broadcast feature
+- Cloud Function on location write checks all subscriber geofences
+- Notification delivered via Web Push (not SMS — too expensive at scale)
+- Requires Web Push infrastructure (see below) before this can be built
+- Customer sets location + radius (1/3/5 miles) + notification preference
+
+**Dependency:** Web Push infrastructure must exist first.
+
+---
+
+### Feature 18 — Flash Sales Campaigns
+
+**Concept:** Vendor types a deal message in the kitchen, hits send, all opted-in customers get notified instantly.
+
+**Opt-in:** Toggle on Account page — "Notify me about flash deals and last-minute offers". Stored as `users/{uid}/marketingOptIn: true`. Explicit consent = GDPR clean for marketing.
+
+**Architecture:**
+- Kitchen broadcast UI: text field + send button in kitchen dashboard
+- Cloud Function: queries all opted-in users with valid push subscription → sends Web Push
+- Dependency: Web Push infrastructure must exist first
+
+---
+
+### Web Push Infrastructure (shared dependency for 17 + 18)
+
+Required components:
+- Service worker registered in PWA (`sw.js`)
+- Push subscription stored server-side (`users/{uid}/pushSubscription`)
+- Cloud Function to send push via Web Push Protocol (or Firebase Cloud Messaging)
+- Permission prompt on Account page (after opt-in toggle)
+
+**Not yet designed in detail — tackle after Feature 16 is shipped.**
 
 ---
 
