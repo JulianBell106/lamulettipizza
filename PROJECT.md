@@ -1,7 +1,8 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-17 — Design session: Feature 16/17/18 design + Twilio/WhatsApp setup started.
+> Last updated: 2026-05-17 — Session 37: Feature 16 Cloud Function built and deployed to stalliq dev. Twilio compliance approved. UK number purchase in progress (compliance registration in review).
 > **Next session — start here:**
-> - **Next build:** Feature 16 — SMS/WhatsApp order-ready notifications (Cloud Function + Twilio). See session entry below.
+> - **Complete Twilio number purchase** — compliance registration for UK mobile number is In Review. Once approved: buy number, register as WhatsApp sender, fill in `.env`, redeploy functions, end-to-end test.
+> - **Then deploy Feature 16 to main (stalliq-production)** — create `.firebaserc` on main with `stalliq-production`, copy functions/, deploy.
 > - **Future session:** Add Stalliq product page to endoo.co.uk (under Products) — agreed with Julian 2026-05-10.
 
 ## What is Stalliq?
@@ -24,10 +25,33 @@ Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering p
 10. ~~Add `stalliq-site` to GitHub source control~~ ✓ Done 2026-05-10 — repo at `JulianBell106/stalliq-site`, linked to Netlify.
 11. **Generic code audit** ⚠️ High priority before scaling — remove hardcoded pizza/La Muletti refs from shared layer. Do on feature branch. Do not rush — risky change.
 12. ~~Rename Firebase `stalliq` project → `stalliq-development`~~ ✓ Done 2026-05-10.
-13. **Twilio billing** — add card to Twilio account (julian@endoo.co.uk) to activate WhatsApp sender. Google Pay kept failing — try card directly.
+13. ~~**Twilio billing**~~ ✓ Done 2026-05-17 — card added, compliance profile approved.
+14. **Twilio UK number** — compliance registration for UK mobile number is In Review. Once approved: buy number → register as WhatsApp sender → fill `functions/.env` → redeploy → end-to-end test.
+15. **Deploy Feature 16 to main** — once tested on dev: create `.firebaserc` on main branch (`stalliq-production`), commit functions/, deploy.
 
 ---
 
+
+## Session 37 — 2026-05-17: Feature 16 — Order Ready Notifications
+
+### Changes
+- **`functions/index.js`** — Cloud Function `orderReadyNotification`. Firestore trigger on `orders/{orderId}` onUpdate. Fires when status → `ready`. Resolves `firstName` from `users/{customerId}` (or `customerName` for walk-ins). Resolves `vendorName` from `vendors/{vendorId}/displayName`. Attempts WhatsApp send via Twilio content template (`HXb0f2b4e74995392bf1f82095d577036c`), SMS fallback on failure. Logs outcome back to order doc (`notificationSent`, `notificationChannel`, `notificationSentAt`).
+- **`functions/package.json`** — firebase-admin ^12, firebase-functions ^5.1, twilio ^5.3, nodejs20.
+- **`functions/.gitignore`** — excludes `node_modules/` and `.env`.
+- **`functions/.env`** — local only, gitignored. Contains Twilio credentials. `TWILIO_WHATSAPP_FROM` and `TWILIO_SMS_FROM` still placeholder — pending UK number purchase.
+- **`firebase.json`** — updated to include `functions` block (source: functions, runtime: nodejs20).
+- **`.firebaserc`** — created on develop branch, `"default": "stalliq"` (dev project).
+- **Deployed to `stalliq` dev project** — europe-west2, nodejs20, deployed 21:26. Trigger confirmed in Firebase console.
+- **`vendors/demo/displayName`** — set to "Street Stack" in stalliq dev Firestore.
+
+### Twilio state (2026-05-17)
+- Account SID: AC7ef0d5d10e124d8ba4a6743ee1d3e4de
+- Compliance profile: ✅ Approved
+- Content template `order_ready_notification` (HXb0f2b4e74995392bf1f82095d577036c): submitted for Meta approval (Utility category) — pending
+- UK mobile number purchase: compliance registration In Review — expected approval within 2 business days
+- WhatsApp sender: not yet created (blocked on number purchase)
+
+---
 
 ## Design Session — 2026-05-17: Feature 16/17/18 Notifications
 
