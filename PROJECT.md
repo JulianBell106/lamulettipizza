@@ -45,7 +45,7 @@ Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering p
 - **`vendors/demo/displayName`** — set to "Street Stack" in stalliq dev Firestore.
 
 ### Twilio state (2026-05-17)
-- Account SID: AC7ef0d5d10e124d8ba4a6743ee1d3e4de
+- Account SID: configured (see .env — do not commit)
 - Compliance profile: ✅ Approved
 - Content template `order_ready_notification` (HXb0f2b4e74995392bf1f82095d577036c): submitted for Meta approval (Utility category) — pending
 - UK mobile number purchase: compliance registration In Review — expected approval within 2 business days
