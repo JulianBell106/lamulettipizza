@@ -168,6 +168,19 @@ service cloud.firestore {
     }
 
 
+    // ── Flash Sales ──────────────────────────────────────────────────────────
+    //
+    // flashSales/{flashSaleId}
+    //   CREATE: Kitchen (anonymous auth) writes a new flash sale doc to trigger
+    //           the flashSaleBroadcast Cloud Function.
+    //   READ/UPDATE/DELETE: Admin SDK only (Cloud Function). No client access needed.
+
+    match /flashSales/{flashSaleId} {
+      allow create: if isAnonymousAuth();
+      allow read, update, delete: if false;
+    }
+
+
     // ── Catch-all deny ───────────────────────────────────────────────────────
     // Any path not explicitly matched above is denied by default in Firestore.
 
