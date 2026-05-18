@@ -104,39 +104,21 @@ exports.orderReadyNotification = functions
     let channel          = null;
     let errorDetail      = null;
 
-    // ── Attempt 1: WhatsApp via content template ───────────────────────────
-    // Template body: "Hi {{1}}, your order from {{2}} is ready for collection!
-    //                 Thanks for your order – see you soon."
+    // ── SMS notification ───────────────────────────────────────────────────
+    // WhatsApp available as a premium upgrade (future).
 
     try {
       await client.messages.create({
-        from:             fromWA,
-        to:               `whatsapp:${customerPhone}`,
-        contentSid:       templateSid,
-        contentVariables: JSON.stringify({ '1': firstName, '2': vendorName }),
+        from: fromSMS,
+        to:   customerPhone,
+        body: `Hi ${firstName}, your order from ${vendorName} is ready for collection! See you soon.`,
       });
       notificationSent = true;
-      channel          = 'whatsapp';
-      console.log(`[F16] WhatsApp sent → ${customerPhone} | order ${orderRef}`);
-    } catch (waErr) {
-      console.warn(`[F16] WhatsApp failed for order ${orderRef}:`, waErr.message);
-      errorDetail = `WA: ${waErr.message}`;
-
-      // ── Attempt 2: SMS fallback ──────────────────────────────────────────
-
-      try {
-        await client.messages.create({
-          from: fromSMS,
-          to:   customerPhone,
-          body: `Hi ${firstName}, your order from ${vendorName} is ready for collection! See you soon.`,
-        });
-        notificationSent = true;
-        channel          = 'sms';
-        console.log(`[F16] SMS fallback sent → ${customerPhone} | order ${orderRef}`);
-      } catch (smsErr) {
-        console.error(`[F16] SMS fallback also failed for order ${orderRef}:`, smsErr.message);
-        errorDetail = `WA: ${waErr.message} | SMS: ${smsErr.message}`;
-      }
+      channel          = 'sms';
+      console.log(`[F16] SMS sent → ${customerPhone} | order ${orderRef}`);
+    } catch (smsErr) {
+      console.error(`[F16] SMS failed for order ${orderRef}:`, smsErr.message);
+      errorDetail = `SMS: ${smsErr.message}`;
     }
 
     // ── Log outcome back to order doc ──────────────────────────────────────
