@@ -1,14 +1,18 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-17 — Design session: Feature 16/17/18 design + Twilio/WhatsApp setup started.
+> Last updated: 2026-05-18 — Session 37: Feature 16 Cloud Function built + deployed to dev. Twilio compliance approved. UK number purchase in progress.
 > **Next session — start here:**
-> - **Next build:** Feature 16 — SMS/WhatsApp order-ready notifications (Cloud Function + Twilio). See Section 42.
-> - **Future session:** Add Stalliq product page to endoo.co.uk (under Products) — agreed with Julian 2026-05-10.
+> - **Rotate Twilio Auth Token first** — Account SID was accidentally committed to git history on develop branch. Rotate at Twilio Console → Account → Request secondary token → promote → revoke old.
+> - **Complete Twilio number purchase** — UK mobile compliance registration In Review. Once approved: buy number → register as WhatsApp sender → fill `functions/.env` with real credentials → redeploy → end-to-end test on dev.
+> - **Then deploy Feature 16 to main** — create `.firebaserc` on main with `"default": "stalliq-production"`, copy `functions/` directory, add `vendors/lamuletti/displayName: "La Muletti"` to stalliq-production Firestore, deploy.
+> - **Future session:** Add Stalliq product page to endoo.co.uk (under Products).
 >
 > ⚠️ **Julian — actions outstanding:**
-> 1. **Twilio billing** — add card to Twilio account (julian@endoo.co.uk) to activate WhatsApp sender. Google Pay kept failing — try card directly.
-> 2. **Wipe test data on stalliq-production** — delete all docs in `orders` and `users` collections. Keep `vendors/{vendorId}/staff/`, `kitchenStatus`, `location`, `counters`.
-> 3. **ICO registration** — ico.org.uk, ~£40/year (required before collecting personal data in production).
-> 4. **Google Sheet header rows** — protect header rows on all three La Muletti sheets.
+> 1. ~~**Twilio billing**~~ ✓ Done 2026-05-17 — card added, compliance profile approved.
+> 2. **Rotate Twilio Auth Token** — SID committed to git history (develop branch). Rotate ASAP.
+> 3. **Twilio UK number** — compliance registration In Review. Buy number + register as WhatsApp sender once approved.
+> 4. **Wipe test data on stalliq-production** — delete all docs in `orders` and `users` collections. Keep `vendors/{vendorId}/staff/`, `kitchenStatus`, `location`, `counters`.
+> 5. **ICO registration** — ico.org.uk, ~£40/year (required before collecting personal data in production).
+> 6. **Google Sheet header rows** — protect header rows on all three La Muletti sheets.
 > **⚠️ Backlog:**
 > - B4: Generic code audit — remove hardcoded pizza/La Muletti refs from shared layer ⚠️ risky — do on feature branch
 > **Demo with Daniele postponed ~2 weeks from 2026-05-17 (he is busy).**
@@ -200,7 +204,7 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 15 | Multi-Staff Kitchen PIN | ✅ Done | Multi-staff PIN login (SHA-256 hashed), lockout after 5 fails (15 min), staff management panel (add/rename/change PIN/deactivate), forgot PIN flow via Firebase Phone Auth. Session 15. |
 | 15a | Real Phone Auth Go-Live | ✅ Done | Blaze plan, App Check (reCAPTCHA v3), authorised domain confirmed, test numbers removed, old kitchen.pin removed. Session 15b. |
 | 15b | Security Hardening + GDPR | ✅ Done | Anonymous auth, Firestore rules, PIN salting, cookie notice, privacy policy. Sessions 16a/16b. |
-| 16 | SMS & WhatsApp Status Notifications | ⏳ Planned | Customer notified on order status changes — Twilio |
+| 16 | SMS & WhatsApp Status Notifications | 🔧 In Progress | Cloud Function built + deployed to dev (Session 37). Twilio compliance approved. Awaiting UK number purchase + WhatsApp template Meta approval. Deploy to production pending. |
 | 17 | Geofence Notifications | ⏳ Planned | Van enters subscriber's area → phone buzzes |
 | 18 | Flash Sales & Broadcasts | ⏳ Planned | Vendor launches deal in seconds, broadcasts to subscribers |
 | 19 | Loyalty Stamp Card | ✅ Done | Stamp card (8 stamps → free pizza), per-order guard, cross-device sync, transaction-safe award |
