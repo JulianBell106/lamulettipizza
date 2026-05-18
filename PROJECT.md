@@ -1,8 +1,9 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-17 — Session 37: Feature 16 Cloud Function built and deployed to stalliq dev. Twilio compliance approved. UK number purchase in progress (compliance registration in review).
+> Last updated: 2026-05-18 — Session 38: Feature 16 fully live on dev + production. Twilio UK number purchased. SMS notifications working. Messaging toggle added to kitchen settings. WhatsApp template still pending Meta approval.
 > **Next session — start here:**
-> - **Complete Twilio number purchase** — compliance registration for UK mobile number is In Review. Once approved: buy number, register as WhatsApp sender, fill in `.env`, redeploy functions, end-to-end test.
-> - **Then deploy Feature 16 to main (stalliq-production)** — create `.firebaserc` on main with `stalliq-production`, copy functions/, deploy.
+> - **Check WhatsApp template approval** — submitted 2026-05-17. Once approved: upgrade to WhatsApp as premium tier offering (see backlog B3).
+> - **Wipe test data on stalliq-production** — still outstanding before demo (see action 3 below).
+> - **Node.js 20 deprecation** — upgrade functions to Node 22 before 2026-10-30.
 > - **Future session:** Add Stalliq product page to endoo.co.uk (under Products) — agreed with Julian 2026-05-10.
 
 ## What is Stalliq?
@@ -26,11 +27,32 @@ Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering p
 11. **Generic code audit** ⚠️ High priority before scaling — remove hardcoded pizza/La Muletti refs from shared layer. Do on feature branch. Do not rush — risky change.
 12. ~~Rename Firebase `stalliq` project → `stalliq-development`~~ ✓ Done 2026-05-10.
 13. ~~**Twilio billing**~~ ✓ Done 2026-05-17 — card added, compliance profile approved.
-14. **Twilio UK number** — compliance registration for UK mobile number is In Review. Once approved: buy number → register as WhatsApp sender → fill `functions/.env` → redeploy → end-to-end test.
-15. **Deploy Feature 16 to main** — once tested on dev: create `.firebaserc` on main branch (`stalliq-production`), commit functions/, deploy.
+14. ~~**Twilio UK number**~~ ✓ Done 2026-05-18 — number +447782218609 purchased. WhatsApp Business profile created (Endoo Limited). `.env` written on both branches. SMS working end-to-end on dev and production.
+15. ~~**Deploy Feature 16 to main**~~ ✓ Done 2026-05-18 — functions deployed to stalliq-production. `displayName: "La Muletti"` set on vendor doc. IAM Cloud Build permissions fixed on stalliq-production.
+16. ~~**Messaging toggle in kitchen settings**~~ ✓ Done 2026-05-18 — owners can enable/disable SMS notifications from kitchen settings. Defaults to enabled. Deployed to both dev and production.
 
 ---
 
+
+## Session 38 — 2026-05-18: Feature 16 — Live on Production + Messaging Toggle
+
+### Changes
+- **Twilio UK number purchased** — +447782218609. WhatsApp Business profile created under Endoo Limited Meta Business account.
+- **`functions/.env`** — written on both `develop` and `main` with real Twilio credentials and number. Gitignored.
+- **Feature 16 SMS-only** — WhatsApp attempt removed. Cloud Function sends SMS only. WhatsApp moved to future premium tier (see backlog B3). Deployed to both `stalliq` dev and `stalliq-production`.
+- **Messaging toggle** — `vendors/{vendorId}/messagingEnabled` (bool, default true). Kitchen settings → Customer Notifications section (owner-only). Toggle writes to Firestore; Cloud Function checks flag before sending. Deployed to both branches.
+- **`displayName: "La Muletti"`** — set on `vendors/lamuletti` in stalliq-production Firestore so SMS reads correctly.
+- **IAM fix** — granted `Storage Object Viewer` to `275171575630@cloudbuild.gserviceaccount.com` on stalliq-production (required for first Cloud Functions deploy).
+- **`firebase.json`** — updated on `main` to include functions block (source: functions, runtime: nodejs20).
+- **`.firebaserc`** on `main` — `"default": "stalliq-production"`.
+
+### Twilio state (2026-05-18)
+- UK number: +447782218609 ✅
+- WhatsApp Business profile: Endoo Limited ✅
+- SMS notifications: ✅ Working on dev and production
+- WhatsApp content template `order_ready_notification` (HXb0f2b4e74995392bf1f82095d577036c): **Pending Meta approval** — submitted 2026-05-17, expected within 48hrs
+
+---
 
 ## Session 37 — 2026-05-17: Feature 16 — Order Ready Notifications
 
@@ -175,6 +197,12 @@ Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering p
 ---
 
 ## Pre-production backlog
+
+**B3 — WhatsApp as premium notifications tier** — once Meta template approved, add WhatsApp as an upgrade to the mid-tier SMS plan. Tier structure:
+- **Mid tier ("Notify"):** SMS order ready notifications (current)
+- **Premium tier ("Connect"):** WhatsApp notifications + SMS fallback. Richer UX, lower cost at scale, unlocks future Features 17/18 (Flash Sales, Geolocation) via WhatsApp.
+- Implementation: add `messagingChannel: 'sms' | 'whatsapp'` to vendor doc. Cloud Function checks channel and sends accordingly. Kitchen settings toggle to switch channel (owner-only).
+- **Dependency:** Meta WhatsApp template approval (pending as of 2026-05-18).
 
 ~~**B1 — stalliq.co.uk: Show kitchen dashboard more prominently**~~ ✓ Done Session 32 — full two-panel demo section with animated kitchen card and both CTAs. See Session 32 below.
 
