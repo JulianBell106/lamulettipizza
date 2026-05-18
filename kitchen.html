@@ -1124,6 +1124,12 @@
         <div class="k-modal-actions" style="margin-top:4px;" id="staff-add-wrap">
           <button class="k-modal-btn primary" id="staff-add-btn" onclick="openAddStaff()">+ Add Staff Member</button>
         </div>
+        <!-- Customer Messaging toggle (owner only) -->
+        <div id="k-messaging-section" style="display:none; margin-top:16px; padding-top:14px; border-top:1px solid var(--gold-rule);">
+          <div style="font-size:12px; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;">Customer Notifications</div>
+          <div style="font-size:12px; color:var(--text-secondary); margin-bottom:10px;">Send SMS when orders are marked ready.</div>
+          <button class="k-broadcast-btn" id="k-messaging-toggle-btn" onclick="toggleMessaging()">💬 Messaging On</button>
+        </div>
       </div>
 
       <!-- Screen 2: Add new staff member -->

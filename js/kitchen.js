@@ -76,6 +76,7 @@ let ordersUnsubscribe = null;
 let broadcastActive     = false;
 let broadcastIntervalId = null;
 let broadcastStopRequested = false; // guards against stale GPS writes after stop
+let messagingEnabled    = true;  // mirrors vendors/{id}/messagingEnabled — default true
 
 // Audio state — shared AudioContext unlocked on PIN entry (iOS requires gesture)
 let kitchenAudioCtx      = null;
@@ -489,6 +490,39 @@ function _dismissAudioRestorePrompt() {
 /* ============================================================================
    5. KITCHEN STATUS
    ============================================================================ */
+// ── Customer messaging toggle (Feature 16) ──────────────────────────────────
+
+function listenMessagingEnabled() {
+  kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
+    .onSnapshot(doc => {
+      messagingEnabled = !doc.exists || doc.data().messagingEnabled !== false;
+      updateMessagingToggleUI();
+    }, err => console.warn('[F16] listenMessagingEnabled error:', err.message));
+}
+
+async function toggleMessaging() {
+  const newVal = !messagingEnabled;
+  try {
+    await kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
+      .set({ messagingEnabled: newVal }, { merge: true });
+  } catch (err) {
+    showToast('Could not update messaging setting.');
+    console.error('[F16] toggleMessaging error:', err.message);
+  }
+}
+
+function updateMessagingToggleUI() {
+  const btn = document.getElementById('k-messaging-toggle-btn');
+  if (!btn) return;
+  if (messagingEnabled) {
+    btn.textContent = '💬 Messaging On';
+    btn.classList.add('active');
+  } else {
+    btn.textContent = '💬 Messaging Off';
+    btn.classList.remove('active');
+  }
+}
+
 function listenKitchenStatus() {
   kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
     .onSnapshot(doc => {
@@ -1286,6 +1320,7 @@ function initKanbanDrag() {
 function startDashboard() {
   startClock();
   listenKitchenStatus();
+  listenMessagingEnabled();
   listenBroadcastState(); // Session 14 — live location broadcast
   listenOrders();
   initKanbanDrag();
@@ -1754,6 +1789,9 @@ async function loadStaffList() {
     ? 'Everyone who can access the kitchen dashboard.'
     : 'You can change your name and PIN below.';
   if (addWrapEl) addWrapEl.style.display = isOwner ? '' : 'none';
+  const msgSectionEl = document.getElementById('k-messaging-section');
+  if (msgSectionEl) msgSectionEl.style.display = isOwner ? '' : 'none';
+  updateMessagingToggleUI();
 
   const visibleDocs = isOwner ? staffDocs : staffDocs.filter(d => d.id === loggedInStaffId);
 
