@@ -3,7 +3,8 @@
 > **Next session — start here:**
 > - **🔴 Rotate Twilio Auth Token** — SID accidentally committed to git history on develop. Rotate at Twilio Console → Account → API keys & tokens. Update `functions/.env` on both branches.
 > - **Deploy functions to develop** — run `firebase deploy --only functions` from lamulettipizza dir. Then test postcode opt-in end-to-end (enter postcode → check Firestore for postcodeLatLng → activate broadcast in kitchen → send flash sale → confirm SMS arrives).
-> - **Feature 19 UI polish** — flash sale section in kitchen settings feels cluttered; postcode opt-in section on customer account page also needs tightening. Tackle as a dedicated polish pass next session.
+> - **🔴 Feature 19 — Flash sale discount not applied at checkout** — critical gap. SMS fires but no discount lands in the basket and kitchen walk-in orders have no way to apply it either. Full spec in Feature 19 section below — build this before Feature 19 goes to production.
+> - **Feature 19 UI polish** — flash sale section in kitchen settings feels cluttered; postcode opt-in section on customer account page also needs tightening. Tackle after discount wiring is done.
 > - **Check WhatsApp template approval** — submitted 2026-05-17. Once approved: implement WhatsApp as premium tier (backlog B3).
 > - **Wipe test data on stalliq-production** — still outstanding before demo (see action 3 below).
 > - **Node.js 20 deprecation** — upgrade functions to Node 22 before 2026-10-30.
@@ -174,6 +175,51 @@ Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering p
 
 **New CDN script:**
 - `firebase-functions-compat.js` added to `index.html` (required for `firebase.functions().httpsCallable()`)
+
+---
+
+### ⚠️ Feature 19 — Outstanding: Flash Sale Discount Not Applied at Checkout
+
+**The gap:** The SMS fires correctly and the `flashSales/` doc is written, but the discount is never applied in the customer basket or to kitchen walk-in orders. The notification is disconnected from the transaction. Must be fixed before Feature 19 goes to production.
+
+**The fix — `vendors/{vendorId}/flashSale/current` live state doc:**
+
+Same pattern as `location/current` and `kitchenStatus` — a single document the whole app listens to in real time. One active flash sale per vendor at a time.
+
+**Doc shape:**
+```
+vendors/{vendorId}/flashSale/current
+  active:        boolean
+  discountType:  'percent' | 'fixed'
+  discountValue: number
+  message:       string   (the SMS text, shown as a banner in-app)
+  expiresAt:     timestamp
+  startedAt:     timestamp
+  startedBy:     string (staffId)
+```
+
+**Kitchen changes (kitchen.html + kitchen.js):**
+- Flash sale panel gets two new fields: discount type selector (% off / £ off) + value input, and a duration selector (30 min / 1 hr / 2 hrs / custom).
+- On Send: writes `flashSale/current` with `active: true` + `expiresAt` + discount fields, AND writes to `flashSales/` for the SMS broadcast (existing behaviour).
+- Kitchen header gets a live "⚡ FLASH SALE ACTIVE" indicator when `flashSale/current` is active — similar to the broadcast button going green. Includes a "End Flash Sale" button that sets `active: false`.
+- Walk-in orders: when a flash sale is active, the new order modal shows the discount and applies it to the order total automatically.
+
+**Customer app changes (app.js + index.html):**
+- New `listenFlashSale()` function — real-time listener on `vendors/{vendorId}/flashSale/current`. Same pattern as `listenVanLocation()`.
+- When active and `expiresAt` is in the future: flash sale discount is returned by `getActiveDiscount()` alongside loyalty (flash sale takes priority over loyalty, same stacking rule — no double discounts).
+- Basket shows the flash sale discount line automatically — no code required, no customer action.
+- Optional: small flash sale banner on the home or menu page when active ("⚡ Flash sale on now!").
+- Expiry handled client-side: check `expiresAt` vs `Date.now()`. No Cloud Function needed for cleanup.
+
+**Firestore rules:**
+- `vendors/{vendorId}/flashSale/{docId}`: public read (customer app needs it unauthenticated); write = anonymous auth (kitchen only).
+
+**Build order for next session:**
+1. Firestore rules update
+2. Kitchen panel — add discount + duration fields, update send logic, add live indicator + End button
+3. app.js — `listenFlashSale()`, integrate with `getActiveDiscount()`, basket rendering
+4. index.html — flash sale banner (optional, can follow)
+5. Test end-to-end: send flash sale from kitchen → discount appears in customer basket → order placed with discount → kitchen walk-in order also gets discount
 
 ---
 
