@@ -1,9 +1,9 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-18 — Session 39: Feature 19 — Geofenced Flash Sale Alerts built on develop. Postcode opt-in on account page, geocoding Cloud Function, kitchen flash sale panel, broadcast Cloud Function. Uses SMS (Twilio) not Web Push. Requires Google Geocoding API key before deploy.
+> Last updated: 2026-05-18 — Session 39: Feature 19 — Geofenced Flash Sale Alerts fully wired. Kitchen panel writes to Firestore ✅. Firestore rules updated ✅. Geocoding API key added ✅. Functions deployed (pending). Postcode opt-in pending end-to-end test. UI polish needed on both kitchen panel and customer account section.
 > **Next session — start here:**
 > - **🔴 Rotate Twilio Auth Token** — SID accidentally committed to git history on develop. Rotate at Twilio Console → Account → API keys & tokens. Update `functions/.env` on both branches.
-> - **Add GOOGLE_GEOCODING_API_KEY to `functions/.env`** on develop — get a Geocoding API key from Google Cloud Console (stalliq project), enable the Geocoding API, add to `.env`. Required before Feature 19 can geocode postcodes. Then deploy functions: `firebase deploy --only functions`.
-> - **Deploy Feature 19 to develop** — `firebase deploy --only functions` on develop branch after adding geocoding key.
+> - **Deploy functions to develop** — run `firebase deploy --only functions` from lamulettipizza dir. Then test postcode opt-in end-to-end (enter postcode → check Firestore for postcodeLatLng → activate broadcast in kitchen → send flash sale → confirm SMS arrives).
+> - **Feature 19 UI polish** — flash sale section in kitchen settings feels cluttered; postcode opt-in section on customer account page also needs tightening. Tackle as a dedicated polish pass next session.
 > - **Check WhatsApp template approval** — submitted 2026-05-17. Once approved: implement WhatsApp as premium tier (backlog B3).
 > - **Wipe test data on stalliq-production** — still outstanding before demo (see action 3 below).
 > - **Node.js 20 deprecation** — upgrade functions to Node 22 before 2026-10-30.

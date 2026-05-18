@@ -255,17 +255,24 @@ exports.flashSaleBroadcast = functions
       return null;
     }
 
-    // Check vendor messagingEnabled (reuse same guard as F16)
+    // Check vendor messagingEnabled + read displayName for SMS prefix
+    let vendorName = null;
     try {
       const vendorDoc = await admin.firestore().collection('vendors').doc(vendorId).get();
-      if (vendorDoc.exists && vendorDoc.data().messagingEnabled === false) {
-        console.log('[F19] Messaging disabled for vendor ' + vendorId + ' — aborting flash sale broadcast.');
-        await snap.ref.update({ status: 'skipped', reason: 'messagingEnabled=false' });
-        return null;
+      if (vendorDoc.exists) {
+        if (vendorDoc.data().messagingEnabled === false) {
+          console.log('[F19] Messaging disabled for vendor ' + vendorId + ' — aborting flash sale broadcast.');
+          await snap.ref.update({ status: 'skipped', reason: 'messagingEnabled=false' });
+          return null;
+        }
+        vendorName = vendorDoc.data().displayName || null;
       }
     } catch (err) {
       console.warn('[F19] Could not read vendor doc:', err.message);
     }
+
+    // Prefix the message with the vendor name so recipients immediately know who's texting them
+    const smsBody = vendorName ? vendorName + ': ' + message : message;
 
     // Query all users with a postcode location
     const usersSnap = await admin.firestore()
@@ -304,7 +311,7 @@ exports.flashSaleBroadcast = functions
         await client.messages.create({
           from: fromSMS,
           to:   user.phone,
-          body: message,
+          body: smsBody,
         });
         sentCount++;
         console.log('[F19] SMS sent to ' + userDoc.id + ' (' + dist.toFixed(1) + ' miles away)');
