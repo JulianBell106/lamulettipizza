@@ -3007,8 +3007,9 @@ async function submitPostcode(prefix) {
     if (!user) throw new Error('Not signed in');
 
     // Geocode server-side — Cloud Function validates, geocodes, and writes to Firestore
-    // ⚠️ Must specify region — functions deployed to europe-west2, not default us-central1
-    const geocodeFn = firebase.functions('europe-west2').httpsCallable('geocodePostcode');
+    // ⚠️ Must specify region via firebase.app().functions() — compat SDK does not accept
+    //    a region string directly on firebase.functions().
+    const geocodeFn = firebase.app().functions('europe-west2').httpsCallable('geocodePostcode');
     await geocodeFn({ postcode: normalised, uid: user.uid });
 
     // listenUserProfile will pick up the update and re-render both surfaces
