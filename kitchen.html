@@ -1130,6 +1130,24 @@
           <div style="font-size:12px; color:var(--text-secondary); margin-bottom:10px;">Send SMS when orders are marked ready.</div>
           <button class="k-broadcast-btn" id="k-messaging-toggle-btn" onclick="toggleMessaging()">💬 Messaging On</button>
         </div>
+
+        <!-- Flash Sale Broadcast (owner only) -->
+        <div id="k-flashsale-section" style="display:none; margin-top:16px; padding-top:14px; border-top:1px solid var(--gold-rule);">
+          <div style="font-size:12px; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px;">⚡ Flash Sale</div>
+          <div style="font-size:12px; color:var(--text-secondary); margin-bottom:10px;">Text all opted-in customers within 3 miles. Van must be broadcasting.</div>
+          <textarea id="k-flashsale-msg"
+                    rows="3"
+                    maxlength="160"
+                    placeholder="e.g. Flash sale! 20% off all pizzas for the next hour — we're at Campbell Park. Come find us! 🍕"
+                    style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:var(--cream);font-size:13px;font-family:inherit;padding:10px;resize:none;outline:none;line-height:1.5;"></textarea>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;margin-bottom:10px;">
+            <span id="k-flashsale-charcount" style="font-size:11px;color:var(--ash);">0 / 160</span>
+            <button onclick="saveFlashSaleTemplate()" style="background:none;border:none;color:var(--gold);font-size:11px;cursor:pointer;text-decoration:underline;text-underline-offset:2px;padding:0;">Save as template</button>
+          </div>
+          <div id="k-flashsale-broadcast-warning" style="display:none;font-size:12px;color:#FFD040;margin-bottom:8px;">⚠️ Enable location broadcast first to use flash sales.</div>
+          <button class="k-broadcast-btn" id="k-flashsale-send-btn" onclick="sendFlashSale()">⚡ Send Flash Sale</button>
+          <div id="k-flashsale-status" style="font-size:12px;color:var(--text-secondary);margin-top:8px;min-height:16px;"></div>
+        </div>
       </div>
 
       <!-- Screen 2: Add new staff member -->

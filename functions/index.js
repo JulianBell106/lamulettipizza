@@ -3,6 +3,14 @@
 // Feature 16 — Order Ready Notifications (SMS)
 // Session 37 — 2026-05-17 | Updated Session 38 — 2026-05-18
 //
+// Feature 19 — Geofenced Flash Sale Alerts
+// Session 39 — 2026-05-18
+//   geocodePostcode  — callable: validates UK postcode, geocodes via Google API,
+//                      writes postcode + postcodeLatLng to users/{uid}.
+//   flashSaleBroadcast — onCreate trigger on flashSales/{id}:
+//                      queries all opted-in users, filters to within 3 miles of
+//                      van position using Haversine, sends SMS via Twilio.
+//
 // Trigger: Firestore onUpdate on orders/{orderId}
 //   Fires when status changes to 'ready'.
 //   1. Reads customerPhone + firstName from order / user profile.
@@ -17,6 +25,7 @@
 //   TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 //   TWILIO_AUTH_TOKEN=your_auth_token
 //   TWILIO_SMS_FROM=+44XXXXXXXXXX
+//   GOOGLE_GEOCODING_API_KEY=your_google_geocoding_api_key
 //
 // Required Firestore field (set once per vendor in Firebase Console):
 //   vendors/lamuletti  ->  displayName: "La Muletti"
@@ -135,5 +144,184 @@ exports.orderReadyNotification = functions
 
     await change.after.ref.update(update);
 
+    return null;
+  });
+
+// ============================================================================
+// Feature 19 — geocodePostcode (callable)
+// Called by the customer app when they submit their postcode on the account page.
+// Validates the postcode format, geocodes via Google Geocoding API (server-side
+// so the API key is never exposed to the browser), then writes postcode +
+// postcodeLatLng to users/{uid} in Firestore.
+// ============================================================================
+
+const UK_POSTCODE_RE = /^[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$/i;
+
+exports.geocodePostcode = functions
+  .region('europe-west2')
+  .https.onCall(async (data, context) => {
+
+    // Auth guard — must be signed in
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Must be signed in.');
+    }
+
+    const uid      = context.auth.uid;
+    const postcode = (data.postcode || '').trim();
+
+    // Server-side postcode validation
+    if (!UK_POSTCODE_RE.test(postcode)) {
+      throw new functions.https.HttpsError('invalid-argument', 'Invalid UK postcode.');
+    }
+
+    const apiKey = process.env.GOOGLE_GEOCODING_API_KEY;
+    if (!apiKey) {
+      console.error('[F19] GOOGLE_GEOCODING_API_KEY not set in environment.');
+      throw new functions.https.HttpsError('internal', 'Geocoding not configured.');
+    }
+
+    // Call Google Geocoding API
+    const url = 'https://maps.googleapis.com/maps/api/geocode/json'
+      + '?address=' + encodeURIComponent(postcode + ', UK')
+      + '&key=' + apiKey;
+
+    let lat, lng;
+    try {
+      const res  = await fetch(url);
+      const json = await res.json();
+
+      if (json.status !== 'OK' || !json.results || json.results.length === 0) {
+        console.warn('[F19] Geocoding returned status:', json.status, 'for postcode:', postcode);
+        throw new functions.https.HttpsError('not-found', 'Could not geocode postcode.');
+      }
+
+      const location = json.results[0].geometry.location;
+      lat = location.lat;
+      lng = location.lng;
+    } catch (err) {
+      if (err instanceof functions.https.HttpsError) throw err;
+      console.error('[F19] Geocoding fetch error:', err.message);
+      throw new functions.https.HttpsError('internal', 'Geocoding request failed.');
+    }
+
+    // Write to Firestore
+    await admin.firestore()
+      .collection('users')
+      .doc(uid)
+      .set({ postcode, postcodeLatLng: { lat, lng } }, { merge: true });
+
+    console.log('[F19] Postcode saved for user ' + uid + ': ' + postcode + ' -> ' + lat + ',' + lng);
+    return { success: true };
+  });
+
+// ============================================================================
+// Feature 19 — flashSaleBroadcast (Firestore onCreate trigger)
+// Triggered when a new doc is written to flashSales/{id} by the kitchen dashboard.
+// Expected doc shape:
+//   { vendorId, message, vanLat, vanLng, createdAt, sentBy }
+//
+// Steps:
+//   1. Reads all users who have a postcodeLatLng set.
+//   2. Filters to those within FLASH_SALE_RADIUS_MILES of the van's position.
+//   3. Sends each an SMS via Twilio.
+//   4. Logs results (sentCount, skippedCount, errors) back to the flashSales doc.
+// ============================================================================
+
+const FLASH_SALE_RADIUS_MILES = 3;
+
+/** Haversine distance in miles between two lat/lng pairs. */
+function haversineMiles(lat1, lng1, lat2, lng2) {
+  const R    = 3958.8; // Earth radius in miles
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a    = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+             + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
+             * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+exports.flashSaleBroadcast = functions
+  .region('europe-west2')
+  .firestore
+  .document('flashSales/{flashSaleId}')
+  .onCreate(async (snap, context) => {
+
+    const data = snap.data();
+    const { vendorId, message, vanLat, vanLng } = data;
+
+    if (!vendorId || !message || vanLat == null || vanLng == null) {
+      console.error('[F19] flashSaleBroadcast: missing required fields on doc', context.params.flashSaleId);
+      await snap.ref.update({ status: 'error', error: 'Missing required fields.' });
+      return null;
+    }
+
+    // Check vendor messagingEnabled (reuse same guard as F16)
+    try {
+      const vendorDoc = await admin.firestore().collection('vendors').doc(vendorId).get();
+      if (vendorDoc.exists && vendorDoc.data().messagingEnabled === false) {
+        console.log('[F19] Messaging disabled for vendor ' + vendorId + ' — aborting flash sale broadcast.');
+        await snap.ref.update({ status: 'skipped', reason: 'messagingEnabled=false' });
+        return null;
+      }
+    } catch (err) {
+      console.warn('[F19] Could not read vendor doc:', err.message);
+    }
+
+    // Query all users with a postcode location
+    const usersSnap = await admin.firestore()
+      .collection('users')
+      .where('postcodeLatLng', '!=', null)
+      .get();
+
+    if (usersSnap.empty) {
+      console.log('[F19] No opted-in users found.');
+      await snap.ref.update({ status: 'done', sentCount: 0, skippedCount: 0 });
+      return null;
+    }
+
+    const client  = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+    const fromSMS = process.env.TWILIO_SMS_FROM;
+
+    let sentCount    = 0;
+    let skippedCount = 0;
+    const errors     = [];
+
+    for (const userDoc of usersSnap.docs) {
+      const user = userDoc.data();
+      if (!user.postcodeLatLng || !user.phone) {
+        skippedCount++;
+        continue;
+      }
+
+      const dist = haversineMiles(vanLat, vanLng, user.postcodeLatLng.lat, user.postcodeLatLng.lng);
+
+      if (dist > FLASH_SALE_RADIUS_MILES) {
+        skippedCount++;
+        continue;
+      }
+
+      try {
+        await client.messages.create({
+          from: fromSMS,
+          to:   user.phone,
+          body: message,
+        });
+        sentCount++;
+        console.log('[F19] SMS sent to ' + userDoc.id + ' (' + dist.toFixed(1) + ' miles away)');
+      } catch (smsErr) {
+        console.error('[F19] SMS failed for user ' + userDoc.id + ':', smsErr.message);
+        errors.push(userDoc.id + ': ' + smsErr.message);
+      }
+    }
+
+    await snap.ref.update({
+      status:       'done',
+      sentCount,
+      skippedCount,
+      errors:       errors.length ? errors : [],
+      completedAt:  admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    console.log('[F19] Flash sale broadcast complete. Sent: ' + sentCount + ', Skipped: ' + skippedCount);
     return null;
   });

@@ -523,6 +523,144 @@ function updateMessagingToggleUI() {
   }
 }
 
+// ── Flash Sale Broadcast (Feature 19) ────────────────────────────────────────
+
+/**
+ * Loads the saved flash sale template from the vendor doc and populates
+ * the textarea. Also wires up the character counter.
+ */
+async function loadFlashSaleTemplate() {
+  const textarea  = document.getElementById('k-flashsale-msg');
+  const charCount = document.getElementById('k-flashsale-charcount');
+  if (!textarea) return;
+
+  // Wire up char counter (idempotent — remove old listener first)
+  textarea.oninput = () => {
+    if (charCount) charCount.textContent = textarea.value.length + ' / 160';
+  };
+
+  try {
+    const vendorDoc = await kitchenDb.collection('vendors').doc(CONFIG.vendor.id).get();
+    if (vendorDoc.exists && vendorDoc.data().flashSaleTemplate) {
+      textarea.value = vendorDoc.data().flashSaleTemplate;
+      if (charCount) charCount.textContent = textarea.value.length + ' / 160';
+    }
+  } catch (err) {
+    console.warn('[F19] loadFlashSaleTemplate error:', err.message);
+  }
+
+  updateFlashSaleUI();
+}
+
+/**
+ * Updates the Send button state and warning based on whether broadcast is active.
+ */
+function updateFlashSaleUI() {
+  const sendBtn  = document.getElementById('k-flashsale-send-btn');
+  const warning  = document.getElementById('k-flashsale-broadcast-warning');
+  if (!sendBtn) return;
+
+  if (broadcastActive) {
+    sendBtn.disabled = false;
+    sendBtn.classList.add('active');
+    if (warning) warning.style.display = 'none';
+  } else {
+    sendBtn.disabled = true;
+    sendBtn.classList.remove('active');
+    if (warning) warning.style.display = '';
+  }
+}
+
+/**
+ * Saves the current textarea content as the flash sale template on the vendor doc.
+ */
+async function saveFlashSaleTemplate() {
+  const textarea   = document.getElementById('k-flashsale-msg');
+  const statusEl   = document.getElementById('k-flashsale-status');
+  if (!textarea) return;
+
+  const msg = textarea.value.trim();
+  if (!msg) { if (statusEl) statusEl.textContent = 'Nothing to save.'; return; }
+
+  try {
+    await kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
+      .set({ flashSaleTemplate: msg }, { merge: true });
+    if (statusEl) {
+      statusEl.textContent = '✓ Template saved.';
+      setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3000);
+    }
+  } catch (err) {
+    console.error('[F19] saveFlashSaleTemplate error:', err.message);
+    if (statusEl) statusEl.textContent = 'Could not save — try again.';
+  }
+}
+
+/**
+ * Fires a flash sale broadcast by writing to flashSales/ in Firestore.
+ * The flashSaleBroadcast Cloud Function picks this up and fans out the SMS.
+ * Requires broadcast to be active (van lat/lng is read from location/current).
+ */
+async function sendFlashSale() {
+  const textarea = document.getElementById('k-flashsale-msg');
+  const statusEl = document.getElementById('k-flashsale-status');
+  const sendBtn  = document.getElementById('k-flashsale-send-btn');
+  if (!textarea || !sendBtn) return;
+
+  const msg = textarea.value.trim();
+  if (!msg) {
+    if (statusEl) statusEl.textContent = 'Please enter a message first.';
+    return;
+  }
+
+  if (!broadcastActive) {
+    if (statusEl) statusEl.textContent = 'Enable location broadcast first.';
+    return;
+  }
+
+  // Read current van position from Firestore
+  let vanLat, vanLng;
+  try {
+    const locDoc = await kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
+                           .collection('location').doc('current').get();
+    if (!locDoc.exists || !locDoc.data().active) {
+      if (statusEl) statusEl.textContent = 'Location not active — toggle broadcast off and on again.';
+      return;
+    }
+    vanLat = locDoc.data().lat;
+    vanLng = locDoc.data().lng;
+  } catch (err) {
+    console.error('[F19] sendFlashSale: could not read location:', err.message);
+    if (statusEl) statusEl.textContent = 'Could not read van location — try again.';
+    return;
+  }
+
+  sendBtn.disabled    = true;
+  sendBtn.textContent = '⏳ Sending…';
+  if (statusEl) statusEl.textContent = '';
+
+  try {
+    await kitchenDb.collection('flashSales').add({
+      vendorId:  CONFIG.vendor.id,
+      message:   msg,
+      vanLat,
+      vanLng,
+      sentBy:    loggedInStaffId || 'unknown',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      status:    'pending',
+    });
+
+    if (statusEl) statusEl.textContent = '✓ Flash sale sent!';
+    setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 5000);
+  } catch (err) {
+    console.error('[F19] sendFlashSale error:', err.message);
+    if (statusEl) statusEl.textContent = 'Failed to send — please try again.';
+  } finally {
+    sendBtn.disabled    = false;
+    sendBtn.textContent = '⚡ Send Flash Sale';
+    updateFlashSaleUI();
+  }
+}
+
 function listenKitchenStatus() {
   kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
     .onSnapshot(doc => {
@@ -606,6 +744,7 @@ function listenBroadcastState() {
     const data      = snap.exists ? snap.data() : null;
     broadcastActive = !!(data && data.active);
     renderBroadcastBtn();
+    updateFlashSaleUI();
 
     if (broadcastActive && !broadcastIntervalId) {
       // Push immediately on startup/reconnect so the map isn't stale for a
@@ -1792,6 +1931,9 @@ async function loadStaffList() {
   const msgSectionEl = document.getElementById('k-messaging-section');
   if (msgSectionEl) msgSectionEl.style.display = isOwner ? '' : 'none';
   updateMessagingToggleUI();
+  const flashSectionEl = document.getElementById('k-flashsale-section');
+  if (flashSectionEl) flashSectionEl.style.display = isOwner ? '' : 'none';
+  if (isOwner) loadFlashSaleTemplate();
 
   const visibleDocs = isOwner ? staffDocs : staffDocs.filter(d => d.id === loggedInStaffId);
 

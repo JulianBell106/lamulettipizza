@@ -1158,6 +1158,25 @@ html { scroll-behavior: smooth; }
 .m-acct-empty-history { padding: 20px 16px 8px; text-align: center; font-size: 13px; color: rgba(255,255,255,0.35); line-height: 1.6; }
 .m-signout-btn { display: block; margin: 8px 16px 24px; background: transparent; color: rgba(255,255,255,0.35); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 14px 16px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; text-align: center; transition: all 0.2s; width: calc(100% - 32px); }
 .m-signout-btn:hover { color: rgba(255,255,255,0.6); border-color: rgba(255,255,255,0.22); }
+
+/* ── Postcode opt-in — Feature 19 (Flash Sale Alerts) ───────────────────── */
+.m-postcode-card { background: rgba(212,160,67,0.06); border: 1px dashed rgba(212,160,67,0.3); border-radius: 12px; padding: 16px; margin: 0 16px 8px; }
+.m-postcode-label { font-size: 13px; font-weight: 600; color: #D4A043; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.m-postcode-info-btn { background: none; border: none; cursor: pointer; color: rgba(253,246,236,0.4); font-size: 13px; padding: 0; line-height: 1; }
+.m-postcode-info-text { font-size: 12px; color: rgba(253,246,236,0.55); margin-bottom: 10px; line-height: 1.5; display: none; }
+.m-postcode-info-text.visible { display: block; }
+.m-postcode-desc { font-size: 12px; color: rgba(253,246,236,0.55); margin-bottom: 12px; line-height: 1.5; }
+.m-postcode-row { display: flex; gap: 8px; align-items: center; }
+.m-postcode-input { flex: 1; background: rgba(255,255,255,0.08); border: 1px solid rgba(253,246,236,0.2); border-radius: 8px; padding: 10px 12px; color: #FDF6EC; font-size: 14px; font-family: 'DM Sans', sans-serif; text-transform: uppercase; letter-spacing: 0.05em; outline: none; min-width: 0; }
+.m-postcode-input::placeholder { color: rgba(253,246,236,0.3); text-transform: none; letter-spacing: 0; }
+.m-postcode-input:focus { border-color: rgba(212,160,67,0.5); }
+.m-postcode-submit { background: #D4A043; color: #1A0A00; border: none; border-radius: 8px; padding: 10px 16px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; font-family: 'DM Sans', sans-serif; }
+.m-postcode-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+.m-postcode-error { font-size: 12px; color: #ff6b6b; margin-top: 6px; min-height: 16px; }
+.m-postcode-status { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; background: rgba(212,160,67,0.07); border: 1px solid rgba(212,160,67,0.2); border-radius: 10px; padding: 12px 14px; margin: 0 16px 8px; }
+.m-postcode-status-label { font-size: 13px; font-weight: 600; color: #D4A043; margin-bottom: 3px; }
+.m-postcode-status-text { font-size: 12px; color: rgba(253,246,236,0.65); line-height: 1.5; }
+.m-postcode-optout { background: none; border: none; color: rgba(253,246,236,0.35); font-size: 11px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; padding: 0; margin-top: 5px; white-space: nowrap; flex-shrink: 0; font-family: 'DM Sans', sans-serif; }
 .status-pending   { background: rgba(255,200,50,0.15);  color: #FFD040; border: 1px solid rgba(255,200,50,0.3); }
 .status-accepted  { background: rgba(80,160,255,0.15);  color: #70B8FF; border: 1px solid rgba(80,160,255,0.3); }
 .status-preparing { background: rgba(217,59,37,0.15);   color: var(--ember); border: 1px solid rgba(217,59,37,0.3); }
@@ -1522,6 +1541,8 @@ html { scroll-behavior: smooth; }
       </div>
       <div class="d-acct-section-label">Offers</div>
       <div id="d-offers-list"></div>
+      <!-- Feature 19 — Flash Sale Alerts postcode opt-in (rendered by app.js) -->
+      <div id="d-postcode-section"></div>
       <div class="d-acct-section-label">Order History</div>
       <div id="d-order-history-list"></div>
       <div id="d-order-history-empty" class="m-acct-empty-history" style="display:none;">
@@ -1655,6 +1676,8 @@ html { scroll-behavior: smooth; }
       </div>
       <div class="m-acct-section-label">Offers</div>
       <div id="m-offers-list"></div>
+      <!-- Feature 19 — Flash Sale Alerts postcode opt-in (rendered by app.js) -->
+      <div id="m-postcode-section"></div>
       <div class="m-acct-section-label">Order History</div>
       <div id="m-order-history-list"></div>
       <div id="m-order-history-empty" class="m-acct-empty-history" style="display:none;">
@@ -1800,6 +1823,7 @@ html { scroll-behavior: smooth; }
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
 <script src="js/config.js"></script>
   <script>
   (function() {

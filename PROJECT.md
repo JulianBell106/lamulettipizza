@@ -1,7 +1,10 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-18 — Session 38: Feature 16 fully live on dev + production. Twilio UK number purchased. SMS notifications working. Messaging toggle added to kitchen settings. WhatsApp template still pending Meta approval.
+> Last updated: 2026-05-18 — Session 39: Feature 19 — Geofenced Flash Sale Alerts built on develop. Postcode opt-in on account page, geocoding Cloud Function, kitchen flash sale panel, broadcast Cloud Function. Uses SMS (Twilio) not Web Push. Requires Google Geocoding API key before deploy.
 > **Next session — start here:**
-> - **Check WhatsApp template approval** — submitted 2026-05-17. Once approved: upgrade to WhatsApp as premium tier offering (see backlog B3).
+> - **🔴 Rotate Twilio Auth Token** — SID accidentally committed to git history on develop. Rotate at Twilio Console → Account → API keys & tokens. Update `functions/.env` on both branches.
+> - **Add GOOGLE_GEOCODING_API_KEY to `functions/.env`** on develop — get a Geocoding API key from Google Cloud Console (stalliq project), enable the Geocoding API, add to `.env`. Required before Feature 19 can geocode postcodes. Then deploy functions: `firebase deploy --only functions`.
+> - **Deploy Feature 19 to develop** — `firebase deploy --only functions` on develop branch after adding geocoding key.
+> - **Check WhatsApp template approval** — submitted 2026-05-17. Once approved: implement WhatsApp as premium tier (backlog B3).
 > - **Wipe test data on stalliq-production** — still outstanding before demo (see action 3 below).
 > - **Node.js 20 deprecation** — upgrade functions to Node 22 before 2026-10-30.
 > - **Future session:** Add Stalliq product page to endoo.co.uk (under Products) — agreed with Julian 2026-05-10.
@@ -33,6 +36,22 @@ Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering p
 
 ---
 
+
+## Session 39 — 2026-05-18: Feature 19 — Geofenced Flash Sale Alerts (develop)
+
+### Changes
+- **`index.html`** — Firebase Functions CDN script added. CSS for postcode opt-in/status chip added. Placeholder divs `#m-postcode-section` / `#d-postcode-section` added to both mobile and desktop account views (between Offers and Order History).
+- **`js/app.js`** — `userPostcode` state var added. `renderPostcodeSection(prefix)`, `togglePostcodeInfo(prefix)`, `submitPostcode(prefix)`, `removePostcode()` functions added. `listenUserProfile` updated to sync `userPostcode` and re-render postcode sections. `loadAccountPage` updated to call `renderPostcodeSection`.
+- **`kitchen.html`** — Flash Sale section added to settings modal (owner-only, below Customer Notifications). Textarea, char counter, Save as template link, Send button, broadcast warning, status line.
+- **`js/kitchen.js`** — `loadFlashSaleTemplate()`, `updateFlashSaleUI()`, `saveFlashSaleTemplate()`, `sendFlashSale()` functions added. `listenBroadcastState` updated to call `updateFlashSaleUI()` on change. `loadStaffList` updated to show/hide flash sale section (owner-only) and load template.
+- **`functions/index.js`** — `geocodePostcode` callable Cloud Function added. `flashSaleBroadcast` Firestore onCreate trigger added. `GOOGLE_GEOCODING_API_KEY` env var required (not yet added to `.env` — Julian to action before deploy).
+
+### Still needed before Feature 19 is testable
+1. Get a Google Geocoding API key from Google Cloud Console (stalliq project) → enable Geocoding API → add `GOOGLE_GEOCODING_API_KEY=<key>` to `functions/.env` on develop.
+2. `firebase deploy --only functions` on develop.
+3. Test: sign in on demo site, enter a postcode, verify lat/lng written to Firestore. Activate broadcast in kitchen, send a flash sale, verify SMS arrives.
+
+---
 
 ## Session 38 — 2026-05-18: Feature 16 — Live on Production + Messaging Toggle
 
@@ -78,10 +97,10 @@ Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering p
 ## Design Session — 2026-05-17: Feature 16/17/18 Notifications
 
 ### Build order agreed
-1. **Feature 16 — Order Ready Notifications (SMS + WhatsApp)** — build first
-2. **Web Push infrastructure** — powers features 17 and 18
-3. **Feature 18 — Flash Sales** — opt-in + kitchen broadcast UI + Cloud Function
-4. **Feature 17 — Geolocation** — Cloud Function on location write + geofence + push
+1. ~~**Feature 16 — Order Ready Notifications (SMS)**~~ ✓ Done Session 38
+2. ~~**Web Push infrastructure**~~ Dropped — SMS (Twilio) used instead. Simpler, works on all phones, no permission prompt.
+3. ~~**Feature 19 — Geofenced Flash Sale Alerts**~~ ✓ Built Session 39 — postcode opt-in, geocoding CF, kitchen panel, broadcast CF.
+4. **Next: Test + deploy Feature 19 to develop.** Then port to main when stable.
 
 ### Feature 16 — Order Ready Notifications spec
 
@@ -111,24 +130,50 @@ Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering p
 - WhatsApp sender: ⏳ blocked on Twilio billing — Julian to add card (Google Pay failed, try card directly)
 - Once billing active: complete WhatsApp sender setup → submit template for Meta approval (~24-48hr)
 
-### Feature 17 — Geolocation spec (outline)
-- Van GPS (existing 10-min Firestore write) triggers Cloud Function
-- Function checks all subscriber geofences
-- Notification via Web Push (not SMS — too expensive at scale)
-- **Dependency:** Web Push infrastructure required first
+### Feature 19 — Geofenced Flash Sale Alerts spec ✅ Built Session 39
 
-### Feature 18 — Flash Sales spec (outline)
-- Opt-in toggle on Account page → `users/{uid}/marketingOptIn: true` (GDPR clean)
-- Kitchen broadcast UI: text field + send button
-- Cloud Function: queries opted-in users with push subscription → sends Web Push
-- **Dependency:** Web Push infrastructure required first
+**Decision:** SMS (Twilio) used instead of Web Push. Simpler architecture, near-100% open rate, no permission prompt, works on all phones. Cost at La Muletti's scale is negligible.
 
-### Web Push infrastructure (shared dependency for 17 + 18)
-- Service worker (`sw.js`) registered in PWA
-- Push subscription stored at `users/{uid}/pushSubscription`
-- Cloud Function sends push via Web Push Protocol or FCM
-- Permission prompt on Account page after opt-in
-- **Not yet designed — tackle after Feature 16 shipped**
+**Postcode opt-in (customer app — account page):**
+- New section between Offers and Order History on both mobile and desktop
+- Shows opt-in card with postcode input, UK postcode validation (client + server), ℹ️ info tooltip explaining data use
+- On submit: calls `geocodePostcode` Cloud Function (server-side Google Geocoding API — key never exposed)
+- On success: `users/{uid}/postcode` + `users/{uid}/postcodeLatLng: {lat, lng}` written to Firestore
+- `listenUserProfile` picks up the update and flips the card to a status chip showing opted-in postcode + "Remove postcode" link
+- Remove: deletes both fields from Firestore; status chip flips back to opt-in card
+
+**Geocoding Cloud Function (`geocodePostcode` — callable):**
+- Validates postcode server-side, calls Google Geocoding API, writes lat/lng to `users/{uid}`
+- Requires: `GOOGLE_GEOCODING_API_KEY` in `functions/.env`
+- Auth guard: `context.auth.uid` used — user can only write their own record
+
+**Kitchen flash sale panel (kitchen dashboard — settings modal, owner only):**
+- New section below Customer Notifications toggle in the staff-list-screen
+- Textarea pre-loaded with saved template from `vendors/{vendorId}/flashSaleTemplate`
+- "Save as template" button — writes to vendor doc for next time
+- Character counter (max 160 — one SMS)
+- "Send Flash Sale" button — disabled with warning if broadcast not active (van must be live)
+- On send: writes to `flashSales/{id}` → triggers `flashSaleBroadcast` Cloud Function
+
+**Broadcast Cloud Function (`flashSaleBroadcast` — Firestore onCreate):**
+- Triggers on `flashSales/{id}` creation
+- Reads `vanLat`/`vanLng` from the doc (captured at send time from `location/current`)
+- Queries all `users` where `postcodeLatLng != null`
+- Filters to users within `FLASH_SALE_RADIUS_MILES = 3` using Haversine formula
+- Sends SMS via Twilio to each in-range user
+- Logs `sentCount`, `skippedCount`, `errors`, `completedAt` back to the `flashSales` doc
+- Respects `vendors/{vendorId}/messagingEnabled` flag
+
+**New Firestore collections/fields:**
+- `users/{uid}/postcode` — normalised UK postcode string (e.g. `"MK1 1AA"`)
+- `users/{uid}/postcodeLatLng` — `{ lat: number, lng: number }`
+- `flashSales/{id}` — `{ vendorId, message, vanLat, vanLng, sentBy, createdAt, status, sentCount, skippedCount, errors, completedAt }`
+
+**New env var required:**
+- `GOOGLE_GEOCODING_API_KEY` — add to `functions/.env` on both branches before deploy
+
+**New CDN script:**
+- `firebase-functions-compat.js` added to `index.html` (required for `firebase.functions().httpsCallable()`)
 
 ---
 

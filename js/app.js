@@ -152,6 +152,7 @@ let locationAgeInterval    = null; // setInterval id for "Updated X mins ago" (S
 let userProfileUnsubscribe    = null; // real-time user document listener (Session 21)
 let userOfferUsageUnsubscribe = null; // real-time offer usage listener (Session 21)
 let userOrdersQueryUnsubscribe = null; // live orders query listener (Session 21)
+let userPostcode              = null; // stored postcode string, null if not opted in (Session 39)
 
 
 /* ============================================================================
@@ -1787,10 +1788,12 @@ function listenUserProfile(uid) {
     // Always sync customerName from Firestore so any auth refresh self-heals
     // (Session 21). Don't gate on !customerName — stale null must be overwritten.
     if (profileData.firstName) customerName = profileData.firstName;
+    userPostcode = profileData.postcode || null;
     ['m', 'd'].forEach(p => {
       const nameEl = document.getElementById(`${p}-account-name`);
       if (nameEl) nameEl.textContent = customerName ? `Hi, ${customerName}!` : 'Welcome back!';
       renderStampCard(buildAccountIds(p));
+      renderPostcodeSection(p);
     });
     // Refresh basket — loyalty reward eligibility may have changed
     const discM = document.getElementById('m-basket-discount-section');
@@ -2846,6 +2849,7 @@ function loadAccountPage(prefix = 'm') {
   // with empty/stale data (Session 21 fix).
   renderStampCard(ids);
   renderAccountOffers(ids);
+  renderPostcodeSection(prefix);
 }
 
 function renderStampCard(ids) {
@@ -2925,6 +2929,108 @@ function renderAccountOffers(ids) {
         ${badgeHtml}
       </div>`;
   }).join('');
+}
+
+// ── Feature 19 — Flash Sale Alerts: postcode opt-in ──────────────────────────
+
+/** UK postcode regex — covers all standard formats (e.g. MK1 1AA, SW1A 2AA). */
+const UK_POSTCODE_RE = /^[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$/i;
+
+function _normalisePostcode(val) {
+  const s = val.trim().toUpperCase().replace(/\s+/g, '');
+  return s.slice(0, -3) + ' ' + s.slice(-3);
+}
+
+/**
+ * Renders the postcode opt-in card OR the opted-in status chip into
+ * #{prefix}-postcode-section. Called on account load and after any state change.
+ */
+function renderPostcodeSection(prefix) {
+  const el = document.getElementById(`${prefix}-postcode-section`);
+  if (!el) return;
+
+  if (userPostcode) {
+    el.innerHTML = `
+      <div class="m-acct-section-label">Flash Sale Alerts</div>
+      <div class="m-postcode-status">
+        <div>
+          <div class="m-postcode-status-label">📍 Opted in</div>
+          <div class="m-postcode-status-text">You'll get a text when we're within 3 miles of ${esc(userPostcode)} and running a flash sale.</div>
+          <button class="m-postcode-optout" onclick="removePostcode()">Remove postcode</button>
+        </div>
+      </div>`;
+  } else {
+    el.innerHTML = `
+      <div class="m-acct-section-label">Flash Sale Alerts</div>
+      <div class="m-postcode-card">
+        <div class="m-postcode-label">
+          📍 Get notified when we're near you
+          <button class="m-postcode-info-btn" onclick="togglePostcodeInfo('${prefix}')" title="How it works">ℹ️</button>
+        </div>
+        <div class="m-postcode-info-text" id="${prefix}-postcode-info">We store your postcode to check whether you're within 3 miles when a flash sale goes live. We never share it and you can remove it any time.</div>
+        <div class="m-postcode-desc">Optionally share your postcode to receive exclusive loyalty flash sale offers when we're in your area.</div>
+        <div class="m-postcode-row">
+          <input class="m-postcode-input" id="${prefix}-postcode-input" type="text"
+                 inputmode="text" autocomplete="postal-code" maxlength="8"
+                 placeholder="e.g. MK1 1AA" />
+          <button class="m-postcode-submit" id="${prefix}-postcode-btn" onclick="submitPostcode('${prefix}')">Save</button>
+        </div>
+        <div class="m-postcode-error" id="${prefix}-postcode-error"></div>
+      </div>`;
+  }
+}
+
+function togglePostcodeInfo(prefix) {
+  const el = document.getElementById(`${prefix}-postcode-info`);
+  if (el) el.classList.toggle('visible');
+}
+
+async function submitPostcode(prefix) {
+  const input = document.getElementById(`${prefix}-postcode-input`);
+  const errEl = document.getElementById(`${prefix}-postcode-error`);
+  const btn   = document.getElementById(`${prefix}-postcode-btn`);
+  if (!input || !errEl || !btn) return;
+
+  const val = input.value.trim();
+  if (!UK_POSTCODE_RE.test(val)) {
+    errEl.textContent = 'Please enter a valid UK postcode (e.g. MK1 1AA)';
+    return;
+  }
+
+  const normalised = _normalisePostcode(val);
+  btn.disabled     = true;
+  btn.textContent  = 'Saving…';
+  errEl.textContent = '';
+
+  try {
+    const user = auth.currentUser;
+    if (!user) throw new Error('Not signed in');
+
+    // Geocode server-side — Cloud Function validates, geocodes, and writes to Firestore
+    const geocodeFn = firebase.functions().httpsCallable('geocodePostcode');
+    await geocodeFn({ postcode: normalised, uid: user.uid });
+
+    // listenUserProfile will pick up the update and re-render both surfaces
+  } catch (err) {
+    console.error('[Stalliq] submitPostcode error:', err.message);
+    errEl.textContent = 'Something went wrong — please try again.';
+    btn.disabled      = false;
+    btn.textContent   = 'Save';
+  }
+}
+
+async function removePostcode() {
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+    await db.collection('users').doc(user.uid).update({
+      postcode:       firebase.firestore.FieldValue.delete(),
+      postcodeLatLng: firebase.firestore.FieldValue.delete(),
+    });
+    // listenUserProfile will fire and re-render
+  } catch (err) {
+    console.error('[Stalliq] removePostcode error:', err.message);
+  }
 }
 
 function loadUserOrders(uid) {
