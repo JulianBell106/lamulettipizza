@@ -1,5 +1,5 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-19 — Session 41: Flash sale expiry timers patched on both branches, consistency check complete, PWA manifest + icons added (both branches), printable install card (install.html) added to both branches.
+> Last updated: 2026-05-19 — Session 42: Collection Window ("Queue from Anywhere") feature designed and specced as B7. No code changes this session.
 > **Next session — start here:**
 > - **🔴 Rotate Twilio Auth Token** — SID committed to git history on develop. Rotate at Twilio Console → Account → API keys & tokens. Update `functions/.env` on both branches.
 > - **Check WhatsApp template approval** — submitted 2026-05-17. Once approved: implement WhatsApp as premium tier (backlog B3).
@@ -20,6 +20,7 @@
 > - B4: Generic code audit — remove hardcoded pizza/La Muletti refs from shared layer ⚠️ risky — do on feature branch.
 > - B5: Flash sale BOGO / flexible discount types — currently only % off and £ off. Future: buy-one-get-one-free.
 > - B6: Google Play Store TWA wrap — pwabuilder.com generates signed AAB. Needs assetlinks.json on Netlify domain + Play Developer account (~$25).
+> - B7: Collection Window ("Queue from Anywhere") — customer picks arrival window at checkout; kitchen sees upcoming orders with countdown. See Section 21a for full spec.
 >
 > **Demo with Daniele postponed ~2 weeks from 2026-05-17 (he is busy).**
 > Read this file at the start of every session to get fully up to speed.
@@ -215,7 +216,7 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 19 | Loyalty Stamp Card | ✅ Done | Stamp card (8 stamps → free pizza), per-order guard, cross-device sync, transaction-safe award |
 | 19b | Geofenced Flash Sale Alerts | ✅ Built | Postcode opt-in, geocoding CF, kitchen panel, SMS broadcast CF (Session 39). Flash sale discount at checkout + walk-in orders (Session 40). Both branches. Deploy rules + CFs to go live. |
 | 20 | Flash Offers by Geolocation | ⏳ Planned | Customer in area gets notified of live deal |
-| 21 | Pre-order Time Slots | ⏳ Planned | Order now, collect at chosen time |
+| 21 | Pre-order Time Slots | ⏳ Specced | Collection Window ("Queue from Anywhere") — see Section 21a |
 | 22 | Vendor Self-Service | ⏳ Planned | Vendor manages own menu, events, location — full self-service portal |
 | 23 | MI & Reporting | ⏳ Planned | Daily order count, revenue totals, product breakdown |
 | 24 | AI Order Assist | 🌟 Vision | Customer orders in natural language — type or dictate |
@@ -450,6 +451,55 @@ vendors/{vendorId}/flashSale/current
 - Run end-to-end test checklist above
 - Rotate Twilio Auth Token 🔴 URGENT
 - Wipe test data on `stalliq-production`
+
+---
+
+## 21a. Collection Window — Feature Spec (logged 2026-05-19)
+
+**Framing:** "Queue from Anywhere" — let customers join the kitchen queue before physically arriving at the stall. Vendor-agnostic; applies to all Stalliq vendors.
+
+### Rules
+- Only available when vendor is **live/broadcasting** — no offline pre-orders.
+- Customer picks a collection preference at checkout — three options (CONFIG-driven via `CONFIG.ordering.collectionWindowOptions`):
+  - **I am here** — standard order, immediate
+  - **~15 mins** — I am on my way
+  - **~30 mins** — I am nearby, heading over
+- Order is sent to kitchen **immediately** on placement — kitchen has full visibility of upcoming queue.
+
+### Firestore — order doc change
+Add `collectionWindow` field to order document:
+```
+collectionWindow: {
+  type:            'now' | 'later',
+  minutesFromOrder: number   // 0 for 'now', 15 or 30 for 'later'
+}
+```
+
+### Customer UX
+Collection preference selector shown in basket/checkout, above the Place Order button. "I am here" selected by default. Selecting "later" shows the time options.
+
+### Kitchen UX
+- **"Now" orders:** render exactly as today — no change.
+- **"Later" orders:** visually subdued on the board with a countdown chip ("Collecting in ~18 mins"). As countdown reaches zero, card promotes to full prominence.
+- Board sorted: "now" orders first, then "later" orders ascending by collection time.
+- When kitchen taps **Accept Order →**, the wait modal pre-fills with the collection window value (e.g. 15 or 30 mins). Kitchen can adjust before confirming. The existing `waitMins` per-order flow is unchanged — collection window is context, not a contract.
+
+### No-show handling (v1)
+No upfront payment required. Kitchen can mark an order "Not collected" — logged for future analytics. No automatic penalty in v1.
+
+### Build scope
+| File | Change |
+|------|--------|
+| `index.html` / `app.js` | Collection preference selector in checkout UI; write `collectionWindow` to order doc |
+| `kitchen.html` / `kitchen.js` | Render "later" orders distinctly; countdown chip; board sort; pre-fill wait modal |
+| `firestore.rules` | No change needed — `collectionWindow` is just a new field on the existing order doc |
+| `js/config.js` | Add `CONFIG.ordering.collectionWindowOptions` (optional — defaults to [15, 30] if absent) |
+
+### Ship order
+1. Build on `develop` (Street Stack demo) — validate kitchen board sort and countdown UX
+2. Test end-to-end: place "later" order → confirm kitchen sees countdown → accept → wait modal pre-fills → mark ready → customer notified
+3. Show Daniele — get real-world feedback
+4. Apply to `main`
 
 ---
 
