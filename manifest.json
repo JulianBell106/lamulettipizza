@@ -1,0 +1,24 @@
+{
+  "name": "Stalliq — Street Stack",
+  "short_name": "Street Stack",
+  "description": "Order street food from Street Stack — powered by Stalliq.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B1221",
+  "theme_color": "#14B8A6",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/stalliq-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/stalliq-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
