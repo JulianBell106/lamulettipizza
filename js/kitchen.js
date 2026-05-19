@@ -523,6 +523,204 @@ function updateMessagingToggleUI() {
   }
 }
 
+// ── Flash Sale Broadcast (Feature 19b) ──────────────────────────────────────────
+// kitchenFlashSaleData — mirrors vendors/{vendorId}/flashSale/current
+let kitchenFlashSaleData = null;
+
+async function loadFlashSaleTemplate() {
+  const textarea  = document.getElementById('k-flashsale-msg');
+  const charCount = document.getElementById('k-flashsale-charcount');
+  if (!textarea) return;
+
+  textarea.oninput = () => {
+    if (charCount) charCount.textContent = textarea.value.length + ' / 160';
+  };
+
+  try {
+    const vendorDoc = await kitchenDb.collection('vendors').doc(CONFIG.vendor.id).get();
+    if (vendorDoc.exists && vendorDoc.data().flashSaleTemplate) {
+      textarea.value = vendorDoc.data().flashSaleTemplate;
+      if (charCount) charCount.textContent = textarea.value.length + ' / 160';
+    }
+  } catch (err) {
+    console.warn('[F19] loadFlashSaleTemplate error:', err.message);
+  }
+
+  updateFlashSaleUI();
+}
+
+function listenFlashSaleState() {
+  kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
+    .collection('flashSale').doc('current')
+    .onSnapshot(snap => {
+      kitchenFlashSaleData = snap.exists ? snap.data() : null;
+      renderFlashSaleLiveIndicator();
+    }, err => {
+      console.warn('[F19] listenFlashSaleState error:', err.message);
+    });
+}
+
+function renderFlashSaleLiveIndicator() {
+  const indicator = document.getElementById('k-flashsale-live-indicator');
+  const endBtn    = document.getElementById('k-flashsale-active-btn');
+  if (!indicator || !endBtn) return;
+
+  const isLive = !!(kitchenFlashSaleData
+    && kitchenFlashSaleData.active
+    && kitchenFlashSaleData.expiresAt
+    && kitchenFlashSaleData.expiresAt.toMillis() > Date.now());
+
+  indicator.style.display = isLive ? 'block' : 'none';
+  endBtn.style.display    = isLive ? ''      : 'none';
+}
+
+function updateFlashSaleUI() {
+  const sendBtn  = document.getElementById('k-flashsale-send-btn');
+  const warning  = document.getElementById('k-flashsale-broadcast-warning');
+  if (!sendBtn) return;
+
+  if (broadcastActive) {
+    sendBtn.disabled = false;
+    sendBtn.classList.add('active');
+    if (warning) warning.style.display = 'none';
+  } else {
+    sendBtn.disabled = true;
+    sendBtn.classList.remove('active');
+    if (warning) warning.style.display = '';
+  }
+}
+
+async function saveFlashSaleTemplate() {
+  const textarea   = document.getElementById('k-flashsale-msg');
+  const statusEl   = document.getElementById('k-flashsale-status');
+  if (!textarea) return;
+
+  const msg = textarea.value.trim();
+  if (!msg) { if (statusEl) statusEl.textContent = 'Nothing to save.'; return; }
+
+  try {
+    await kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
+      .set({ flashSaleTemplate: msg }, { merge: true });
+    if (statusEl) {
+      statusEl.textContent = '✓ Template saved.';
+      setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3000);
+    }
+  } catch (err) {
+    console.error('[F19] saveFlashSaleTemplate error:', err.message);
+    if (statusEl) statusEl.textContent = 'Could not save — try again.';
+  }
+}
+
+async function sendFlashSale() {
+  const textarea      = document.getElementById('k-flashsale-msg');
+  const statusEl      = document.getElementById('k-flashsale-status');
+  const sendBtn       = document.getElementById('k-flashsale-send-btn');
+  const discTypeEl    = document.getElementById('k-flashsale-discount-type');
+  const discValueEl   = document.getElementById('k-flashsale-discount-value');
+  const durationEl    = document.getElementById('k-flashsale-duration');
+  if (!textarea || !sendBtn) return;
+
+  const msg           = textarea.value.trim();
+  const discountType  = discTypeEl  ? discTypeEl.value               : 'percent';
+  const discountValue = discValueEl ? parseFloat(discValueEl.value)  : NaN;
+  const durationMins  = durationEl  ? parseInt(durationEl.value, 10) : 60;
+
+  if (!msg) {
+    if (statusEl) statusEl.textContent = 'Please enter a message first.';
+    return;
+  }
+  if (isNaN(discountValue) || discountValue <= 0) {
+    if (statusEl) statusEl.textContent = 'Please enter a valid discount amount.';
+    return;
+  }
+  if (discountType === 'percent' && discountValue > 100) {
+    if (statusEl) statusEl.textContent = 'Percentage discount cannot exceed 100%.';
+    return;
+  }
+  if (!broadcastActive) {
+    if (statusEl) statusEl.textContent = 'Enable location broadcast first.';
+    return;
+  }
+
+  let vanLat, vanLng;
+  try {
+    const locDoc = await kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
+                           .collection('location').doc('current').get();
+    if (!locDoc.exists || !locDoc.data().active) {
+      if (statusEl) statusEl.textContent = 'Location not active — toggle broadcast off and on again.';
+      return;
+    }
+    vanLat = locDoc.data().lat;
+    vanLng = locDoc.data().lng;
+  } catch (err) {
+    console.error('[F19] sendFlashSale: could not read location:', err.message);
+    if (statusEl) statusEl.textContent = 'Could not read van location — try again.';
+    return;
+  }
+
+  sendBtn.disabled    = true;
+  sendBtn.textContent = '⏳ Sending…';
+  if (statusEl) statusEl.textContent = '';
+
+  const now       = new Date();
+  const expiresAt = new Date(now.getTime() + durationMins * 60 * 1000);
+
+  try {
+    const batch = kitchenDb.batch();
+
+    const flashSaleCurrentRef = kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
+                                  .collection('flashSale').doc('current');
+    batch.set(flashSaleCurrentRef, {
+      active:        true,
+      discountType,
+      discountValue,
+      message:       msg,
+      expiresAt,
+      startedAt:     firebase.firestore.FieldValue.serverTimestamp(),
+      startedBy:     loggedInStaffId || 'unknown',
+    });
+
+    const broadcastRef = kitchenDb.collection('flashSales').doc();
+    batch.set(broadcastRef, {
+      vendorId:  CONFIG.vendor.id,
+      message:   msg,
+      vanLat,
+      vanLng,
+      sentBy:    loggedInStaffId || 'unknown',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      status:    'pending',
+    });
+
+    await batch.commit();
+
+    if (statusEl) statusEl.textContent = '✓ Flash sale live!';
+    setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 5000);
+  } catch (err) {
+    console.error('[F19] sendFlashSale error:', err.message);
+    if (statusEl) statusEl.textContent = 'Failed to send — please try again.';
+  } finally {
+    sendBtn.disabled    = false;
+    sendBtn.textContent = '⚡ Send Flash Sale';
+    updateFlashSaleUI();
+  }
+}
+
+async function endFlashSale() {
+  const endBtn = document.getElementById('k-flashsale-active-btn');
+  if (endBtn) { endBtn.textContent = '⏳ Ending…'; endBtn.disabled = true; }
+  try {
+    await kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
+      .collection('flashSale').doc('current')
+      .set({ active: false }, { merge: true });
+    console.log('[F19] Flash sale ended by', loggedInStaffId || 'unknown');
+  } catch (err) {
+    console.error('[F19] endFlashSale error:', err.message);
+  } finally {
+    if (endBtn) { endBtn.textContent = '⚡ End Flash Sale'; endBtn.disabled = false; }
+    renderFlashSaleLiveIndicator();
+  }
+}
+
 function listenKitchenStatus() {
   kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
     .onSnapshot(doc => {
@@ -1326,6 +1524,7 @@ function startDashboard() {
   listenKitchenStatus();
   listenMessagingEnabled();
   listenBroadcastState(); // Session 14 — live location broadcast
+  listenFlashSaleState(); // Session 40 — flash sale live state
   listenOrders();
   initKanbanDrag();
   _acquireWakeLock();    // Session 18 — keep screen on during kitchen session
@@ -1491,18 +1690,42 @@ function saveWalkinNote(itemId, value) {
 }
 
 function updateWalkinTotal() {
-  // NOTE (multi-tenancy): Uses CONFIG.menu (static) — same reason as renderWalkinItems().
   const currency = CONFIG.business.currency || '£';
   const menu     = CONFIG.menu || [];
-  let total      = 0;
+  let subtotal   = 0;
 
   Object.entries(walkinQty).forEach(([id, qty]) => {
     const item = menu.find(m => String(m.id) === String(id));
-    if (item) total += Number(item.price) * qty;
+    if (item) subtotal += Number(item.price) * qty;
   });
 
+  if (subtotal === 0) {
+    const el = document.getElementById('walkin-total');
+    if (el) el.textContent = '';
+    return;
+  }
+
+  let discountLine = '';
+  let finalTotal   = subtotal;
+  if (kitchenFlashSaleData
+      && kitchenFlashSaleData.active
+      && kitchenFlashSaleData.expiresAt
+      && kitchenFlashSaleData.expiresAt.toMillis() > Date.now()) {
+    const { discountType, discountValue } = kitchenFlashSaleData;
+    let amount = 0;
+    if (discountType === 'fixed') {
+      amount = Math.min(discountValue, subtotal);
+    } else if (discountType === 'percent') {
+      amount = parseFloat((subtotal * discountValue / 100).toFixed(2));
+    }
+    if (amount > 0) {
+      finalTotal   = Math.max(0, subtotal - amount);
+      discountLine = ` (⚡ -${currency}${amount.toFixed(2)})`;
+    }
+  }
+
   const el = document.getElementById('walkin-total');
-  if (el) el.textContent = total > 0 ? `Total: ${currency}${total.toFixed(2)}` : '';
+  if (el) el.textContent = `Total: ${currency}${finalTotal.toFixed(2)}${discountLine}`;
 }
 
 async function submitWalkinOrder() {
@@ -1545,10 +1768,36 @@ async function submitWalkinOrder() {
     };
   });
 
-  const orderTotal  = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const subtotal    = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const phoneRaw    = (document.getElementById('walkin-phone')?.value || '').trim();
   const phone       = normalizePhone(phoneRaw);  // E.164 or null
   const paymentNote = CONFIG.ordering.paymentNote || 'Cash on collection';
+
+  // Flash sale discount on walk-in orders (Session 40)
+  let activeDiscount = null;
+  if (kitchenFlashSaleData
+      && kitchenFlashSaleData.active
+      && kitchenFlashSaleData.expiresAt
+      && kitchenFlashSaleData.expiresAt.toMillis() > Date.now()) {
+    const { discountType, discountValue } = kitchenFlashSaleData;
+    let amount;
+    if (discountType === 'fixed') {
+      amount = Math.min(discountValue, subtotal);
+    } else if (discountType === 'percent') {
+      amount = parseFloat((subtotal * discountValue / 100).toFixed(2));
+    }
+    if (amount > 0) {
+      const currency = CONFIG.business.currency || '£';
+      activeDiscount = {
+        type:        'flash_sale',
+        description: discountType === 'percent'
+          ? `Flash sale ${discountValue}% off`
+          : `Flash sale ${currency}${discountValue} off`,
+        amount,
+      };
+    }
+  }
+  const orderTotal = activeDiscount ? Math.max(0, subtotal - activeDiscount.amount) : subtotal;
 
   const btn = document.getElementById('walkin-submit-btn');
   if (btn) { btn.textContent = 'Placing…'; btn.disabled = true; }
@@ -1585,6 +1834,7 @@ async function submitWalkinOrder() {
       customerPhone: phone,
       items,
       orderTotal,
+      discount:      activeDiscount || null,
       payment:       paymentNote,
       status:        'pending',
       waitMins:      null,
@@ -1793,8 +2043,11 @@ async function loadStaffList() {
     ? 'Everyone who can access the kitchen dashboard.'
     : 'You can change your name and PIN below.';
   if (addWrapEl) addWrapEl.style.display = isOwner ? '' : 'none';
-  const msgSectionEl = document.getElementById('k-messaging-section');
+  const msgSectionEl     = document.getElementById('k-messaging-section');
   if (msgSectionEl) msgSectionEl.style.display = isOwner ? '' : 'none';
+  const flashSectionEl  = document.getElementById('k-flashsale-section');
+  if (flashSectionEl) flashSectionEl.style.display = isOwner ? '' : 'none';
+  if (isOwner) loadFlashSaleTemplate();
   updateMessagingToggleUI();
 
   const visibleDocs = isOwner ? staffDocs : staffDocs.filter(d => d.id === loggedInStaffId);

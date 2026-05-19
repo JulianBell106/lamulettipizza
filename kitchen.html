@@ -931,7 +931,10 @@
         <button class="k-status-btn open" id="k-status-btn" onclick="openKitchenModal()">🟢 Open</button>
         <button class="k-new-order-btn" onclick="openWalkinModal()">➕ New Order</button>
         <button class="k-broadcast-btn" id="k-broadcast-btn" onclick="toggleBroadcast()">📍 Broadcast</button>
+        <button class="k-broadcast-btn k-flashsale-active-btn" id="k-flashsale-active-btn" style="display:none;" onclick="endFlashSale()">⚡ End Flash Sale</button>
       </div>
+      <!-- Flash sale active indicator -->
+      <div id="k-flashsale-live-indicator" style="display:none; font-size:11px; font-weight:700; color:#FFD040; text-transform:uppercase; letter-spacing:0.06em; margin-top:4px; text-align:center;">⚡ FLASH SALE ACTIVE</div>
 
       <!-- RIGHT: session / system -->
       <div class="k-header-right">
@@ -1129,6 +1132,42 @@
           <div style="font-size:12px; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;">Customer Notifications</div>
           <div style="font-size:12px; color:var(--text-secondary); margin-bottom:10px;">Send SMS when orders are marked ready.</div>
           <button class="k-broadcast-btn" id="k-messaging-toggle-btn" onclick="toggleMessaging()">💬 Messaging On</button>
+        </div>
+
+        <!-- Flash Sale Broadcast (owner only) -->
+        <div id="k-flashsale-section" style="display:none; margin-top:16px; padding-top:14px; border-top:1px solid var(--gold-rule);">
+          <div style="font-size:12px; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px;">⚡ Flash Sale</div>
+          <div style="font-size:12px; color:var(--text-secondary); margin-bottom:10px;">Text opted-in customers within 3 miles and apply a discount at checkout. Van must be broadcasting.</div>
+
+          <!-- Discount row -->
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
+            <div style="font-size:12px;color:var(--text-secondary);white-space:nowrap;">Discount:</div>
+            <select id="k-flashsale-discount-type" style="flex:0 0 auto;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:var(--cream);font-size:13px;font-family:system-ui,-apple-system,Arial,sans-serif;padding:5px 8px;outline:none;cursor:pointer;">
+              <option value="percent" style="color:#1A0A00;background:#fff;">% off</option>
+              <option value="fixed" style="color:#1A0A00;background:#fff;">&pound; off</option>
+            </select>
+            <input id="k-flashsale-discount-value" type="number" min="1" max="100" step="1" placeholder="e.g. 20"
+                   style="flex:1;min-width:0;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:var(--cream);font-size:13px;font-family:inherit;padding:5px 8px;outline:none;" />
+            <div style="font-size:12px;color:var(--text-secondary);white-space:nowrap;">for</div>
+            <select id="k-flashsale-duration" style="flex:0 0 auto;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:var(--cream);font-size:13px;font-family:system-ui,-apple-system,Arial,sans-serif;padding:5px 8px;outline:none;cursor:pointer;">
+              <option value="30" style="color:#1A0A00;background:#fff;">30 min</option>
+              <option value="60" style="color:#1A0A00;background:#fff;">1 hour</option>
+              <option value="120" style="color:#1A0A00;background:#fff;">2 hours</option>
+            </select>
+          </div>
+
+          <textarea id="k-flashsale-msg"
+                    rows="3"
+                    maxlength="160"
+                    placeholder="e.g. Flash sale! 20% off all pizzas for the next hour — come find us!"
+                    style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:var(--cream);font-size:13px;font-family:inherit;padding:10px;resize:none;outline:none;line-height:1.5;"></textarea>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;margin-bottom:10px;">
+            <span id="k-flashsale-charcount" style="font-size:11px;color:var(--ash);">0 / 160</span>
+            <button onclick="saveFlashSaleTemplate()" style="background:none;border:none;color:var(--gold);font-size:11px;cursor:pointer;text-decoration:underline;text-underline-offset:2px;padding:0;">Save as template</button>
+          </div>
+          <div id="k-flashsale-broadcast-warning" style="display:none;font-size:12px;color:#FFD040;margin-bottom:8px;">⚠️ Enable location broadcast first to use flash sales.</div>
+          <button class="k-broadcast-btn" id="k-flashsale-send-btn" onclick="sendFlashSale()">⚡ Send Flash Sale</button>
+          <div id="k-flashsale-status" style="font-size:12px;color:var(--text-secondary);margin-top:8px;min-height:16px;"></div>
         </div>
       </div>
 

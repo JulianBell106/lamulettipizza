@@ -907,6 +907,51 @@ html { scroll-behavior: smooth; }
 .page { display: none; flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding-bottom: 80px; }
 .page.active { display: block; }
 
+.m-flash-sale-banner {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 16px 4px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(196,39,26,0.18) 0%, rgba(212,160,67,0.14) 100%);
+  border: 1px solid rgba(212,160,67,0.35);
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--cream);
+  line-height: 1.4;
+}
+.m-flash-sale-banner .fsb-icon { font-size: 18px; flex-shrink: 0; }
+.m-flash-sale-banner .fsb-text { flex: 1; }
+.d-flash-sale-banner {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  margin: 0 0 16px;
+  background: linear-gradient(135deg, rgba(196,39,26,0.15) 0%, rgba(212,160,67,0.12) 100%);
+  border: 1px solid rgba(212,160,67,0.35);
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--cream);
+  line-height: 1.4;
+}
+.d-flash-sale-banner .fsb-icon { font-size: 20px; flex-shrink: 0; }
+.d-flash-sale-banner .fsb-text { flex: 1; }
+.bsk-flash-sale-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  background: linear-gradient(135deg, rgba(196,39,26,0.20) 0%, rgba(212,160,67,0.15) 100%);
+  border: 1px solid rgba(212,160,67,0.40);
+  border-radius: 8px;
+}
+.bsk-flash-icon  { font-size: 18px; flex-shrink: 0; }
+.bsk-flash-text  { flex: 1; }
+.bsk-flash-title { font-size: 12px; font-weight: 700; color: var(--gold); text-transform: uppercase; letter-spacing: 0.05em; }
+.bsk-flash-desc  { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+.bsk-flash-amount{ font-size: 14px; font-weight: 700; color: var(--gold); flex-shrink: 0; }
 .m-hero { position: relative; height: 260px; overflow: hidden; }
 #page-about .m-hero { height: 160px; }
 .m-hero img { width: 100%; height: 100%; object-fit: cover; }
@@ -1359,6 +1404,7 @@ html { scroll-behavior: smooth; }
           <span id="d-menu-note"></span>
         </p>
       </div>
+      <div id="d-flash-sale-banner" class="d-flash-sale-banner"></div>
       <div class="d-menu-grid" id="d-menu-grid"></div>
       <p class="d-menu-note reveal">
         <span class="diet-badge diet-badge-ve">VE</span> Vegan &nbsp;·&nbsp;
@@ -1562,6 +1608,7 @@ html { scroll-behavior: smooth; }
   </div>
 
   <div id="page-menu" class="page">
+    <div id="m-flash-sale-banner" class="m-flash-sale-banner"></div>
     <div class="m-eyebrow">Fresh to order</div>
     <div class="m-section-header">Our Menu</div>
     <div id="m-menu-sub" class="m-section-sub">All pizzas fresh to order · Pay on collection</div>

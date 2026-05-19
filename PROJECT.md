@@ -1,28 +1,28 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-18 — Session 39: Feature 19 — Geofenced Flash Sale Alerts scaffolded on develop. Postcode opt-in, geocoding CF, kitchen panel, broadcast CF, Firestore rules. Flash sale discount checkout gap identified and fully specced — build next session before shipping to production.
+> Last updated: 2026-05-19 — Session 40: Feature 19b — Flash sale discount at checkout. Full build on develop + ported to main (production). Both branches fully patched and syntax-checked (node --check OK).
 > **Next session — start here:**
 > - **🔴 Rotate Twilio Auth Token** — SID committed to git history on develop. Rotate at Twilio Console → Account → API keys & tokens. Update `functions/.env` on both branches.
-> - **🔴 Feature 19 — Flash sale discount at checkout** — critical gap: SMS fires but discount is never applied in basket or walk-in orders. Full spec in Section 19 below. Build this before Feature 19 goes to production.
-> - **Deploy Feature 19 functions to develop** — run `firebase deploy --only functions` (geocoding key already added to `functions/.env`). Then test postcode opt-in end-to-end.
-> - **Feature 19 UI polish** — kitchen flash sale panel + customer account postcode section both need tightening. Do after discount wiring.
+> - **Deploy Firestore rules** — `firebase deploy --only firestore:rules` on both `stalliq` (dev) and `stalliq-production` projects. New `flashSale` sub-collection rule must be live before testing.
+> - **Deploy Cloud Functions** — `firebase deploy --only functions` on both projects (geocoding + broadcast CFs from Session 39, plus flash sale from Session 40).
+> - **End-to-end test** — see 9-step checklist in Section 19b. Test on demo.stalliq.co.uk first, then La Muletti production.
 > - **Check WhatsApp template approval** — submitted 2026-05-17. Once approved: implement WhatsApp as premium tier (backlog B3).
 > - **Wipe test data on stalliq-production** — still outstanding before demo (see action 4 below).
 > - **Node.js 20 deprecation** — upgrade functions to Node 22 before 2026-10-30.
 > - **Future session:** Add Stalliq product page to endoo.co.uk (under Products).
 >
 > ⚠️ **Julian — actions outstanding:**
-> 1. ~~**Twilio billing**~~ ✓ Done 2026-05-17 — card added, compliance profile approved.
-> 2. **Rotate Twilio Auth Token** — SID committed to git history (develop branch). Rotate ASAP.
-> 3. ~~**Twilio UK number**~~ ✓ Done 2026-05-18 — +447782218609 purchased. WhatsApp Business profile (Endoo Limited) created. SMS working on dev + production.
+> 1. ​​**🔴 Rotate Twilio Auth Token** — URGENT. SID committed to develop git history.
+> 2. **Commit + push develop branch** — all Session 40 flash sale changes need committing.
+> 3. **Commit + push main branch** — all Session 40 flash sale changes need committing.
 > 4. **Wipe test data on stalliq-production** — delete all docs in `orders` and `users` collections. Keep `vendors/{vendorId}/staff/`, `kitchenStatus`, `location`, `counters`.
 > 5. **ICO registration** — ico.org.uk, ~£40/year (required before collecting personal data in production).
 > 6. **Google Sheet header rows** — protect header rows on all three La Muletti sheets.
 > **⚠️ Backlog:**
-> - B3: WhatsApp as premium notifications tier — once Meta template approved, add `messagingChannel: 'sms' | 'whatsapp'` to vendor doc. Mid tier = SMS, Premium = WhatsApp + SMS fallback. See Session 38 notes.
+> - B3: WhatsApp as premium notifications tier — once Meta template approved, add `messagingChannel: 'sms' | 'whatsapp'` to vendor doc.
 > - B4: Generic code audit — remove hardcoded pizza/La Muletti refs from shared layer ⚠️ risky — do on feature branch
+> - B5: Flash sale BOGO / flexible discount types — currently only % off and £ off. Future: buy-one-get-one-free. Low priority — log for later.
 > **Demo with Daniele postponed ~2 weeks from 2026-05-17 (he is busy).**
 > Read this file at the start of every session to get fully up to speed.
-
 ---
 
 ## 1. What Is This Project?
@@ -213,7 +213,7 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 17 | Geofence Notifications | ⏳ Planned | Van enters subscriber's area → phone buzzes |
 | 18 | Flash Sales & Broadcasts | ⏳ Planned | Vendor launches deal in seconds, broadcasts to subscribers |
 | 19 | Loyalty Stamp Card | ✅ Done | Stamp card (8 stamps → free pizza), per-order guard, cross-device sync, transaction-safe award |
-| 19b | Geofenced Flash Sale Alerts | 🔨 In progress | Postcode opt-in, geocoding CF, kitchen panel, SMS broadcast CF built Session 39 on develop. Discount at checkout not yet wired — build next session before shipping. See Section 19b. |
+| 19b | Geofenced Flash Sale Alerts | ✅ Built | Postcode opt-in, geocoding CF, kitchen panel, SMS broadcast CF (Session 39). Flash sale discount at checkout + walk-in orders (Session 40). Both branches. Deploy rules + CFs to go live. |
 | 20 | Flash Offers by Geolocation | ⏳ Planned | Customer in area gets notified of live deal |
 | 21 | Pre-order Time Slots | ⏳ Planned | Order now, collect at chosen time |
 | 22 | Vendor Self-Service | ⏳ Planned | Vendor manages own menu, events, location — full self-service portal |
@@ -388,7 +388,7 @@ All changes in `kitchen.html` CSS only. Target: readable in a busy kitchen in po
 
 ---
 
-## 19b. Geofenced Flash Sale Alerts — Session 39 (develop only)
+## 19b. Geofenced Flash Sale Alerts — Sessions 39–40
 
 ### What was built (Session 39)
 - **Postcode opt-in** — account page (mobile + desktop). UK postcode validation, ℹ️ info tooltip, status chip with opt-out. `users/{uid}/postcode` + `postcodeLatLng` written via `geocodePostcode` Cloud Function (server-side Google Geocoding API — key never in browser).
@@ -398,15 +398,9 @@ All changes in `kitchen.html` CSS only. Target: readable in a busy kitchen in po
 - **Firestore rules** — `flashSales/{id}` allow create: anonymous auth (kitchen). Read/update/delete: false (admin SDK only).
 - **`firebase-functions-compat.js`** CDN script added to `index.html`.
 
-### ⚠️ Outstanding — must build before shipping to production
+### What was built (Session 40) — discount at checkout
 
-**Critical gap: flash sale discount is not applied at checkout.**
-
-The SMS fires and the Firestore write succeeds, but when the customer opens the app there is no discount in the basket. Walk-in orders have no mechanism to apply it either.
-
-**The fix — `vendors/{vendorId}/flashSale/current` live state doc:**
-
-Same pattern as `location/current` and `kitchenStatus`. One active flash sale at a time per vendor.
+**The fix: `vendors/{vendorId}/flashSale/current` live state doc** (same pattern as `location/current` + `kitchenStatus`).
 
 **Doc shape:**
 ```
@@ -420,28 +414,42 @@ vendors/{vendorId}/flashSale/current
   startedBy:     string (staffId)
 ```
 
-**Kitchen changes:**
-- Flash sale panel gets discount type (% / £) + value fields + duration selector (30 min / 1 hr / 2 hrs).
-- On Send: writes `flashSale/current` with `active: true` AND writes `flashSales/` for SMS broadcast.
-- Kitchen header shows "⚡ FLASH SALE ACTIVE" live indicator + "End Flash Sale" button when active.
-- Walk-in orders: discount applied automatically when flash sale is active.
+**Files changed (both `develop` and `main`):**
 
-**Customer app changes:**
-- `listenFlashSale()` — real-time listener on `vendors/{vendorId}/flashSale/current`. Same pattern as `listenVanLocation()`.
-- When active and `expiresAt` in the future: discount auto-applied in basket. No code, no customer action.
-- `getActiveDiscount()` returns flash sale discount (takes priority over loyalty — no stacking).
-- Optional: flash sale banner on home/menu page when active.
-- Expiry checked client-side against `Date.now()` — no Cloud Function needed for cleanup.
+| File | Change |
+|------|--------|
+| `firestore.rules` | Added `flashSale/{docId}` sub-collection: public read, anonymous write |
+| `kitchen.html` | Discount type selector (% off / £ off), value input, duration selector (30min/1hr/2hr); live indicator; End Flash Sale button |
+| `js/kitchen.js` | `listenFlashSaleState()`, `renderFlashSaleLiveIndicator()`, `sendFlashSale()` batch-writes both `flashSale/current` and `flashSales/` doc, `endFlashSale()`, walk-in discount in `updateWalkinTotal()` + `submitWalkinOrder()` |
+| `js/app.js` | `listenFlashSale()`, `getFlashSaleDiscount()`, `getActiveDiscount()` (flash > loyalty > offer), `renderFlashSaleBanner()`, basket discount rendering |
+| `index.html` | CSS + HTML for `#m-flash-sale-banner`, `#d-flash-sale-banner`, `.bsk-flash-sale-banner` |
 
-**Firestore rules addition:**
-- `vendors/{vendorId}/flashSale/{docId}`: public read (customer needs it unauthenticated); write = anonymous auth (kitchen only).
+**Key decisions:**
+- Walk-in orders: ALL walk-ups get the discount automatically (no account required).
+- Discount priority: flash sale > loyalty > offer (no stacking).
+- Expiry checked client-side against `Date.now()` on every basket render — no Cloud Function cleanup needed.
+- £ dropdown fix: `<option style="color:#1A0A00;background:#fff">` to prevent white-on-white on native OS dropdowns.
+- Both branches patched and `node --check` verified OK.
 
-**Build order for next session:**
-1. Firestore rules — add `flashSale` sub-collection read/write rules
-2. Kitchen panel — discount + duration fields, update send logic, live indicator + End button
-3. `app.js` — `listenFlashSale()`, integrate with `getActiveDiscount()`, basket rendering
-4. `index.html` — flash sale banner (optional)
-5. Test end-to-end: send → discount in basket → order placed → walk-in order also gets discount
+### 9-step end-to-end test checklist
+
+1. Deploy Firestore rules to `stalliq` (dev) project
+2. Open demo.stalliq.co.uk in two tabs: customer + kitchen
+3. Kitchen: sign in as owner → Flash Sale panel visible
+4. Customer: add items to basket (no flash sale active yet — confirm no discount)
+5. Kitchen: launch flash sale (20% off, 30 min) → "FLASH SALE ACTIVE" indicator appears
+6. Customer: `#m-flash-sale-banner` / `#d-flash-sale-banner` appears with promo details
+7. Customer: basket shows flash sale discount line + correct total
+8. Customer: place order → order doc contains `discount: { type: 'flash_sale', amount: X }`
+9. Kitchen: walk-in order → discount preview visible; submitted order also has `discount` field
+
+### ⚠️ Still to do before shipping
+
+- Deploy Firestore rules: `firebase deploy --only firestore:rules` (both projects)
+- Deploy Cloud Functions: `firebase deploy --only functions` (both projects)
+- Run end-to-end test checklist above
+- Rotate Twilio Auth Token 🔴 URGENT
+- Wipe test data on `stalliq-production`
 
 ---
 
