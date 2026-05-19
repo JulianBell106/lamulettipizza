@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Install the App — Stalliq</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    /* ── Reset ──────────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Brand tokens ───────────────────────────────────────────────────── */
+    :root {
+      --midnight:  #0B1221;
+      --teal:      #14B8A6;
+      --teal-dim:  rgba(20,184,166,0.15);
+      --teal-rule: rgba(20,184,166,0.25);
+      --text:      #F0FDFA;
+      --muted:     rgba(240,253,250,0.55);
+      --card-bg:   rgba(20,184,166,0.06);
+    }
+
+    /* ── Screen view ────────────────────────────────────────────────────── */
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--midnight);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+      gap: 24px;
+    }
+
+    .screen-header {
+      text-align: center;
+    }
+
+    .wordmark {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text);
+    }
+
+    .wordmark span { color: var(--teal); }
+
+    .tagline {
+      font-size: 14px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .card-wrap {
+      background: var(--card-bg);
+      border: 1px solid var(--teal-rule);
+      border-radius: 20px;
+      padding: 32px 28px;
+      max-width: 380px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .card-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .card-sub {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    #qrcode {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+
+    #qrcode canvas, #qrcode img {
+      border-radius: 12px;
+      padding: 12px;
+      background: #fff;
+    }
+
+    .url-chip {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--teal);
+      background: var(--teal-dim);
+      border: 1px solid var(--teal-rule);
+      border-radius: 20px;
+      padding: 5px 14px;
+      letter-spacing: 0.02em;
+      margin-bottom: 24px;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid var(--teal-rule);
+      margin: 0 0 20px;
+    }
+
+    .steps-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--teal);
+      margin-bottom: 14px;
+    }
+
+    .steps {
+      list-style: none;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .steps li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .step-num {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--teal-dim);
+      border: 1px solid var(--teal-rule);
+      color: var(--teal);
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 1px;
+    }
+
+    .ios-note {
+      margin-top: 20px;
+      font-size: 12px;
+      color: var(--muted);
+      background: rgba(255,255,255,0.04);
+      border-radius: 10px;
+      padding: 12px 14px;
+      line-height: 1.5;
+      text-align: left;
+    }
+
+    .ios-note strong { color: var(--text); }
+
+    .print-btn {
+      background: var(--teal);
+      color: var(--midnight);
+      border: none;
+      border-radius: 12px;
+      padding: 14px 32px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      letter-spacing: -0.2px;
+    }
+
+    .print-btn:hover { opacity: 0.9; }
+
+    /* ── Print styles ───────────────────────────────────────────────────── */
+    @media print {
+      @page {
+        size: A5 portrait;
+        margin: 12mm;
+      }
+
+      body {
+        background: #fff;
+        color: #0B1221;
+        min-height: unset;
+        padding: 0;
+        gap: 0;
+        justify-content: flex-start;
+      }
+
+      .screen-header { display: none; }
+      .print-btn     { display: none; }
+      .ios-note      { display: none; }
+
+      .card-wrap {
+        background: #fff;
+        border: 1.5px solid #14B8A6;
+        border-radius: 12px;
+        padding: 20px;
+        max-width: 100%;
+        page-break-inside: avoid;
+      }
+
+      .card-title { color: #0B1221; font-size: 18px; }
+      .card-sub   { color: #4B5563; }
+
+      .url-chip {
+        color: #14B8A6;
+        background: rgba(20,184,166,0.08);
+        border-color: rgba(20,184,166,0.3);
+      }
+
+      .steps-title { color: #14B8A6; }
+
+      .steps li    { color: #374151; }
+
+      .step-num {
+        background: rgba(20,184,166,0.1);
+        border-color: rgba(20,184,166,0.3);
+        color: #14B8A6;
+      }
+
+      #qrcode canvas, #qrcode img {
+        padding: 8px;
+        border-radius: 8px;
+      }
+
+      .divider { border-color: rgba(20,184,166,0.2); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Screen only header -->
+  <div class="screen-header">
+    <div class="wordmark">Stall<span>iq</span></div>
+    <div class="tagline">Street food, ordered smarter.</div>
+  </div>
+
+  <!-- Card (screen + print) -->
+  <div class="card-wrap">
+    <div class="card-title">Order from your phone</div>
+    <div class="card-sub">Scan the code with your camera app — no App Store needed.</div>
+
+    <div id="qrcode"></div>
+    <div class="url-chip">demo.stalliq.co.uk</div>
+
+    <hr class="divider" />
+
+    <div class="steps-title">Android — Add to Home Screen</div>
+    <ol class="steps">
+      <li>
+        <span class="step-num">1</span>
+        <span>Scan the QR code — Chrome opens the ordering page.</span>
+      </li>
+      <li>
+        <span class="step-num">2</span>
+        <span>Tap <strong>"Add to Home screen"</strong> in the banner at the bottom of Chrome.</span>
+      </li>
+      <li>
+        <span class="step-num">3</span>
+        <span>Tap <strong>Install</strong> — the app icon appears on your home screen.</span>
+      </li>
+      <li>
+        <span class="step-num">4</span>
+        <span>Open it any time to order ahead — no App Store, no account required.</span>
+      </li>
+    </ol>
+
+    <div class="ios-note">
+      <strong>On iPhone?</strong> Open the link in Safari, tap the Share button, then <strong>"Add to Home Screen"</strong>. Ask staff if you need a hand.
+    </div>
+  </div>
+
+  <!-- Print button (screen only) -->
+  <button class="print-btn" onclick="window.print()">Print this card</button>
+
+  <script>
+    new QRCode(document.getElementById('qrcode'), {
+      text:           'https://demo.stalliq.co.uk',
+      width:          200,
+      height:         200,
+      colorDark:      '#0B1221',
+      colorLight:     '#ffffff',
+      correctLevel:   QRCode.CorrectLevel.H,
+    });
+  </script>
+</body>
+</html>
