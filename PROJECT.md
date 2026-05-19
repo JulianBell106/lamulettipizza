@@ -338,6 +338,13 @@ All files pass `node --check`. Changes on `develop` branch only — not yet merg
 - Implementation: add `messagingChannel: 'sms' | 'whatsapp'` to vendor doc. Cloud Function checks channel and sends accordingly. Kitchen settings toggle to switch channel (owner-only).
 - **Dependency:** Meta WhatsApp template approval (pending as of 2026-05-18).
 
+**B5 — Flash sale: additional discount types (BOGO + item-specific offers)**
+Current flash sale supports % off and £ off the whole basket. Future vendors may want more granular mechanics:
+- Buy one get one free (cheapest item free — variant of the existing loyalty reward logic)
+- Item-specific discounts (e.g. "£2 off any margherita")
+- Category discounts (requires menu categories — not yet in the data model)
+BOGO is the most requested; could reuse `getLoyaltyDiscount()` cheapest-item logic but time-limited. Needs menu categories before item-specific offers make sense. **Pre-requisite: B4 (generic code audit + CONFIG-driven menu categories).** Log for Growth tier roadmap — current % / £ off covers 90% of real van use cases.
+
 ~~**B1 — stalliq.co.uk: Show kitchen dashboard more prominently**~~ ✓ Done Session 32 — full two-panel demo section with animated kitchen card and both CTAs. See Session 32 below.
 
 ~~**B2 — La Muletti: Live Broadcast re-enables itself (intermittent bug)**~~ ✓ Fixed Session 32 — `broadcastStopRequested` flag prevents stale GPS resolves from overwriting the stop. Applied to both branches.
