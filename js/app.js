@@ -151,6 +151,7 @@ let vanLocationData        = null; // last received location doc (Session 14)
 let locationAgeInterval    = null; // setInterval id for "Updated X mins ago" (Session 14)
 let flashSaleData             = null; // vendors/{vendorId}/flashSale/current (Session 40)
 let flashSaleUnsubscribe      = null; // real-time listener handle (Session 40)
+let flashSaleExpiryInterval   = null; // setInterval to auto-clear expired flash sale (Session 41)
 let userPostcode              = null; // stored postcode string, null if not opted in (Session 39)
 let userProfileUnsubscribe    = null; // real-time user document listener (Session 21)
 let userOfferUsageUnsubscribe = null; // real-time offer usage listener (Session 21)
@@ -1494,6 +1495,12 @@ function listenFlashSale() {
     refreshDesktopBasket();
     renderMobileBasket();
     renderFlashSaleBanner();
+    if (flashSaleExpiryInterval) clearInterval(flashSaleExpiryInterval);
+    flashSaleExpiryInterval = setInterval(() => {
+      renderFlashSaleBanner();
+      refreshDesktopBasket();
+      renderMobileBasket();
+    }, 30000);
   }, err => {
     console.warn('[Stalliq] listenFlashSale error:', err.message);
   });
