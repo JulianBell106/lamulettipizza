@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Order Online — La Muletti</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --fire:       #C4271A;
+      --gold:       #D4A043;
+      --cream:      #FDF6EC;
+      --dark:       #1A0A00;
+      --char:       #2C1A0A;
+      --gold-dim:   rgba(212,160,67,0.12);
+      --gold-rule:  rgba(212,160,67,0.25);
+      --text-muted: rgba(253,246,236,0.6);
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--dark);
+      color: var(--cream);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+      gap: 24px;
+    }
+
+    .screen-header {
+      text-align: center;
+    }
+
+    .wordmark {
+      font-family: 'Playfair Display', serif;
+      font-size: 30px;
+      font-weight: 700;
+      color: var(--cream);
+      letter-spacing: -0.3px;
+    }
+
+    .wordmark span { color: var(--gold); }
+
+    .tagline {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .card-wrap {
+      background: var(--gold-dim);
+      border: 1px solid var(--gold-rule);
+      border-radius: 20px;
+      padding: 32px 28px;
+      max-width: 380px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .card-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--cream);
+      margin-bottom: 6px;
+    }
+
+    .card-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    #qrcode {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+
+    #qrcode img {
+      border-radius: 12px;
+      padding: 12px;
+      background: #fff;
+    }
+
+    .url-chip {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--gold);
+      background: var(--gold-dim);
+      border: 1px solid var(--gold-rule);
+      border-radius: 20px;
+      padding: 5px 14px;
+      letter-spacing: 0.02em;
+      margin-bottom: 24px;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid var(--gold-rule);
+      margin: 0 0 20px;
+    }
+
+    .steps-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 14px;
+    }
+
+    .steps {
+      list-style: none;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .steps li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    .step-num {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--gold-dim);
+      border: 1px solid var(--gold-rule);
+      color: var(--gold);
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 1px;
+    }
+
+    .ios-note {
+      margin-top: 20px;
+      font-size: 12px;
+      color: var(--text-muted);
+      background: rgba(255,255,255,0.04);
+      border-radius: 10px;
+      padding: 12px 14px;
+      line-height: 1.5;
+      text-align: left;
+    }
+
+    .ios-note strong { color: var(--cream); }
+
+    .print-btn {
+      background: var(--gold);
+      color: var(--dark);
+      border: none;
+      border-radius: 12px;
+      padding: 14px 32px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .print-btn:hover { opacity: 0.9; }
+
+    /* ── Print ──────────────────────────────────────────────────────────── */
+    @media print {
+      @page {
+        size: A5 portrait;
+        margin: 12mm;
+      }
+
+      body {
+        background: #fff;
+        color: #1A0A00;
+        min-height: unset;
+        padding: 0;
+        gap: 0;
+        justify-content: flex-start;
+      }
+
+      .screen-header { display: none; }
+      .print-btn     { display: none; }
+      .ios-note      { display: none; }
+
+      .card-wrap {
+        background: #fff;
+        border: 1.5px solid #D4A043;
+        border-radius: 12px;
+        padding: 20px;
+        max-width: 100%;
+      }
+
+      .card-title { color: #1A0A00; }
+      .card-sub   { color: #5C3D1E; }
+
+      .url-chip {
+        color: #C4271A;
+        background: rgba(196,39,26,0.06);
+        border-color: rgba(196,39,26,0.2);
+      }
+
+      .steps-title { color: #D4A043; }
+      .steps li    { color: #2C1A0A; }
+
+      .step-num {
+        background: rgba(212,160,67,0.1);
+        border-color: rgba(212,160,67,0.3);
+        color: #D4A043;
+      }
+
+      .divider { border-color: rgba(212,160,67,0.2); }
+
+      #qrcode img {
+        padding: 8px;
+        border-radius: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="screen-header">
+    <div class="wordmark">La <span>Muletti</span></div>
+    <div class="tagline">Authentic Italian street food, MK.</div>
+  </div>
+
+  <div class="card-wrap">
+    <div class="card-title">Order from your phone</div>
+    <div class="card-sub">Scan the code with your camera — no App Store needed.</div>
+
+    <div id="qrcode">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=0&data=https%3A%2F%2Flamuletti-stalliq.netlify.app"
+           alt="QR code — lamuletti-stalliq.netlify.app"
+           width="200" height="200" />
+    </div>
+
+    <div class="url-chip">lamuletti-stalliq.netlify.app</div>
+
+    <hr class="divider" />
+
+    <div class="steps-title">Android — Add to Home Screen</div>
+    <ol class="steps">
+      <li>
+        <span class="step-num">1</span>
+        <span>Scan the QR code — Chrome opens the La Muletti ordering page.</span>
+      </li>
+      <li>
+        <span class="step-num">2</span>
+        <span>Tap <strong>"Add to Home screen"</strong> in the banner at the bottom of Chrome.</span>
+      </li>
+      <li>
+        <span class="step-num">3</span>
+        <span>Tap <strong>Install</strong> — the app icon appears on your home screen.</span>
+      </li>
+      <li>
+        <span class="step-num">4</span>
+        <span>Open it any time to order ahead — works just like an app.</span>
+      </li>
+    </ol>
+
+    <div class="ios-note">
+      <strong>On iPhone?</strong> Open the link in Safari, tap the Share button, then <strong>"Add to Home Screen"</strong>. Ask us if you need a hand.
+    </div>
+  </div>
+
+  <button class="print-btn" onclick="window.print()">Print this card</button>
+
+</body>
+</html>
