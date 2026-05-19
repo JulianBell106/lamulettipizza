@@ -523,18 +523,15 @@ function updateMessagingToggleUI() {
   }
 }
 
-// ── Flash Sale Broadcast (Feature 19) ────────────────────────────────────────
+// ── Flash Sale Broadcast (Feature 19b) ──────────────────────────────────────────
+// kitchenFlashSaleData — mirrors vendors/{vendorId}/flashSale/current
+let kitchenFlashSaleData = null;
 
-/**
- * Loads the saved flash sale template from the vendor doc and populates
- * the textarea. Also wires up the character counter.
- */
 async function loadFlashSaleTemplate() {
   const textarea  = document.getElementById('k-flashsale-msg');
   const charCount = document.getElementById('k-flashsale-charcount');
   if (!textarea) return;
 
-  // Wire up char counter (idempotent — remove old listener first)
   textarea.oninput = () => {
     if (charCount) charCount.textContent = textarea.value.length + ' / 160';
   };
@@ -553,8 +550,37 @@ async function loadFlashSaleTemplate() {
 }
 
 /**
- * Updates the Send button state and warning based on whether broadcast is active.
+ * Real-time listener on vendors/{vendorId}/flashSale/current.
+ * Keeps kitchenFlashSaleData in sync and renders the live indicator / End button.
  */
+function listenFlashSaleState() {
+  kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
+    .collection('flashSale').doc('current')
+    .onSnapshot(snap => {
+      kitchenFlashSaleData = snap.exists ? snap.data() : null;
+      renderFlashSaleLiveIndicator();
+    }, err => {
+      console.warn('[F19] listenFlashSaleState error:', err.message);
+    });
+}
+
+/**
+ * Shows/hides the header live indicator and End Flash Sale button.
+ */
+function renderFlashSaleLiveIndicator() {
+  const indicator = document.getElementById('k-flashsale-live-indicator');
+  const endBtn    = document.getElementById('k-flashsale-active-btn');
+  if (!indicator || !endBtn) return;
+
+  const isLive = !!(kitchenFlashSaleData
+    && kitchenFlashSaleData.active
+    && kitchenFlashSaleData.expiresAt
+    && kitchenFlashSaleData.expiresAt.toMillis() > Date.now());
+
+  indicator.style.display = isLive ? 'block' : 'none';
+  endBtn.style.display    = isLive ? ''      : 'none';
+}
+
 function updateFlashSaleUI() {
   const sendBtn  = document.getElementById('k-flashsale-send-btn');
   const warning  = document.getElementById('k-flashsale-broadcast-warning');
@@ -571,9 +597,6 @@ function updateFlashSaleUI() {
   }
 }
 
-/**
- * Saves the current textarea content as the flash sale template on the vendor doc.
- */
 async function saveFlashSaleTemplate() {
   const textarea   = document.getElementById('k-flashsale-msg');
   const statusEl   = document.getElementById('k-flashsale-status');
@@ -596,28 +619,42 @@ async function saveFlashSaleTemplate() {
 }
 
 /**
- * Fires a flash sale broadcast by writing to flashSales/ in Firestore.
- * The flashSaleBroadcast Cloud Function picks this up and fans out the SMS.
- * Requires broadcast to be active (van lat/lng is read from location/current).
+ * Fires a flash sale:
+ *   1. Validates discount + message.
+ *   2. Writes vendors/{vendorId}/flashSale/current (live state for basket discounts).
+ *   3. Writes flashSales/{id} to trigger SMS broadcast Cloud Function.
  */
 async function sendFlashSale() {
-  const textarea = document.getElementById('k-flashsale-msg');
-  const statusEl = document.getElementById('k-flashsale-status');
-  const sendBtn  = document.getElementById('k-flashsale-send-btn');
+  const textarea      = document.getElementById('k-flashsale-msg');
+  const statusEl      = document.getElementById('k-flashsale-status');
+  const sendBtn       = document.getElementById('k-flashsale-send-btn');
+  const discTypeEl    = document.getElementById('k-flashsale-discount-type');
+  const discValueEl   = document.getElementById('k-flashsale-discount-value');
+  const durationEl    = document.getElementById('k-flashsale-duration');
   if (!textarea || !sendBtn) return;
 
-  const msg = textarea.value.trim();
+  const msg           = textarea.value.trim();
+  const discountType  = discTypeEl  ? discTypeEl.value               : 'percent';
+  const discountValue = discValueEl ? parseFloat(discValueEl.value)  : NaN;
+  const durationMins  = durationEl  ? parseInt(durationEl.value, 10) : 60;
+
   if (!msg) {
     if (statusEl) statusEl.textContent = 'Please enter a message first.';
     return;
   }
-
+  if (isNaN(discountValue) || discountValue <= 0) {
+    if (statusEl) statusEl.textContent = 'Please enter a valid discount amount.';
+    return;
+  }
+  if (discountType === 'percent' && discountValue > 100) {
+    if (statusEl) statusEl.textContent = 'Percentage discount cannot exceed 100%.';
+    return;
+  }
   if (!broadcastActive) {
     if (statusEl) statusEl.textContent = 'Enable location broadcast first.';
     return;
   }
 
-  // Read current van position from Firestore
   let vanLat, vanLng;
   try {
     const locDoc = await kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
@@ -638,8 +675,28 @@ async function sendFlashSale() {
   sendBtn.textContent = '⏳ Sending…';
   if (statusEl) statusEl.textContent = '';
 
+  const now       = new Date();
+  const expiresAt = new Date(now.getTime() + durationMins * 60 * 1000);
+
   try {
-    await kitchenDb.collection('flashSales').add({
+    const batch = kitchenDb.batch();
+
+    // 1. flashSale/current — live state for customer basket discount
+    const flashSaleCurrentRef = kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
+                                  .collection('flashSale').doc('current');
+    batch.set(flashSaleCurrentRef, {
+      active:        true,
+      discountType,
+      discountValue,
+      message:       msg,
+      expiresAt,
+      startedAt:     firebase.firestore.FieldValue.serverTimestamp(),
+      startedBy:     loggedInStaffId || 'unknown',
+    });
+
+    // 2. flashSales/{id} — triggers SMS Cloud Function
+    const broadcastRef = kitchenDb.collection('flashSales').doc();
+    batch.set(broadcastRef, {
       vendorId:  CONFIG.vendor.id,
       message:   msg,
       vanLat,
@@ -649,7 +706,9 @@ async function sendFlashSale() {
       status:    'pending',
     });
 
-    if (statusEl) statusEl.textContent = '✓ Flash sale sent!';
+    await batch.commit();
+
+    if (statusEl) statusEl.textContent = '✓ Flash sale live!';
     setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 5000);
   } catch (err) {
     console.error('[F19] sendFlashSale error:', err.message);
@@ -661,6 +720,24 @@ async function sendFlashSale() {
   }
 }
 
+/**
+ * Ends an active flash sale immediately.
+ */
+async function endFlashSale() {
+  const endBtn = document.getElementById('k-flashsale-active-btn');
+  if (endBtn) { endBtn.textContent = '⏳ Ending…'; endBtn.disabled = true; }
+  try {
+    await kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
+      .collection('flashSale').doc('current')
+      .set({ active: false }, { merge: true });
+    console.log('[F19] Flash sale ended by', loggedInStaffId || 'unknown');
+  } catch (err) {
+    console.error('[F19] endFlashSale error:', err.message);
+  } finally {
+    if (endBtn) { endBtn.textContent = '⚡ End Flash Sale'; endBtn.disabled = false; }
+    renderFlashSaleLiveIndicator();
+  }
+}
 function listenKitchenStatus() {
   kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
     .onSnapshot(doc => {
@@ -1461,6 +1538,7 @@ function startDashboard() {
   listenKitchenStatus();
   listenMessagingEnabled();
   listenBroadcastState(); // Session 14 — live location broadcast
+  listenFlashSaleState(); // Session 40 — flash sale live state
   listenOrders();
   initKanbanDrag();
   _acquireWakeLock();    // Session 18 — keep screen on during kitchen session
@@ -1626,18 +1704,43 @@ function saveWalkinNote(itemId, value) {
 }
 
 function updateWalkinTotal() {
-  // NOTE (multi-tenancy): Uses CONFIG.menu (static) — same reason as renderWalkinItems().
   const currency = CONFIG.business.currency || '£';
   const menu     = CONFIG.menu || [];
-  let total      = 0;
+  let subtotal   = 0;
 
   Object.entries(walkinQty).forEach(([id, qty]) => {
     const item = menu.find(m => String(m.id) === String(id));
-    if (item) total += Number(item.price) * qty;
+    if (item) subtotal += Number(item.price) * qty;
   });
 
+  if (subtotal === 0) {
+    const el = document.getElementById('walkin-total');
+    if (el) el.textContent = '';
+    return;
+  }
+
+  // Flash sale discount preview (Session 40)
+  let discountLine = '';
+  let finalTotal   = subtotal;
+  if (kitchenFlashSaleData
+      && kitchenFlashSaleData.active
+      && kitchenFlashSaleData.expiresAt
+      && kitchenFlashSaleData.expiresAt.toMillis() > Date.now()) {
+    const { discountType, discountValue } = kitchenFlashSaleData;
+    let amount = 0;
+    if (discountType === 'fixed') {
+      amount = Math.min(discountValue, subtotal);
+    } else if (discountType === 'percent') {
+      amount = parseFloat((subtotal * discountValue / 100).toFixed(2));
+    }
+    if (amount > 0) {
+      finalTotal   = Math.max(0, subtotal - amount);
+      discountLine = ` (⚡ -${currency}${amount.toFixed(2)})`;
+    }
+  }
+
   const el = document.getElementById('walkin-total');
-  if (el) el.textContent = total > 0 ? `Total: ${currency}${total.toFixed(2)}` : '';
+  if (el) el.textContent = `Total: ${currency}${finalTotal.toFixed(2)}${discountLine}`;
 }
 
 async function submitWalkinOrder() {
@@ -1680,10 +1783,36 @@ async function submitWalkinOrder() {
     };
   });
 
-  const orderTotal  = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const subtotal    = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const phoneRaw    = (document.getElementById('walkin-phone')?.value || '').trim();
   const phone       = normalizePhone(phoneRaw);  // E.164 or null
   const paymentNote = CONFIG.ordering.paymentNote || 'Cash on collection';
+
+  // Flash sale discount on walk-in orders (Session 40)
+  let activeDiscount = null;
+  if (kitchenFlashSaleData
+      && kitchenFlashSaleData.active
+      && kitchenFlashSaleData.expiresAt
+      && kitchenFlashSaleData.expiresAt.toMillis() > Date.now()) {
+    const { discountType, discountValue } = kitchenFlashSaleData;
+    let amount;
+    if (discountType === 'fixed') {
+      amount = Math.min(discountValue, subtotal);
+    } else if (discountType === 'percent') {
+      amount = parseFloat((subtotal * discountValue / 100).toFixed(2));
+    }
+    if (amount > 0) {
+      const currency = CONFIG.business.currency || '£';
+      activeDiscount = {
+        type:        'flash_sale',
+        description: discountType === 'percent'
+          ? `Flash sale ${discountValue}% off`
+          : `Flash sale ${currency}${discountValue} off`,
+        amount,
+      };
+    }
+  }
+  const orderTotal = activeDiscount ? Math.max(0, subtotal - activeDiscount.amount) : subtotal;
 
   const btn = document.getElementById('walkin-submit-btn');
   if (btn) { btn.textContent = 'Placing…'; btn.disabled = true; }
@@ -1720,6 +1849,7 @@ async function submitWalkinOrder() {
       customerPhone: phone,
       items,
       orderTotal,
+      discount:      activeDiscount || null,
       payment:       paymentNote,
       status:        'pending',
       waitMins:      null,

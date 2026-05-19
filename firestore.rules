@@ -85,6 +85,16 @@ service cloud.firestore {
       match /counters/{docId} {
         allow read, write: if isAuthenticated();
       }
+
+      // ── Flash Sale current state ─────────────────────────────────────────
+      // vendors/{vendorId}/flashSale/current
+      //   Public read: customer basket checks for an active deal unauthenticated.
+      //   Write: kitchen anonymous session only (start + end flash sale).
+
+      match /flashSale/{docId} {
+        allow read:  if true;
+        allow write: if isAnonymousAuth();
+      }
     }
 
 

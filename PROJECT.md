@@ -1,14 +1,21 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-18 — Session 39: Feature 19 — Geofenced Flash Sale Alerts fully wired. Kitchen panel writes to Firestore ✅. Firestore rules updated ✅. Geocoding API key added ✅. Functions deployed (pending). Postcode opt-in pending end-to-end test. UI polish needed on both kitchen panel and customer account section.
+> Last updated: 2026-05-19 — Session 40: Feature 19b — Flash sale discount at checkout fully built on develop. All files pass node --check.
 > **Next session — start here:**
-> - **🔴 Rotate Twilio Auth Token** — SID accidentally committed to git history on develop. Rotate at Twilio Console → Account → API keys & tokens. Update `functions/.env` on both branches.
-> - **Deploy functions to develop** — run `firebase deploy --only functions` from lamulettipizza dir. Then test postcode opt-in end-to-end (enter postcode → check Firestore for postcodeLatLng → activate broadcast in kitchen → send flash sale → confirm SMS arrives).
-> - **🔴 Feature 19 — Flash sale discount not applied at checkout** — critical gap. SMS fires but no discount lands in the basket and kitchen walk-in orders have no way to apply it either. Full spec in Feature 19 section below — build this before Feature 19 goes to production.
-> - **Feature 19 UI polish** — flash sale section in kitchen settings feels cluttered; postcode opt-in section on customer account page also needs tightening. Tackle after discount wiring is done.
+> - **🔴 Rotate Twilio Auth Token** — SID committed to git history on develop. Rotate at Twilio Console → Account → API keys & tokens. Update `functions/.env` on both branches.
+> - **Deploy Feature 19b to develop** — run `firebase deploy --only firestore:rules` then `firebase deploy --only functions` from the lamulettipizza dir. Then test end-to-end (see test checklist in Section 19b below).
+> - **Feature 19b UI polish** — postcode opt-in section on customer account page needs tightening (separate task). Kitchen flash sale panel is clean.
+> - **Ship Feature 19b to production** — once end-to-end tested on develop: merge to main (gitattributes protects firebase.js and config.js), verify, push. Daniele's users will get flash sale alerts + discounts.
 > - **Check WhatsApp template approval** — submitted 2026-05-17. Once approved: implement WhatsApp as premium tier (backlog B3).
 > - **Wipe test data on stalliq-production** — still outstanding before demo (see action 3 below).
 > - **Node.js 20 deprecation** — upgrade functions to Node 22 before 2026-10-30.
-> - **Future session:** Add Stalliq product page to endoo.co.uk (under Products) — agreed with Julian 2026-05-10.
+> - **Future session:** Add Stalliq product page to endoo.co.uk (under Products).
+>
+> ⚠️ **Julian — actions outstanding:**
+> 1. **Rotate Twilio Auth Token** (🔴 urgent — SID in git history).
+> 2. **Wipe test data on stalliq-production** — orders + users collections.
+> 3. **ICO registration** — ico.org.uk, ~£40/year.
+> 4. **Google Sheet header rows** — protect header rows on La Muletti sheets.
+> 5. **Commit + push develop** — commit all Session 40 changes on develop branch, push, verify stalliq-demo auto-deploys.
 
 ## What is Stalliq?
 Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering platform for independent mobile street food vendors. La Muletti Pizza (Daniele + Danielle, Bletchley MK) is the launch customer, on a free Year 1 Founding Customer deal.
@@ -214,12 +221,48 @@ vendors/{vendorId}/flashSale/current
 **Firestore rules:**
 - `vendors/{vendorId}/flashSale/{docId}`: public read (customer app needs it unauthenticated); write = anonymous auth (kitchen only).
 
-**Build order for next session:**
-1. Firestore rules update
-2. Kitchen panel — add discount + duration fields, update send logic, add live indicator + End button
-3. app.js — `listenFlashSale()`, integrate with `getActiveDiscount()`, basket rendering
-4. index.html — flash sale banner (optional, can follow)
-5. Test end-to-end: send flash sale from kitchen → discount appears in customer basket → order placed with discount → kitchen walk-in order also gets discount
+### ✅ Built — Session 40 (2026-05-19)
+
+All files pass `node --check`. Changes on `develop` branch only — not yet merged to main.
+
+**firestore.rules:** Added `vendors/{vendorId}/flashSale/{docId}` — `allow read: if true` (customer reads unauthenticated), `allow write: if isAnonymousAuth()` (kitchen only).
+
+**kitchen.html:**
+- Header: added `⚡ End Flash Sale` button (`#k-flashsale-active-btn`, hidden until live) + `⚡ FLASH SALE ACTIVE` text indicator (`#k-flashsale-live-indicator`).
+- Settings panel: discount type selector (`%` / `£`, `#k-flashsale-discount-type`), value input (`#k-flashsale-discount-value`), duration selector (`30 min / 1 hr / 2 hrs`, `#k-flashsale-duration`) — all before the SMS textarea.
+
+**kitchen.js:**
+- `kitchenFlashSaleData` state var — mirrors `flashSale/current`.
+- `listenFlashSaleState()` — real-time listener; called from `startDashboard()` alongside `listenBroadcastState()`. Drives the header live indicator.
+- `renderFlashSaleLiveIndicator()` — shows/hides header indicator and End button.
+- `sendFlashSale()` — now validates discount fields + duration; writes a Firestore **batch**: `flashSale/current` (active=true, discount, expiresAt) + `flashSales/{id}` (SMS CF trigger).
+- `endFlashSale()` — sets `flashSale/current.active = false`. Customer app listener picks it up instantly.
+- `updateWalkinTotal()` — shows flash sale discount preview in the walk-in modal.
+- `submitWalkinOrder()` — applies active flash sale discount to walk-in order total; stores `discount` field on the order doc.
+
+**app.js:**
+- `flashSaleData` + `flashSaleUnsubscribe` state vars.
+- `listenFlashSale()` — real-time listener; called from `DOMContentLoaded` after `listenVanLocation()`.
+- `getFlashSaleDiscount()` — calculates discount from `flashSaleData`; checks expiry client-side.
+- `getActiveDiscount()` — priority order: flash sale > loyalty > offer (no stacking).
+- `buildBasketDiscountHTML()` — if flash sale active: returns flash sale banner with auto-applied discount (suppresses loyalty/offer picker entirely).
+- `renderFlashSaleBanner()` — shows/hides `#m-flash-sale-banner` and `#d-flash-sale-banner`.
+
+**index.html:**
+- CSS: `.m-flash-sale-banner`, `.d-flash-sale-banner`, `.bsk-flash-sale-banner` + child classes.
+- `#m-flash-sale-banner` added top of `#page-menu` (mobile).
+- `#d-flash-sale-banner` added above `#d-menu-grid` (desktop).
+
+### End-to-end test checklist (do on demo.stalliq.co.uk after deploying rules + functions)
+1. Start broadcast in kitchen — Broadcast button goes green.
+2. Open settings panel → Flash Sale section (owner only).
+3. Enter 20% / 1 hr / message → tap Send Flash Sale.
+4. Confirm: `vendors/streetstack/flashSale/current` exists in Firestore with `active:true`, `discountType:'percent'`, `discountValue:20`, `expiresAt` ~1hr from now.
+5. Customer app: add items to basket → basket shows ⚡ Flash sale active banner + correct discount row.
+6. Place order → order in Firestore has `discount: {type:'flash_sale', amount: X}` and `orderTotal` is subtotal minus discount.
+7. Kitchen walk-in modal: new order → total shows `⚡ -£X.XX` preview → Place Order → Firestore order has correct discounted total.
+8. Kitchen End Flash Sale → `flashSale/current.active = false` → basket discount disappears immediately for customer.
+9. Wait for `expiresAt` to pass (or set it to 1 min for testing) → discount disappears automatically client-side.
 
 ---
 

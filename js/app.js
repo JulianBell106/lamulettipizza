@@ -153,6 +153,8 @@ let userProfileUnsubscribe    = null; // real-time user document listener (Sessi
 let userOfferUsageUnsubscribe = null; // real-time offer usage listener (Session 21)
 let userOrdersQueryUnsubscribe = null; // live orders query listener (Session 21)
 let userPostcode              = null; // stored postcode string, null if not opted in (Session 39)
+let flashSaleData             = null; // vendors/{vendorId}/flashSale/current (Session 40)
+let flashSaleUnsubscribe      = null; // real-time listener handle (Session 40)
 
 
 /* ============================================================================
@@ -1482,6 +1484,25 @@ function listenVanLocation() {
 }
 
 /**
+ * listenFlashSale — real-time Firestore listener on vendors/{vendorId}/flashSale/current.
+ * Fires on every change; refreshes basket discount and flash sale banner.
+ * Same pattern as listenVanLocation (Session 14).
+ */
+function listenFlashSale() {
+  const ref = db.collection('vendors').doc(CONFIG.vendor.id)
+                .collection('flashSale').doc('current');
+
+  flashSaleUnsubscribe = ref.onSnapshot(snap => {
+    flashSaleData = snap.exists ? snap.data() : null;
+    refreshDesktopBasket();
+    renderMobileBasket();
+    renderFlashSaleBanner();
+  }, err => {
+    console.warn('[Stalliq] listenFlashSale error:', err.message);
+  });
+}
+
+/**
  * buildMapHTML — returns the inner HTML for the van location widget.
  * @param {number} lat
  * @param {number} lng
@@ -1649,9 +1670,37 @@ function getOfferDiscount() {
 }
 
 /**
- * Returns the active discount object (loyalty takes priority; no stacking).
+ * Returns the flash sale discount if one is currently active and not expired.
+ * Flash sale takes priority over loyalty and offers — no stacking.
+ */
+function getFlashSaleDiscount() {
+  if (!flashSaleData || !flashSaleData.active) return null;
+  if (flashSaleData.expiresAt && flashSaleData.expiresAt.toMillis() < Date.now()) return null;
+  if (basketTotalQty() === 0) return null;
+
+  const raw = basketTotalPrice();
+  const c   = CONFIG.business.currency || '£';
+  let amount;
+  if (flashSaleData.discountType === 'fixed') {
+    amount = Math.min(flashSaleData.discountValue, raw);
+  } else if (flashSaleData.discountType === 'percent') {
+    amount = parseFloat((raw * flashSaleData.discountValue / 100).toFixed(2));
+  } else {
+    return null;
+  }
+  const label = flashSaleData.discountType === 'percent'
+    ? `Flash sale ${flashSaleData.discountValue}% off`
+    : `Flash sale ${c}${flashSaleData.discountValue} off`;
+  return { type: 'flash_sale', description: label, amount };
+}
+
+/**
+ * Returns the active discount object.
+ * Priority: flash sale > loyalty > offer. No stacking.
  */
 function getActiveDiscount() {
+  const flashSale = getFlashSaleDiscount();
+  if (flashSale) return flashSale;
   const loyalty = getLoyaltyDiscount();
   if (loyalty) return loyalty;
   return getOfferDiscount();
@@ -1715,10 +1764,24 @@ function removeOffer() {
 function buildBasketDiscountHTML(prefix) {
   if (basketTotalQty() === 0) return '';
 
-  const loyaltyDisc = getLoyaltyDiscount();
   const c = CONFIG.business.currency;
   let html = '';
 
+  // Flash sale — auto-applies, highest priority, suppresses loyalty/offers
+  const flashDisc = getFlashSaleDiscount();
+  if (flashDisc) {
+    return `
+      <div class="bsk-flash-sale-banner">
+        <span class="bsk-flash-icon">⚡</span>
+        <div class="bsk-flash-text">
+          <div class="bsk-flash-title">Flash sale active</div>
+          <div class="bsk-flash-desc">${esc(flashDisc.description)}</div>
+        </div>
+        <span class="bsk-flash-amount">−${c}${flashDisc.amount.toFixed(2)}</span>
+      </div>`;
+  }
+
+  const loyaltyDisc = getLoyaltyDiscount();
   if (loyaltyDisc) {
     // Loyalty auto-applies — show locked reward banner
     html += `
@@ -1979,6 +2042,9 @@ document.addEventListener('DOMContentLoaded', async function () {
 
   // Van location — real-time listener (Section 20a)
   listenVanLocation();
+
+  // Flash sale — real-time listener (Session 40)
+  listenFlashSale();
 
   // ── Auth state — load stamp count + offer usage at auth time (Session 21) ─
   // Fixes: stamp count and offer usage reset on page reload if Account page
@@ -2930,6 +2996,30 @@ function renderAccountOffers(ids) {
       </div>`;
   }).join('');
 }
+
+// ── Feature 19b — Flash Sale: banner rendering ────────────────────────────────
+
+/**
+ * Renders or hides the flash sale banner on the home/menu pages.
+ * IDs: #m-flash-sale-banner (mobile) and #d-flash-sale-banner (desktop).
+ */
+function renderFlashSaleBanner() {
+  const disc = getFlashSaleDiscount();
+  const c    = CONFIG.business.currency || '£';
+
+  ['m', 'd'].forEach(p => {
+    const el = document.getElementById(`${p}-flash-sale-banner`);
+    if (!el) return;
+    if (disc) {
+      el.innerHTML = `<span class="fsb-icon">⚡</span><span class="fsb-text">Flash sale on now — ${esc(disc.description)} automatically in your basket!</span>`;
+      el.style.display = 'flex';
+    } else {
+      el.style.display = 'none';
+      el.innerHTML = '';
+    }
+  });
+}
+
 
 // ── Feature 19 — Flash Sale Alerts: postcode opt-in ──────────────────────────
 
