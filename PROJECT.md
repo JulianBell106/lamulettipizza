@@ -1,5 +1,5 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-19 — Session 42: Collection Window ("Queue from Anywhere") feature designed and specced as B7. No code changes this session.
+> Last updated: 2026-05-19 — Session 43: Pitch deck v7 built. 12 slides, gold colour scheme (red → gold circles), fade transitions on all slides, phone mockup on Solution slide, kanban graphic on Kitchen slide, new Find Us slide (3 feature cards: Live GPS, Events, Offers), new Competitor Comparison slide (Stalliq vs IndyLocal vs Just Eat). Delivered: `Stalliq_LaMuletti_Pitch_v7.pptx`.
 > **Next session — start here:**
 > - **🔴 Rotate Twilio Auth Token** — SID committed to git history on develop. Rotate at Twilio Console → Account → API keys & tokens. Update `functions/.env` on both branches.
 > - **Check WhatsApp template approval** — submitted 2026-05-17. Once approved: implement WhatsApp as premium tier (backlog B3).
