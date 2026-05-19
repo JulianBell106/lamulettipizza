@@ -1,26 +1,26 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-19 — Session 40: Feature 19b — Flash sale discount at checkout. Full build on develop + ported to main (production). Both branches fully patched and syntax-checked (node --check OK).
+> Last updated: 2026-05-19 — Session 41: Flash sale expiry timers patched on both branches, consistency check complete, PWA manifest + icons added (both branches), printable install card (install.html) added to both branches.
 > **Next session — start here:**
 > - **🔴 Rotate Twilio Auth Token** — SID committed to git history on develop. Rotate at Twilio Console → Account → API keys & tokens. Update `functions/.env` on both branches.
-> - **Deploy Firestore rules** — `firebase deploy --only firestore:rules` on both `stalliq` (dev) and `stalliq-production` projects. New `flashSale` sub-collection rule must be live before testing.
-> - **Deploy Cloud Functions** — `firebase deploy --only functions` on both projects (geocoding + broadcast CFs from Session 39, plus flash sale from Session 40).
-> - **End-to-end test** — see 9-step checklist in Section 19b. Test on demo.stalliq.co.uk first, then La Muletti production.
 > - **Check WhatsApp template approval** — submitted 2026-05-17. Once approved: implement WhatsApp as premium tier (backlog B3).
-> - **Wipe test data on stalliq-production** — still outstanding before demo (see action 4 below).
+> - **Wipe test data on stalliq-production** — delete all docs in `orders` and `users` collections. Keep `vendors/{vendorId}/staff/`, `kitchenStatus`, `location`, `counters`.
 > - **Node.js 20 deprecation** — upgrade functions to Node 22 before 2026-10-30.
+> - **Future session:** Google Play Store TWA wrap (pwabuilder.com → AAB → Play Console). Do on main (La Muletti production URL).
+> - **Future session:** iOS PWA install guidance — in-app instructions for Safari Share → Add to Home Screen.
 > - **Future session:** Add Stalliq product page to endoo.co.uk (under Products).
 >
 > ⚠️ **Julian — actions outstanding:**
-> 1. ​​**🔴 Rotate Twilio Auth Token** — URGENT. SID committed to develop git history.
-> 2. **Commit + push develop branch** — all Session 40 flash sale changes need committing.
-> 3. **Commit + push main branch** — all Session 40 flash sale changes need committing.
-> 4. **Wipe test data on stalliq-production** — delete all docs in `orders` and `users` collections. Keep `vendors/{vendorId}/staff/`, `kitchenStatus`, `location`, `counters`.
-> 5. **ICO registration** — ico.org.uk, ~£40/year (required before collecting personal data in production).
-> 6. **Google Sheet header rows** — protect header rows on all three La Muletti sheets.
+> 1. **🔴 Rotate Twilio Auth Token** — URGENT. SID committed to develop git history.
+> 2. **Wipe test data on stalliq-production** — delete all docs in `orders` and `users` collections.
+> 3. **ICO registration** — ico.org.uk, ~£40/year (required before collecting personal data in production).
+> 4. **Google Sheet header rows** — protect header rows on all three La Muletti sheets.
+>
 > **⚠️ Backlog:**
 > - B3: WhatsApp as premium notifications tier — once Meta template approved, add `messagingChannel: 'sms' | 'whatsapp'` to vendor doc.
-> - B4: Generic code audit — remove hardcoded pizza/La Muletti refs from shared layer ⚠️ risky — do on feature branch
-> - B5: Flash sale BOGO / flexible discount types — currently only % off and £ off. Future: buy-one-get-one-free. Low priority — log for later.
+> - B4: Generic code audit — remove hardcoded pizza/La Muletti refs from shared layer ⚠️ risky — do on feature branch.
+> - B5: Flash sale BOGO / flexible discount types — currently only % off and £ off. Future: buy-one-get-one-free.
+> - B6: Google Play Store TWA wrap — pwabuilder.com generates signed AAB. Needs assetlinks.json on Netlify domain + Play Developer account (~$25).
+>
 > **Demo with Daniele postponed ~2 weeks from 2026-05-17 (he is busy).**
 > Read this file at the start of every session to get fully up to speed.
 ---
