@@ -2,6 +2,7 @@
 // Stalliq — Firestore Security Rules
 // Session 16b — April 2026 | Updated Session 19 — loyalty stamps + offer usage
 // Updated Session 23 — phoneIndex collection + walk-in order account linking
+// Updated Session 40 — flashSale sub-collection + flashSales broadcast log
 //
 // Auth model:
 //   Customer ordering: Firebase Phone Auth  (provider == 'phone')
@@ -175,6 +176,18 @@ service cloud.firestore {
     match /phoneIndex/{phone} {
       allow read:  if isAuthenticated();
       allow write: if isPhoneAuth();
+    }
+
+
+    // ── Flash Sale broadcast log ─────────────────────────────────────────────
+    //
+    // flashSales/{flashSaleId}
+    //   Written by the kitchen (anonymous auth) to trigger the SMS broadcast CF.
+    //   Read/update/delete: denied from clients — admin SDK only (Cloud Function).
+
+    match /flashSales/{flashSaleId} {
+      allow create: if isAnonymousAuth();
+      allow read, update, delete: if false;
     }
 
 
