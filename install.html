@@ -7,7 +7,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     /* ── Reset ──────────────────────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -250,7 +249,11 @@
     <div class="card-title">Order from your phone</div>
     <div class="card-sub">Scan the code with your camera app — no App Store needed.</div>
 
-    <div id="qrcode"></div>
+    <div id="qrcode">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=0&data=https%3A%2F%2Fdemo.stalliq.co.uk"
+           alt="QR code — demo.stalliq.co.uk"
+           width="200" height="200" />
+    </div>
     <div class="url-chip">demo.stalliq.co.uk</div>
 
     <hr class="divider" />
@@ -283,15 +286,5 @@
   <!-- Print button (screen only) -->
   <button class="print-btn" onclick="window.print()">Print this card</button>
 
-  <script>
-    new QRCode(document.getElementById('qrcode'), {
-      text:           'https://demo.stalliq.co.uk',
-      width:          200,
-      height:         200,
-      colorDark:      '#0B1221',
-      colorLight:     '#ffffff',
-      correctLevel:   QRCode.CorrectLevel.H,
-    });
-  </script>
 </body>
 </html>
