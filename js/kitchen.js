@@ -525,7 +525,8 @@ function updateMessagingToggleUI() {
 
 // ── Flash Sale Broadcast (Feature 19b) ──────────────────────────────────────────
 // kitchenFlashSaleData — mirrors vendors/{vendorId}/flashSale/current
-let kitchenFlashSaleData = null;
+let kitchenFlashSaleData      = null;
+let flashSaleExpiryInterval   = null; // setInterval to auto-clear expired indicator (Session 41)
 
 async function loadFlashSaleTemplate() {
   const textarea  = document.getElementById('k-flashsale-msg');
@@ -562,6 +563,10 @@ function listenFlashSaleState() {
     }, err => {
       console.warn('[F19] listenFlashSaleState error:', err.message);
     });
+
+  // Poll every 30s — auto-hides live indicator once expiresAt passes
+  if (flashSaleExpiryInterval) clearInterval(flashSaleExpiryInterval);
+  flashSaleExpiryInterval = setInterval(renderFlashSaleLiveIndicator, 30000);
 }
 
 /**

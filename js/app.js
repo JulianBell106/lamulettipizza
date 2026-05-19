@@ -155,6 +155,7 @@ let userOrdersQueryUnsubscribe = null; // live orders query listener (Session 21
 let userPostcode              = null; // stored postcode string, null if not opted in (Session 39)
 let flashSaleData             = null; // vendors/{vendorId}/flashSale/current (Session 40)
 let flashSaleUnsubscribe      = null; // real-time listener handle (Session 40)
+let flashSaleExpiryInterval   = null; // setInterval to auto-clear expired flash sale (Session 41)
 
 
 /* ============================================================================
@@ -1500,6 +1501,14 @@ function listenFlashSale() {
   }, err => {
     console.warn('[Stalliq] listenFlashSale error:', err.message);
   });
+
+  // Poll every 30s — auto-clears banner and basket discount once expiresAt passes
+  if (flashSaleExpiryInterval) clearInterval(flashSaleExpiryInterval);
+  flashSaleExpiryInterval = setInterval(() => {
+    renderFlashSaleBanner();
+    refreshDesktopBasket();
+    renderMobileBasket();
+  }, 30000);
 }
 
 /**
