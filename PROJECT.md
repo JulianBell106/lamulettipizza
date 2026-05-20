@@ -1,10 +1,11 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-19 — Session 40: Feature 19b — Flash sale discount at checkout fully built on develop. All files pass node --check.
+> Last updated: 2026-05-20 — Session 41: Feature B6 — Collection Window ("Queue from Anywhere") built on develop. All files pass node --check.
 > **Next session — start here:**
 > - **🔴 Rotate Twilio Auth Token** — SID committed to git history on develop. Rotate at Twilio Console → Account → API keys & tokens. Update `functions/.env` on both branches.
-> - **Deploy Feature 19b to develop** — run `firebase deploy --only firestore:rules` then `firebase deploy --only functions` from the lamulettipizza dir. Then test end-to-end (see test checklist in Section 19b below).
-> - **Feature 19b UI polish** — postcode opt-in section on customer account page needs tightening (separate task). Kitchen flash sale panel is clean.
-> - **Ship Feature 19b to production** — once end-to-end tested on develop: merge to main (gitattributes protects firebase.js and config.js), verify, push. Daniele's users will get flash sale alerts + discounts.
+> - **Test Feature B6 (Collection Window)** — load demo.stalliq.co.uk, add items, confirm picker shows when kitchen is live. Place a "~15 mins" order and verify it appears subdued in kitchen with countdown chip. Accept → confirm wait modal pre-fills to 15 mins.
+> - **Deploy Feature 19b to develop** — run `firebase deploy --only firestore:rules` then `firebase deploy --only functions` from the lamulettipizza dir. Then test end-to-end flash sale checklist.
+> - **Feature 19b UI polish** — postcode opt-in section on customer account page needs tightening (separate task).
+> - **Ship Feature 19b to production** — once end-to-end tested on develop: merge to main (gitattributes protects firebase.js and config.js), verify, push.
 > - **Check WhatsApp template approval** — submitted 2026-05-17. Once approved: implement WhatsApp as premium tier (backlog B3).
 > - **Wipe test data on stalliq-production** — still outstanding before demo (see action 3 below).
 > - **Node.js 20 deprecation** — upgrade functions to Node 22 before 2026-10-30.
@@ -15,7 +16,7 @@
 > 2. **Wipe test data on stalliq-production** — orders + users collections.
 > 3. **ICO registration** — ico.org.uk, ~£40/year.
 > 4. **Google Sheet header rows** — protect header rows on La Muletti sheets.
-> 5. **Commit + push develop** — commit all Session 40 changes on develop branch, push, verify stalliq-demo auto-deploys.
+> 5. **Commit + push develop** — commit all Session 40+41 changes on develop branch, push, verify stalliq-demo auto-deploys.
 
 ## What is Stalliq?
 Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering platform for independent mobile street food vendors. La Muletti Pizza (Daniele + Danielle, Bletchley MK) is the launch customer, on a free Year 1 Founding Customer deal.

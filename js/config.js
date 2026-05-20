@@ -230,6 +230,11 @@ const CONFIG = {
     confirmMsg:      'Order received! Your fresh smash burger will be ready soon 🍔 Come and collect when we call your name.',
     waitOptions:     [5, 8, 10, 15],
     allowCustomWait: true,
+    collectionWindowOptions: [
+      { label: 'I\'m here now',  type: 'now',   minutesFromOrder: 0  },
+      { label: '~15 mins away', type: 'later', minutesFromOrder: 15 },
+      { label: '~30 mins away', type: 'later', minutesFromOrder: 30 },
+    ],
   },
 
 
@@ -249,8 +254,8 @@ const CONFIG = {
      SEO / META
   -------------------------------------------------------------------------- */
   meta: {
-    title:       'Street Stack — Smash Burgers & Loaded Fries · Milton Keynes',
-    description: 'Proper smash burgers and loaded fries from a mobile street food van. Based in Milton Keynes. Order for collection or book us for your event.',
+    title:       'Street Stack — Smash Burgers & Loaded Fries',
+    description: 'Proper smash burgers and loaded fries from a mobile street food van. Based in Milton Keynes.',
     appTitle:    'Street Stack',
   },
 
