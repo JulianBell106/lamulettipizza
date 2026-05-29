@@ -1,8 +1,8 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-19 — Session 43: Pitch deck v7 built. 12 slides, gold colour scheme (red → gold circles), fade transitions on all slides, phone mockup on Solution slide, kanban graphic on Kitchen slide, new Find Us slide (3 feature cards: Live GPS, Events, Offers), new Competitor Comparison slide (Stalliq vs IndyLocal vs Just Eat). Delivered: `Stalliq_LaMuletti_Pitch_v7.pptx`.
+> Last updated: 2026-05-29 — WhatsApp template re-submitted directly via Meta WhatsApp Manager, now in review. (Prev: 2026-05-19 — Session 43: Pitch deck v7 built. 12 slides, gold colour scheme (red → gold circles), fade transitions on all slides, phone mockup on Solution slide, kanban graphic on Kitchen slide, new Find Us slide (3 feature cards: Live GPS, Events, Offers), new Competitor Comparison slide (Stalliq vs IndyLocal vs Just Eat). Delivered: `Stalliq_LaMuletti_Pitch_v7.pptx`.
 > **Next session — start here:**
 > - **🔴 Rotate Twilio Auth Token** — SID committed to git history on develop. Rotate at Twilio Console → Account → API keys & tokens. Update `functions/.env` on both branches.
-> - **Check WhatsApp template approval** — submitted 2026-05-17. Once approved: implement WhatsApp as premium tier (backlog B3).
+> - **WhatsApp template approved? → Update Cloud Function** — once Meta approves, update `functions/index.js` to send via template name rather than old Twilio Content SID (`HXb0f2b4e74995392bf1f82095d577036c`). See WhatsApp state below.
 > - **Wipe test data on stalliq-production** — delete all docs in `orders` and `users` collections. Keep `vendors/{vendorId}/staff/`, `kitchenStatus`, `location`, `counters`.
 > - **Node.js 20 deprecation** — upgrade functions to Node 22 before 2026-10-30.
 > - **Future session:** Google Play Store TWA wrap (pwabuilder.com → AAB → Play Console). Do on main (La Muletti production URL).
@@ -210,7 +210,7 @@ Secondary text must use `rgba(255,255,255,0.X)` not `rgba(cream,0.X)`. Warm crea
 | 15 | Multi-Staff Kitchen PIN | ✅ Done | Multi-staff PIN login (SHA-256 hashed), lockout after 5 fails (15 min), staff management panel (add/rename/change PIN/deactivate), forgot PIN flow via Firebase Phone Auth. Session 15. |
 | 15a | Real Phone Auth Go-Live | ✅ Done | Blaze plan, App Check (reCAPTCHA v3), authorised domain confirmed, test numbers removed, old kitchen.pin removed. Session 15b. |
 | 15b | Security Hardening + GDPR | ✅ Done | Anonymous auth, Firestore rules, PIN salting, cookie notice, privacy policy. Sessions 16a/16b. |
-| 16 | SMS Order Ready Notifications | ✅ Done | SMS notifications live on dev + production (Session 38). Twilio UK number +447782218609. Messaging toggle in kitchen settings. WhatsApp pending Meta template approval — future premium tier (B3). |
+| 16 | SMS Order Ready Notifications | ✅ Done | SMS notifications live on dev + production (Session 38). Twilio UK number +447782218609. Messaging toggle in kitchen settings. WhatsApp template re-submitted directly via Meta WhatsApp Manager 2026-05-29 (in review) — once approved, update Cloud Function to use template name not old Twilio Content SID. Future premium tier (B3). |
 | 17 | Geofence Notifications | ⏳ Planned | Van enters subscriber's area → phone buzzes |
 | 18 | Flash Sales & Broadcasts | ⏳ Planned | Vendor launches deal in seconds, broadcasts to subscribers |
 | 19 | Loyalty Stamp Card | ✅ Done | Stamp card (8 stamps → free pizza), per-order guard, cross-device sync, transaction-safe award |
