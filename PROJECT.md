@@ -1,7 +1,7 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-29 — Session 42: B6 Collection Window tested on develop, chip/card styling improved, ported to main. WhatsApp template re-submitted via Meta (in review).
+> Last updated: 2026-05-29 — Session 42: B6 tested + ported to main, chip/card styling improved, Twilio Auth Token rotated, WhatsApp template re-submitted via Meta (in review), B8 Menu Categories logged.
 > **Next session — start here:**
-> - **🔴 Rotate Twilio Auth Token** — SID committed to git history on develop. Rotate at Twilio Console → Account → API keys & tokens. Update `functions/.env` on both branches.
+> - ~~**Rotate Twilio Auth Token**~~ ✓ Done 2026-05-29 — token rotated, `.env` updated on both branches, functions redeployed to both `stalliq` and `stalliq-production`.
 > - ~~**B6 Collection Window**~~ ✓ Done 2026-05-29 — tested on develop, ported to main.
 > - ~~**Flash Sale (Feature 19b)**~~ ✓ Done — deployed to develop and main.
 > - **Feature 19b UI polish** — postcode opt-in section on customer account page needs tightening (separate task).
@@ -11,8 +11,7 @@
 > - **Future session:** Add Stalliq product page to endoo.co.uk (under Products).
 >
 > ⚠️ **Julian — actions outstanding:**
-> 1. **Rotate Twilio Auth Token** (🔴 urgent — SID in git history).
-> 2. **Wipe test data on stalliq-production** — orders + users collections.
+> 1. **Wipe test data on stalliq-production** — orders + users collections.
 > 3. **ICO registration** — ico.org.uk, ~£40/year.
 > 4. **Google Sheet header rows** — protect header rows on La Muletti sheets.
 > 5. **Commit + push both branches** — commit Session 42 changes (chip styling, B6 port to main, PROJECT.md updates) on both develop and main.
@@ -362,6 +361,3 @@ BOGO is the most requested; could reuse `getLoyaltyDiscount()` cheapest-item log
 | `demo.stalliq.co.uk` | stalliq-demo | `develop` | `stalliq` (sandbox) | Generic demo — configured ✓ 2026-05-09 |
 | `lamuletti-stalliq.netlify.app` | lamuletti | `main` | `stalliq-production` | La Muletti live system |
 
-**DNS:** stalliq.co.uk uses Netlify DNS. Nameservers: `dns1-4.p05.nsone.net` (set in HostPapa 2026-05-04).
-**Email:** ImprovMX handles `@stalliq.co.uk`. MX records in Netlify DNS. `hello@` → `info@endoo.co.uk`, `*@` → `julian@endoo.co.uk`. ✓ Working 2026-05-10.
-**Future vendors** will get `[vendor].stalliq.co.uk` subdomains — Netlify DNS makes this triv
