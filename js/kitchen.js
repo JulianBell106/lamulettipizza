@@ -70,6 +70,7 @@ let pendingAcceptId   = null;     // orderId waiting for wait time selection
 let pendingReadyId    = null;     // orderId waiting for ready confirmation
 let selectedWaitMins  = null;     // chosen wait time value
 let elapsedTimers     = {};       // setInterval handles keyed by orderId
+let collectionCountdownTimers = {}; // setInterval handles for collection window countdown chips
 let ordersUnsubscribe = null;
 
 // Location broadcast state (Session 14)
@@ -1071,6 +1072,10 @@ function renderOrders() {
 
   orders.forEach(order => {
     if (order.status !== 'ready') startElapsedTimer(order.id);
+    var cw2 = order.collectionWindow;
+    if (cw2 && cw2.type === 'later' && order.status === 'pending') {
+      startCollectionCountdown(order.id);
+    }
   });
 }
 
@@ -1108,6 +1113,14 @@ function orderCardHTML(order) {
     ? `<span class="k-card-source-badge">Walk-in</span>`
     : '';
 
+  // Collection window — subdued styling + countdown for 'later' pending orders
+  const cw = order.collectionWindow;
+  const isLaterOrder = cw && cw.type === 'later' && cw.minutesFromOrder > 0;
+  const collectionChipHTML = isLaterOrder
+    ? '<span class="k-countdown-chip" id="cw-chip-' + order.id + '">Collecting in ~' + cw.minutesFromOrder + ' mins</span>'
+    : '';
+  const laterClass = (isLaterOrder && order.status === 'pending') ? ' collection-later' : '';
+
   let actionBtn = '';
   switch (order.status) {
     case 'pending':
@@ -1125,9 +1138,10 @@ function orderCardHTML(order) {
   }
 
   return `
-    <div class="k-card status-${order.status}" id="k-card-${order.id}">
+    <div class="k-card status-${order.status}${laterClass}" id="k-card-${order.id}">
       <div class="k-card-header">
         <div class="k-card-ref">${order.orderRef || '—'}${sourceBadge}</div>
+        ${collectionChipHTML ? `<div class="k-collection-row">${collectionChipHTML}</div>` : ''}
         <div class="k-card-meta">
           <div class="k-card-name">${order.customerName || 'Customer'}</div>
           <div class="k-card-elapsed" id="elapsed-${order.id}">0:00</div>
@@ -1166,6 +1180,17 @@ function openWaitModal(orderId) {
          ${mins}<span>mins</span>
        </button>`
     ).join('');
+  }
+
+  // Pre-select wait suggestion based on collection window
+  if (order && order.collectionWindow && order.collectionWindow.minutesFromOrder > 0) {
+    var suggested  = order.collectionWindow.minutesFromOrder;
+    var exactBtn   = optsEl ? Array.from(optsEl.querySelectorAll('.k-wait-opt'))
+      .find(function(b) { return parseInt(b.textContent, 10) === suggested; }) : null;
+    if (exactBtn) { selectWait(suggested, exactBtn); }
+    else if (refEl) {
+      refEl.textContent = (order.orderRef || '') + ' — collecting in ~' + suggested + ' mins';
+    }
   }
 
   const customRow   = document.getElementById('custom-wait-row');
@@ -1412,6 +1437,39 @@ function startElapsedTimer(orderId) {
 function clearElapsedTimers() {
   Object.values(elapsedTimers).forEach(t => clearInterval(t));
   elapsedTimers = {};
+  clearCollectionCountdowns();
+}
+
+function startCollectionCountdown(orderId) {
+  if (collectionCountdownTimers[orderId]) clearInterval(collectionCountdownTimers[orderId]);
+  var order2 = currentOrders[orderId];
+  if (!order2 || !order2.collectionWindow || !order2.createdAt) return;
+  var createdMs  = order2.createdAt.toDate ? order2.createdAt.toDate().getTime() : Date.now();
+  var expectedMs = createdMs + (order2.collectionWindow.minutesFromOrder * 60 * 1000);
+  function cwTick() {
+    var chip = document.getElementById('cw-chip-' + orderId);
+    if (!chip) { clearInterval(collectionCountdownTimers[orderId]); return; }
+    var remaining = Math.round((expectedMs - Date.now()) / 60000);
+    if (remaining > 1) {
+      chip.textContent = 'Collecting in ~' + remaining + ' mins';
+      chip.className = 'k-countdown-chip';
+    } else if (remaining > 0) {
+      chip.textContent = 'Arriving soon';
+      chip.className = 'k-countdown-chip cw-arriving';
+    } else {
+      chip.textContent = 'Expected now';
+      chip.className = 'k-countdown-chip cw-due';
+      var card = document.getElementById('k-card-' + orderId);
+      if (card) card.classList.remove('collection-later');
+    }
+  }
+  cwTick();
+  collectionCountdownTimers[orderId] = setInterval(cwTick, 30000);
+}
+
+function clearCollectionCountdowns() {
+  Object.values(collectionCountdownTimers).forEach(t => clearInterval(t));
+  collectionCountdownTimers = {};
 }
 
 function playOrderAlert() {

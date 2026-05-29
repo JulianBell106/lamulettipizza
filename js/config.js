@@ -237,6 +237,11 @@ const CONFIG = {
     confirmMsg:     'Thanks for your order! Please collect and pay on pickup. Your fresh pizza will be ready soon 🍕',
     waitOptions:    [10, 15, 20, 25],
     allowCustomWait: true,
+    collectionWindowOptions: [
+      { label: 'I am here now',  type: 'now',   minutesFromOrder: 0  },
+      { label: '~15 mins away', type: 'later', minutesFromOrder: 15 },
+      { label: '~30 mins away', type: 'later', minutesFromOrder: 30 },
+    ],
   },
 
 

@@ -152,6 +152,7 @@ let locationAgeInterval    = null; // setInterval id for "Updated X mins ago" (S
 let flashSaleData             = null; // vendors/{vendorId}/flashSale/current (Session 40)
 let flashSaleUnsubscribe      = null; // real-time listener handle (Session 40)
 let flashSaleExpiryInterval   = null; // setInterval to auto-clear expired flash sale (Session 41)
+let selectedCollectionWindow  = null; // { type:'now'|'later', minutesFromOrder:N } chosen at checkout
 let userPostcode              = null; // stored postcode string, null if not opted in (Session 39)
 let userProfileUnsubscribe    = null; // real-time user document listener (Session 21)
 let userOfferUsageUnsubscribe = null; // real-time offer usage listener (Session 21)
@@ -695,6 +696,8 @@ function refreshDesktopBasket() {
   const discSection = document.getElementById('d-basket-discount-section');
   if (discSection) discSection.innerHTML = buildBasketDiscountHTML('d');
 
+  renderCollectionWindowPicker('d');
+
   const totalEl = document.getElementById('d-basket-total');
   if (totalEl) totalEl.textContent = CONFIG.business.currency + basketFinalTotal().toFixed(2);
 }
@@ -741,6 +744,7 @@ function dPlaceOrder() {
       }
 
       selectedOffer = null;
+      selectedCollectionWindow = null;
       document.getElementById('d-order-ref').textContent   = 'Order ref ' + orderRef;
       document.getElementById('d-order-details').innerHTML = rows;
 
@@ -934,6 +938,8 @@ function renderMobileBasket() {
   const discSection = document.getElementById('m-basket-discount-section');
   if (discSection) discSection.innerHTML = buildBasketDiscountHTML('m');
 
+  renderCollectionWindowPicker('m');
+
   const finalTotal = basketFinalTotal();
   const totalEl = document.getElementById('m-basket-total');
   if (totalEl) totalEl.textContent = CONFIG.business.currency + finalTotal.toFixed(2);
@@ -980,6 +986,7 @@ function mPlaceOrder() {
       }
 
       selectedOffer = null;
+      selectedCollectionWindow = null;
       document.getElementById('m-confirm-ref').textContent   = 'Order ref ' + orderRef;
       document.getElementById('m-confirm-details').innerHTML = rows;
       document.getElementById('m-confirm-msg').textContent   = CONFIG.ordering.confirmMsg;
@@ -1870,6 +1877,43 @@ function buildBasketDiscountHTML(prefix) {
  * (e.g. stamps awarded on mobile while desktop is open).
  * Replaces the one-shot loadUserStampCount call in onAuthStateChanged.
  */
+/* ============================================================================
+   22f. COLLECTION WINDOW PICKER
+   Renders the "When are you collecting?" selector in basket.
+   Only shown when kitchenStatus === 'open'.
+   ============================================================================ */
+function renderCollectionWindowPicker(prefix) {
+  var el = document.getElementById(prefix + '-collection-window');
+  if (!el) return;
+
+  var opts = CONFIG.ordering && CONFIG.ordering.collectionWindowOptions;
+  if (!opts || opts.length === 0 || kitchenStatus !== 'open') {
+    el.style.display = 'none';
+    return;
+  }
+
+  var icons = { now: '\u{1F4CD}', later: '\u{1F550}' };
+  var optsHTML = opts.map(function(opt) {
+    var isSelected = selectedCollectionWindow &&
+      selectedCollectionWindow.minutesFromOrder === opt.minutesFromOrder &&
+      selectedCollectionWindow.type === opt.type;
+    return '<button class="cw-opt' + (isSelected ? ' selected' : '') + '"' +
+      ' onclick="selectCollectionWindow(' + opt.minutesFromOrder + ',\'' + opt.type + '\',this)">' +
+      '<span class="cw-opt-icon">' + (icons[opt.type] || '\u{1F4CD}') + '</span>' +
+      esc(opt.label) + '</button>';
+  }).join('');
+
+  el.style.display = 'block';
+  el.innerHTML = '<div class="cw-label">When are you collecting?</div>' +
+    '<div class="cw-options">' + optsHTML + '</div>';
+}
+
+function selectCollectionWindow(minutesFromOrder, type, btn) {
+  selectedCollectionWindow = { type: type, minutesFromOrder: minutesFromOrder };
+  document.querySelectorAll('.cw-opt').forEach(function(b) { b.classList.remove('selected'); });
+  if (btn) btn.classList.add('selected');
+}
+
 function listenUserProfile(uid) {
   if (userProfileUnsubscribe) { userProfileUnsubscribe(); userProfileUnsubscribe = null; }
   userProfileUnsubscribe = db.collection('users').doc(uid).onSnapshot(doc => {
@@ -2430,6 +2474,7 @@ async function submitOrderToFirestore() {
     },
     status:    'pending',
     waitMins:  null,
+    collectionWindow: selectedCollectionWindow || { type: 'now', minutesFromOrder: 0 },
     expiresAt,
     deleteAt,
     createdAt: new Date(),
