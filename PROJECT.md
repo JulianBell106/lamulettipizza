@@ -20,7 +20,8 @@
 > - B4: Generic code audit — remove hardcoded pizza/La Muletti refs from shared layer ⚠️ risky — do on feature branch.
 > - B5: Flash sale BOGO / flexible discount types — currently only % off and £ off. Future: buy-one-get-one-free.
 > - B6: Google Play Store TWA wrap — pwabuilder.com generates signed AAB. Needs assetlinks.json on Netlify domain + Play Developer account (~$25).
-> - B7: Collection Window ("Queue from Anywhere") — customer picks arrival window at checkout; kitchen sees upcoming orders with countdown. See Section 21a for full spec.
+> - ~~B7: Collection Window ("Queue from Anywhere")~~ ✓ Done 2026-05-29 — built on develop (Session 41), ported to main (Session 42).
+> - B8: Menu Categories — add `category` column to Google Sheet; group items by category in app.js with section headers; `CONFIG.ordering.menuCategories` array defines display order. Low risk, no Firestore changes needed.
 >
 > **Demo with Daniele postponed ~2 weeks from 2026-05-17 (he is busy).**
 > Read this file at the start of every session to get fully up to speed.
