@@ -1,12 +1,12 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-20 — Session 41: Feature B6 — Collection Window ("Queue from Anywhere") built on develop. All files pass node --check.
+> Last updated: 2026-05-29 — WhatsApp template re-submitted directly via Meta WhatsApp Manager. Now in review.
 > **Next session — start here:**
 > - **🔴 Rotate Twilio Auth Token** — SID committed to git history on develop. Rotate at Twilio Console → Account → API keys & tokens. Update `functions/.env` on both branches.
 > - **Test Feature B6 (Collection Window)** — load demo.stalliq.co.uk, add items, confirm picker shows when kitchen is live. Place a "~15 mins" order and verify it appears subdued in kitchen with countdown chip. Accept → confirm wait modal pre-fills to 15 mins.
 > - **Deploy Feature 19b to develop** — run `firebase deploy --only firestore:rules` then `firebase deploy --only functions` from the lamulettipizza dir. Then test end-to-end flash sale checklist.
 > - **Feature 19b UI polish** — postcode opt-in section on customer account page needs tightening (separate task).
 > - **Ship Feature 19b to production** — once end-to-end tested on develop: merge to main (gitattributes protects firebase.js and config.js), verify, push.
-> - **Check WhatsApp template approval** — submitted 2026-05-17. Once approved: implement WhatsApp as premium tier (backlog B3).
+> - **WhatsApp template approved? → Update Cloud Function** — once Meta approves, update `functions/index.js` to send via template name rather than old Twilio Content SID (`HXb0f2b4e74995392bf1f82095d577036c`). See WhatsApp state below.
 > - **Wipe test data on stalliq-production** — still outstanding before demo (see action 3 below).
 > - **Node.js 20 deprecation** — upgrade functions to Node 22 before 2026-10-30.
 > - **Future session:** Add Stalliq product page to endoo.co.uk (under Products).
@@ -74,11 +74,13 @@ Julian (Endoo Limited) is building Stalliq — a white-label PWA food ordering p
 - **`firebase.json`** — updated on `main` to include functions block (source: functions, runtime: nodejs20).
 - **`.firebaserc`** on `main` — `"default": "stalliq-production"`.
 
-### Twilio state (2026-05-18)
+### Twilio state (updated 2026-05-29)
 - UK number: +447782218609 ✅
 - WhatsApp Business profile: Endoo Limited ✅
 - SMS notifications: ✅ Working on dev and production
-- WhatsApp content template `order_ready_notification` (HXb0f2b4e74995392bf1f82095d577036c): **Pending Meta approval** — submitted 2026-05-17, expected within 48hrs
+- WhatsApp content template `order_ready_notification` (HXb0f2b4e74995392bf1f82095d577036c): **Never reached Meta** — original Twilio submission did not sync to Meta WABA despite number being Connected.
+- **Re-submitted 2026-05-29 directly via Meta WhatsApp Manager** — Utility / Default / English (GB). Header: "Your order is ready". Body: `Hi {{1}}, your order from {{2}} is ready for collection! Thanks for your order – see you soon.` Status: **In review**.
+- Once approved: update `functions/index.js` to reference template by name instead of old Twilio Content SID.
 
 ---
 
