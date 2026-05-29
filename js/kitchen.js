@@ -1156,7 +1156,8 @@ function orderCardHTML(order) {
   return `
     <div class="k-card status-${order.status}${laterClass}" id="k-card-${order.id}">
       <div class="k-card-header">
-        <div class="k-card-ref">${order.orderRef || '—'}${sourceBadge}${collectionChipHTML}</div>
+        <div class="k-card-ref">${order.orderRef || '—'}${sourceBadge}</div>
+        ${collectionChipHTML ? `<div class="k-collection-row">${collectionChipHTML}</div>` : ''}
         <div class="k-card-meta">
           <div class="k-card-name">${order.customerName || 'Customer'}</div>
           <div class="k-card-elapsed" id="elapsed-${order.id}">0:00</div>
