@@ -1,7 +1,7 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-29 — WhatsApp template re-submitted directly via Meta WhatsApp Manager, now in review. (Prev: 2026-05-19 — Session 43: Pitch deck v7 built. 12 slides, gold colour scheme (red → gold circles), fade transitions on all slides, phone mockup on Solution slide, kanban graphic on Kitchen slide, new Find Us slide (3 feature cards: Live GPS, Events, Offers), new Competitor Comparison slide (Stalliq vs IndyLocal vs Just Eat). Delivered: `Stalliq_LaMuletti_Pitch_v7.pptx`.
+> Last updated: 2026-05-29 — Session 42: B6 tested + ported to main, chip/card styling improved, Twilio Auth Token rotated, WhatsApp template re-submitted via Meta (in review), B8 Menu Categories logged. (Prev: 2026-05-19 — Session 43: Pitch deck v7 built. 12 slides, gold colour scheme (red → gold circles), fade transitions on all slides, phone mockup on Solution slide, kanban graphic on Kitchen slide, new Find Us slide (3 feature cards: Live GPS, Events, Offers), new Competitor Comparison slide (Stalliq vs IndyLocal vs Just Eat). Delivered: `Stalliq_LaMuletti_Pitch_v7.pptx`.
 > **Next session — start here:**
-> - **🔴 Rotate Twilio Auth Token** — SID committed to git history on develop. Rotate at Twilio Console → Account → API keys & tokens. Update `functions/.env` on both branches.
+> - ~~**Rotate Twilio Auth Token**~~ ✓ Done 2026-05-29 — token rotated, `.env` updated on both branches, functions redeployed to both `stalliq` and `stalliq-production`.
 > - **WhatsApp template approved? → Update Cloud Function** — once Meta approves, update `functions/index.js` to send via template name rather than old Twilio Content SID (`HXb0f2b4e74995392bf1f82095d577036c`). See WhatsApp state below.
 > - **Wipe test data on stalliq-production** — delete all docs in `orders` and `users` collections. Keep `vendors/{vendorId}/staff/`, `kitchenStatus`, `location`, `counters`.
 > - **Node.js 20 deprecation** — upgrade functions to Node 22 before 2026-10-30.
@@ -10,8 +10,7 @@
 > - **Future session:** Add Stalliq product page to endoo.co.uk (under Products).
 >
 > ⚠️ **Julian — actions outstanding:**
-> 1. **🔴 Rotate Twilio Auth Token** — URGENT. SID committed to develop git history.
-> 2. **Wipe test data on stalliq-production** — delete all docs in `orders` and `users` collections.
+> 1. **Wipe test data on stalliq-production** — delete all docs in `orders` and `users` collections.
 > 3. **ICO registration** — ico.org.uk, ~£40/year (required before collecting personal data in production).
 > 4. **Google Sheet header rows** — protect header rows on all three La Muletti sheets.
 >
@@ -504,32 +503,4 @@ No upfront payment required. Kitchen can mark an order "Not collected" — logge
 
 ---
 
-## 18. Deployment Pipeline ✅
-
-**GitHub:** https://github.com/JulianBell106/lamulettipizza
-
-| Branch | Netlify Site | Domain | Firebase Project | Purpose |
-|--------|-------------|--------|-----------------|---------|
-| `develop` | stalliq-demo.netlify.app | demo.stalliq.co.uk (pending) | `stalliq` (dev sandbox) | All active development + generic Stalliq demo |
-| `main` | lamuletti-stalliq.netlify.app | — | `stalliq-production` | La Muletti live production system |
-
-**Stalliq product site:** `stalliq-site/` folder in workspace → deployed separately via Netlify drop → stalliq.co.uk
-
-**⚠️ `.gitattributes` protects both `js/firebase.js` AND `js/config.js` with `merge=ours`** — commit this change on `develop` and merge to `main` before next code change.
-Never commit production credentials or La Muletti config to `develop`, or vice versa. Always verify both files after a merge.
-
-**DNS:** stalliq.co.uk uses Netlify DNS. Nameservers: `dns1-4.p05.nsone.net` (set in HostPapa 2026-05-04). Add subdomains directly in Netlify DNS panel.
-
-**Development workflow:**
-1. All work starts on `develop`
-2. Claude produces files or diffs → Julian applies to `develop`
-3. GitHub Desktop → commit to `develop` → push → stalliq-demo auto-deploys
-4. When ready to ship to La Muletti: switch to `main` → merge from `develop` → verify firebase.js AND config.js still have La Muletti/production values → push → lamuletti-stalliq auto-deploys
-
-**See `BRANCHES.md` in repo root for the full branching guide.**
-
----
-
-## 36a. Stalliq Product Brand — Session 26 (2026-05-04)
-
-**stalliq.co.uk** is the Stalliq product marketing site — entirely separate from the La Mul
+## 18. Deployment Pipeli
