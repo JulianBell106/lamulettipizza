@@ -30,6 +30,7 @@
 // Required Firestore field (set once per vendor in Firebase Console):
 //   vendors/lamuletti  ->  displayName: "La Muletti"
 // ============================================================================
+// - Latest version.
 
 const functions = require('firebase-functions');
 const admin     = require('firebase-admin');
