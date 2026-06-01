@@ -1,5 +1,5 @@
 # Stalliq — Project Bible
-> Last updated: 2026-05-29 — Session 42: B6 tested + ported to main, chip/card styling improved, Twilio Auth Token rotated, WhatsApp template re-submitted via Meta (in review), B8 Menu Categories logged. (Prev: 2026-05-19 — Session 43: Pitch deck v7 built. 12 slides, gold colour scheme (red → gold circles), fade transitions on all slides, phone mockup on Solution slide, kanban graphic on Kitchen slide, new Find Us slide (3 feature cards: Live GPS, Events, Offers), new Competitor Comparison slide (Stalliq vs IndyLocal vs Just Eat). Delivered: `Stalliq_LaMuletti_Pitch_v7.pptx`.
+> Last updated: 2026-06-01 — Session 44 (product thinking): Stalliq pricing model finalised — tiers renamed Stall/Market/Festival (£19/£49/£79), La Muletti Founding Customer #1 deal agreed (£149 setup + Year 1 free Festival + £39.50/month for life from Year 2). Pitch deck updated to v10 then reformatted by Gamma as `Stalliq_LaMuletti_Pitch_baseline_1.0.pptx` (13 slides). Competitor research conducted — no direct UK competitor for mobile vendor ordering PWA. Pricing confirmed competitive vs Flipdish (£49-£99) and strong vs Just Eat/Deliveroo commission (14-35%). Wednesday 2026-06-04: pitch meeting with Daniele. (Prev: 2026-05-29 — Session 42: B6 tested + ported to main, chip/card styling improved, Twilio Auth Token rotated, WhatsApp template re-submitted via Meta (in review), B8 Menu Categories logged.)
 > **Next session — start here:**
 > - ~~**Rotate Twilio Auth Token**~~ ✓ Done 2026-05-29 — token rotated, `.env` updated on both branches, functions redeployed to both `stalliq` and `stalliq-production`.
 > - **WhatsApp template approved? → Update Cloud Function** — once Meta approves, update `functions/index.js` to send via template name rather than old Twilio Content SID (`HXb0f2b4e74995392bf1f82095d577036c`). See WhatsApp state below.
@@ -22,7 +22,7 @@
 > - ~~B7: Collection Window ("Queue from Anywhere")~~ ✓ Done 2026-05-29 — built on develop (Session 41), ported to main (Session 42).
 > - B8: Menu Categories — add `category` column to Google Sheet; group items by category in app.js with section headers; `CONFIG.ordering.menuCategories` array defines display order. Low risk, no Firestore changes needed.
 >
-> **Demo with Daniele postponed ~2 weeks from 2026-05-17 (he is busy).**
+> **Pitch meeting with Daniele: Wednesday 2026-06-04. Deck: `Stalliq_LaMuletti_Pitch_baseline_1.0.pptx`.**
 > Read this file at the start of every session to get fully up to speed.
 ---
 
@@ -70,7 +70,7 @@ Julian has ~30 years IT experience and a development background but no longer co
 **Facebook:** @lamulettipizza
 **Website:** lamulettipizza.co.uk
 
-**Commercial arrangement:** Free for year one in exchange for being a reference customer and providing feedback. Year two onwards moves to standard pricing. **Daniele has confirmed he wants to go ahead — meeting happened April 2026.**
+**Commercial arrangement (finalised 2026-06-01):** £149 one-time setup fee. Year 1 free — full Festival tier. Year 2+: £39.50/month (50% off Festival, locked for life as Founding Customer #1). Cancel and rejoin loses the rate permanently. **Pitch meeting: Wednesday 2026-06-04. Daniele confirmed he wants to go ahead — first meeting April 2026.**
 
 **Demo site (live):** https://stalliq-demo.netlify.app/
 **GitHub repo:** https://github.com/JulianBell106/lamulettipizza
@@ -107,21 +107,29 @@ Sophie (sophieetc.com) runs the definitive MK food blog and organises Sophie's S
 
 ## 5. Pricing Model
 
+**Tier names: Stall / Market / Festival** (updated 2026-06-01)
+
 | Tier | Monthly | Annual (2 months free) | Features |
 |------|---------|------------------------|----------|
-| Founding Customer | 50% off chosen tier, locked for life as long as subscription continuous | — | Everything in chosen tier — first 5 customers only |
-| Starter | £19 | £190 | Core ordering, kitchen dashboard, real-time status, WhatsApp alerts |
-| Growth | £59 | £590 | Starter + geofence, flash sales, loyalty stamp card, event menus |
-| Pro | £99 | £990 | Growth + self-service portal, analytics, pre-order slots, priority support |
+| Stall | £19 | £190 | Core ordering, kitchen dashboard, live/offline toggle, 1 staff PIN |
+| Market | £49 | £490 | Stall + loyalty stamps, flash sales, geofence alerts, collection window, WhatsApp, 3 staff accounts |
+| Festival | £79 | £790 | Market + AI Order Assist (when built), unlimited staff, priority support |
 
 **Pricing principles:**
-- No setup fee on any tier
 - No commission, ever — flat monthly only
 - Monthly rolling, no contracts — cancel anytime
-- Annual plans: 2 months free (~17% discount) — paid upfront, strong lock-in
-- Founding customers: 50% lifetime discount locked in as long as subscription is continuous — cancel and re-signup loses the rate forever
-- La Muletti stays on original free year 1 terms — Founding discount applies to customer #2 onwards
-- Revisit prices at customer #10 — real conversion data will show which tier should be the centre of gravity
+- Annual plans: 2 months free (~17% discount) — paid upfront
+- New customer prices reviewed annually (not CPI — fixed annual review)
+- Founding customers grandfathered at signup price for life — first 5 customers only
+- Cancel and rejoin loses the Founding rate forever
+- Display pricing publicly on stalliq.co.uk with commission comparison built in
+- Revisit prices at customer #10 — real conversion data will show which tier is centre of gravity
+
+**La Muletti — Founding Customer #1 deal (agreed 2026-06-01):**
+- One-time setup fee: £149 (menu config, branding, staff onboarding, on-site go-live)
+- Year 1: FREE — full Festival tier, all features as built, no conditions
+- Year 2+: £39.50/month — 50% off Festival, locked for life
+- Founding rate lost permanently if subscription cancelled and restarted
 
 ---
 
