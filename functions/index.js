@@ -149,7 +149,7 @@ exports.orderReadyNotification = functions
         await client.messages.create({
           from: fromSMS,
           to:   customerPhone,
-          body: 'Hi ' + firstName + ', your order from ' + vendorName + ' is ready for collection! See you soon.',
+          body: 'Hi ' + firstName + ', your order from ' + vendorName + ' is ready for collection! Thanks for your order – see you soon.',
         });
         notificationSent = true;
         channel          = 'sms';
