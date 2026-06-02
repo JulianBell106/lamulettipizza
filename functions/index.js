@@ -83,7 +83,8 @@ exports.orderReadyNotification = functions
     }
 
     // -- Resolve vendor display name + messaging flag -----------------------
-    let vendorName = 'the kitchen';
+    let vendorName       = 'the kitchen';
+    let messagingChannel = 'sms'; // 'sms' | 'whatsapp'
 
     try {
       const vendorDoc = await admin.firestore()
@@ -100,6 +101,7 @@ exports.orderReadyNotification = functions
           console.log('[F16] Messaging disabled for vendor ' + vendorId + ' - skipping order ' + orderRef);
           return null;
         }
+        if (vendorDoc.data().messagingChannel === 'whatsapp') messagingChannel = 'whatsapp';
       }
     } catch (err) {
       console.warn('[F16] Could not read vendor doc for ' + vendorId + ':', err.message);
@@ -113,21 +115,45 @@ exports.orderReadyNotification = functions
     let channel          = null;
     let errorDetail      = null;
 
-    // -- SMS notification ---------------------------------------------------
-    // WhatsApp available as a premium upgrade (future).
+    if (messagingChannel === 'whatsapp') {
+      // -- WhatsApp notification via Meta-approved template ------------------
+      // Template: 'order_ready_notification' — {{1}} = firstName, {{2}} = vendorName
+      const contentSid = process.env.TWILIO_WHATSAPP_CONTENT_SID;
+      if (!contentSid) {
+        console.error('[F16] TWILIO_WHATSAPP_CONTENT_SID not set — falling back to SMS for order ' + orderRef);
+      } else {
+        try {
+          await client.messages.create({
+            from:             'whatsapp:' + fromSMS,
+            to:               'whatsapp:' + customerPhone,
+            contentSid:       contentSid,
+            contentVariables: JSON.stringify({ '1': firstName, '2': vendorName }),
+          });
+          notificationSent = true;
+          channel          = 'whatsapp';
+          console.log('[F16] WhatsApp sent -> ' + customerPhone + ' | order ' + orderRef);
+        } catch (waErr) {
+          console.error('[F16] WhatsApp failed for order ' + orderRef + ':', waErr.message);
+          errorDetail = 'WhatsApp: ' + waErr.message;
+        }
+      }
+    }
 
-    try {
-      await client.messages.create({
-        from: fromSMS,
-        to:   customerPhone,
-        body: 'Hi ' + firstName + ', your order from ' + vendorName + ' is ready for collection! See you soon.',
-      });
-      notificationSent = true;
-      channel          = 'sms';
-      console.log('[F16] SMS sent -> ' + customerPhone + ' | order ' + orderRef);
-    } catch (smsErr) {
-      console.error('[F16] SMS failed for order ' + orderRef + ':', smsErr.message);
-      errorDetail = 'SMS: ' + smsErr.message;
+    // Send SMS if channel is 'sms', or WhatsApp was not configured / failed
+    if (!notificationSent && messagingChannel !== 'whatsapp') {
+      try {
+        await client.messages.create({
+          from: fromSMS,
+          to:   customerPhone,
+          body: 'Hi ' + firstName + ', your order from ' + vendorName + ' is ready for collection! Thanks for your order – see you soon.',
+        });
+        notificationSent = true;
+        channel          = 'sms';
+        console.log('[F16] SMS sent -> ' + customerPhone + ' | order ' + orderRef);
+      } catch (smsErr) {
+        console.error('[F16] SMS failed for order ' + orderRef + ':', smsErr.message);
+        errorDetail = 'SMS: ' + smsErr.message;
+      }
     }
 
     // -- Log outcome back to order doc -------------------------------------
