@@ -1,8 +1,8 @@
 # Stalliq — Project Bible
-> Last updated: 2026-06-02 — Session 45 (B3: WhatsApp notifications): Meta template `order_ready_notification` approved. WhatsApp channel support applied to main — `orderReadyNotification` CF reads `messagingChannel` from vendor doc and routes to WhatsApp (Twilio Content API, template vars 1=firstName 2=vendorName) or SMS. Kitchen settings panel gets SMS/WhatsApp channel selector. Same changes still to apply to develop. Flash sale broadcast stays SMS-only (needs separate Meta marketing template). (Prev: 2026-06-01 — Session 44: pricing model finalised.)
+> Last updated: 2026-06-02 — Session 45 (B3: WhatsApp notifications — full build): WhatsApp channel support built and applied to BOTH main and develop. `orderReadyNotification` CF reads `messagingChannel` from vendor doc — routes to WhatsApp (Twilio Content API, template `order_ready_notification`, vars 1=firstName 2=vendorName) or SMS. SMS body updated to match Meta template ("Thanks for your order – see you soon."). Kitchen settings panel gets SMS/WhatsApp channel selector (owner only). Tested on stalliq dev — SMS fallback confirmed working (TWILIO_WHATSAPP_CONTENT_SID not yet in .env). Flash sale broadcast stays SMS-only (needs separate Meta marketing template). Meta Business Verification submitted for Endoo Limited (Private Company, CRN provided) — in review. Twilio Content Template Builder: new `order_ready_notification` submitted for WhatsApp business initiated approval — pending Meta WABA verification. (Prev: 2026-06-01 — Session 44: pricing model finalised.)
 > **Next session — start here:**
-> - **Apply same WhatsApp changes to develop** — switch to develop branch; apply same patches to `js/kitchen.js`, `kitchen.html`, `functions/index.js` (identical changes as main).
-> - **Add TWILIO_WHATSAPP_CONTENT_SID to functions/.env** — get Content SID from Twilio Console → Messaging → Content → `order_ready_notification` → copy HX... SID. Add to `.env` on BOTH branches. Redeploy functions to both `stalliq` and `stalliq-production`.
+> - **Check Meta business verification status** — business.facebook.com → Settings → WhatsApp Accounts → Endoo Limited → Business verification. Once verified, Twilio template should flip to ✅ WhatsApp business initiated.
+> - **Once Twilio template approved:** copy new HX... SID from Twilio Console → Messaging → Content Template Builder → `order_ready_notification`. Add `TWILIO_WHATSAPP_CONTENT_SID=HXxxxxxx` to `functions/.env` on BOTH branches. Run `firebase deploy --only functions` on both `stalliq` and `stalliq-production`.
 > - **Wipe test data on stalliq-production** — delete all docs in `orders` and `users` collections. Keep `vendors/{vendorId}/staff/`, `kitchenStatus`, `location`, `counters`.
 > - **Node.js 20 deprecation** — upgrade functions to Node 22 before 2026-10-30.
 > - **Future session:** Google Play Store TWA wrap (pwabuilder.com → AAB → Play Console). Do on main (La Muletti production URL).
@@ -10,15 +10,21 @@
 > - **Future session:** Add Stalliq product page to endoo.co.uk (under Products).
 >
 > ⚠️ **Julian — actions outstanding:**
-> 1. **Delete the three `_wa_patch` files** from repo folder (they are orphaned — the real files are already patched).
-> 2. **Apply same WhatsApp changes to develop** — next session, Claude applies the same three-file patch on the develop branch.
-> 3. **Add `TWILIO_WHATSAPP_CONTENT_SID` to `functions/.env`** — Twilio Console → Messaging → Content → order_ready_notification → copy HX... SID. Add to `.env` on both branches. Run `firebase deploy --only functions` on both.
-> 4. **Wipe test data on stalliq-production** — delete all docs in `orders` and `users` collections.
-> 5. **ICO registration** — ico.org.uk, ~£40/year (required before collecting personal data in production).
-> 6. **Google Sheet header rows** — protect header rows on all three La Muletti sheets.
+> 1. **Monitor Meta business verification** — check back tomorrow. Once approved, Twilio template gets WhatsApp business initiated ✅.
+> 2. **Add `TWILIO_WHATSAPP_CONTENT_SID` to `functions/.env`** — do this once Twilio template is approved. Add to `.env` on both branches. Run `firebase deploy --only functions` on both.
+> 3. **Wipe test data on stalliq-production** — delete all docs in `orders` and `users` collections.
+> 4. **ICO registration** — ico.org.uk, ~£40/year (required before collecting personal data in production).
+> 5. **Google Sheet header rows** — protect header rows on all three La Muletti sheets.
+>
+> ### WhatsApp state (as of 2026-06-02)
+> - Meta template `order_ready_notification`: **Active** in Meta Business Manager ✅
+> - Twilio Content template: submitted, **WhatsApp business initiated pending** ⊗ (blocked by unverified WABA)
+> - Meta Business Verification (Endoo Limited): **in review** — submitted 2026-06-02
+> - `TWILIO_WHATSAPP_CONTENT_SID`: **not yet set** in `.env` — do after template approved
+> - SMS fallback: **working** on both branches ✅
 >
 > **⚠️ Backlog:**
-> - ~~B3: WhatsApp as premium notifications tier~~ ✓ Built 2026-06-02 — pending apply + test on develop, then port to main.
+> - ~~B3: WhatsApp as premium notifications tier~~ ✓ Built 2026-06-02 (both branches) — waiting on Meta WABA verification to go fully live.
 > - B3b: WhatsApp flash sale broadcasts — needs a separate Meta marketing template approval. Currently flash sale broadcast always uses SMS.
 > - B4: Generic code audit — remove hardcoded pizza/La Muletti refs from shared layer ⚠️ risky — do on feature branch.
 > - B5: Flash sale BOGO / flexible discount types — currently only % off and £ off. Future: buy-one-get-one-free.
