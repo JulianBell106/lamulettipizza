@@ -1,8 +1,8 @@
 # Stalliq — Project Bible
-> Last updated: 2026-06-01 — Session 44 (product thinking): Stalliq pricing model finalised — tiers renamed Stall/Market/Festival (£19/£49/£79), La Muletti Founding Customer #1 deal agreed (£149 setup + Year 1 free Festival + £39.50/month for life from Year 2). Pitch deck updated to v10 then reformatted by Gamma as `Stalliq_LaMuletti_Pitch_baseline_1.0.pptx` (13 slides). Competitor research conducted — no direct UK competitor for mobile vendor ordering PWA. Pricing confirmed competitive vs Flipdish (£49-£99) and strong vs Just Eat/Deliveroo commission (14-35%). Wednesday 2026-06-04: pitch meeting with Daniele. (Prev: 2026-05-29 — Session 42: B6 tested + ported to main, chip/card styling improved, Twilio Auth Token rotated, WhatsApp template re-submitted via Meta (in review), B8 Menu Categories logged.)
+> Last updated: 2026-06-02 — Session 45 (B3: WhatsApp notifications): Meta template `order_ready_notification` approved. WhatsApp channel support applied to main — `orderReadyNotification` CF reads `messagingChannel` from vendor doc and routes to WhatsApp (Twilio Content API, template vars 1=firstName 2=vendorName) or SMS. Kitchen settings panel gets SMS/WhatsApp channel selector. Same changes still to apply to develop. Flash sale broadcast stays SMS-only (needs separate Meta marketing template). (Prev: 2026-06-01 — Session 44: pricing model finalised.)
 > **Next session — start here:**
-> - ~~**Rotate Twilio Auth Token**~~ ✓ Done 2026-05-29 — token rotated, `.env` updated on both branches, functions redeployed to both `stalliq` and `stalliq-production`.
-> - **WhatsApp template approved? → Update Cloud Function** — once Meta approves, update `functions/index.js` to send via template name rather than old Twilio Content SID (`HXb0f2b4e74995392bf1f82095d577036c`). See WhatsApp state below.
+> - **Apply same WhatsApp changes to develop** — switch to develop branch; apply same patches to `js/kitchen.js`, `kitchen.html`, `functions/index.js` (identical changes as main).
+> - **Add TWILIO_WHATSAPP_CONTENT_SID to functions/.env** — get Content SID from Twilio Console → Messaging → Content → `order_ready_notification` → copy HX... SID. Add to `.env` on BOTH branches. Redeploy functions to both `stalliq` and `stalliq-production`.
 > - **Wipe test data on stalliq-production** — delete all docs in `orders` and `users` collections. Keep `vendors/{vendorId}/staff/`, `kitchenStatus`, `location`, `counters`.
 > - **Node.js 20 deprecation** — upgrade functions to Node 22 before 2026-10-30.
 > - **Future session:** Google Play Store TWA wrap (pwabuilder.com → AAB → Play Console). Do on main (La Muletti production URL).
@@ -10,12 +10,16 @@
 > - **Future session:** Add Stalliq product page to endoo.co.uk (under Products).
 >
 > ⚠️ **Julian — actions outstanding:**
-> 1. **Wipe test data on stalliq-production** — delete all docs in `orders` and `users` collections.
-> 3. **ICO registration** — ico.org.uk, ~£40/year (required before collecting personal data in production).
-> 4. **Google Sheet header rows** — protect header rows on all three La Muletti sheets.
+> 1. **Delete the three `_wa_patch` files** from repo folder (they are orphaned — the real files are already patched).
+> 2. **Apply same WhatsApp changes to develop** — next session, Claude applies the same three-file patch on the develop branch.
+> 3. **Add `TWILIO_WHATSAPP_CONTENT_SID` to `functions/.env`** — Twilio Console → Messaging → Content → order_ready_notification → copy HX... SID. Add to `.env` on both branches. Run `firebase deploy --only functions` on both.
+> 4. **Wipe test data on stalliq-production** — delete all docs in `orders` and `users` collections.
+> 5. **ICO registration** — ico.org.uk, ~£40/year (required before collecting personal data in production).
+> 6. **Google Sheet header rows** — protect header rows on all three La Muletti sheets.
 >
 > **⚠️ Backlog:**
-> - B3: WhatsApp as premium notifications tier — once Meta template approved, add `messagingChannel: 'sms' | 'whatsapp'` to vendor doc.
+> - ~~B3: WhatsApp as premium notifications tier~~ ✓ Built 2026-06-02 — pending apply + test on develop, then port to main.
+> - B3b: WhatsApp flash sale broadcasts — needs a separate Meta marketing template approval. Currently flash sale broadcast always uses SMS.
 > - B4: Generic code audit — remove hardcoded pizza/La Muletti refs from shared layer ⚠️ risky — do on feature branch.
 > - B5: Flash sale BOGO / flexible discount types — currently only % off and £ off. Future: buy-one-get-one-free.
 > - B6: Google Play Store TWA wrap — pwabuilder.com generates signed AAB. Needs assetlinks.json on Netlify domain + Play Developer account (~$25).

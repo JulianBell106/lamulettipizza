@@ -1159,8 +1159,16 @@
         <!-- Customer Messaging toggle (owner only) -->
         <div id="k-messaging-section" style="display:none; margin-top:16px; padding-top:14px; border-top:1px solid var(--gold-rule);">
           <div style="font-size:12px; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;">Customer Notifications</div>
-          <div style="font-size:12px; color:var(--text-secondary); margin-bottom:10px;">Send SMS when orders are marked ready.</div>
+          <div style="font-size:12px; color:var(--text-secondary); margin-bottom:10px;">Notify customers when their order is ready.</div>
           <button class="k-broadcast-btn" id="k-messaging-toggle-btn" onclick="toggleMessaging()">💬 Messaging On</button>
+          <!-- Channel selector — shown when messaging is on -->
+          <div id="k-messaging-channel-wrap" style="margin-top:10px;">
+            <div style="font-size:11px; color:var(--text-secondary); margin-bottom:6px;">Send via:</div>
+            <div style="display:flex; gap:8px;">
+              <button class="k-broadcast-btn" id="k-channel-sms-btn" onclick="setMessagingChannel('sms')" style="font-size:12px; padding:6px 14px;">📱 SMS</button>
+              <button class="k-broadcast-btn" id="k-channel-wa-btn" onclick="setMessagingChannel('whatsapp')" style="font-size:12px; padding:6px 14px;">💬 WhatsApp</button>
+            </div>
+          </div>
         </div>
 
         <!-- Flash Sale Broadcast (owner only) -->

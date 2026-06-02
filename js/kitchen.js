@@ -78,6 +78,7 @@ let broadcastActive     = false;
 let broadcastIntervalId = null;
 let broadcastStopRequested = false; // guards against stale GPS writes after stop
 let messagingEnabled    = true;  // mirrors vendors/{id}/messagingEnabled — default true
+let messagingChannel    = 'sms'; // mirrors vendors/{id}/messagingChannel — 'sms' | 'whatsapp'
 
 // Audio state — shared AudioContext unlocked on PIN entry (iOS requires gesture)
 let kitchenAudioCtx      = null;
@@ -497,6 +498,7 @@ function listenMessagingEnabled() {
   kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
     .onSnapshot(doc => {
       messagingEnabled = !doc.exists || doc.data().messagingEnabled !== false;
+      messagingChannel = (doc.exists && doc.data().messagingChannel === 'whatsapp') ? 'whatsapp' : 'sms';
       updateMessagingToggleUI();
     }, err => console.warn('[F16] listenMessagingEnabled error:', err.message));
 }
@@ -512,16 +514,33 @@ async function toggleMessaging() {
   }
 }
 
+async function setMessagingChannel(channel) {
+  try {
+    await kitchenDb.collection('vendors').doc(CONFIG.vendor.id)
+      .set({ messagingChannel: channel }, { merge: true });
+  } catch (err) {
+    showToast('Could not update messaging channel.');
+    console.error('[F16] setMessagingChannel error:', err.message);
+  }
+}
+
 function updateMessagingToggleUI() {
-  const btn = document.getElementById('k-messaging-toggle-btn');
+  const btn      = document.getElementById('k-messaging-toggle-btn');
+  const chanWrap = document.getElementById('k-messaging-channel-wrap');
+  const btnSMS   = document.getElementById('k-channel-sms-btn');
+  const btnWA    = document.getElementById('k-channel-wa-btn');
   if (!btn) return;
   if (messagingEnabled) {
     btn.textContent = '💬 Messaging On';
     btn.classList.add('active');
+    if (chanWrap) chanWrap.style.display = '';
   } else {
     btn.textContent = '💬 Messaging Off';
     btn.classList.remove('active');
+    if (chanWrap) chanWrap.style.display = 'none';
   }
+  if (btnSMS) btnSMS.classList.toggle('active', messagingChannel === 'sms');
+  if (btnWA)  btnWA.classList.toggle('active',  messagingChannel === 'whatsapp');
 }
 
 // ── Flash Sale Broadcast (Feature 19b) ──────────────────────────────────────────
