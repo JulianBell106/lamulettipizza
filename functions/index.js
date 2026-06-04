@@ -144,7 +144,7 @@ exports.orderReadyNotification = functions
     }
 
     // Send SMS if: channel is 'sms', OR WhatsApp was attempted but failed/not configured
-    if (!notificationSent && messagingChannel !== 'whatsapp') {
+    if (!notificationSent) {
       try {
         await client.messages.create({
           from: fromSMS,
